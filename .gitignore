@@ -1,0 +1,19 @@
+# general
+.DS_Store
+node_modules/
+.env
+.env.*
+
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.venv*/
+.pytest_cache/
+
+
+# build
+dist/
+build/
+coverage/
