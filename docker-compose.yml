@@ -1,4 +1,4 @@
-version: "3.9"
+
 services:
   db:
     image: postgres:16
@@ -6,12 +6,11 @@ services:
       POSTGRES_DB: lookdb
       POSTGRES_USER: lookuser
       POSTGRES_PASSWORD: lookpass
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes:
       - dbdata:/var/lib/postgresql/data
   redis:
     image: redis:7
-    ports: ["6379:6379"]
   backend:
     build: ./backend
     env_file: ./backend/.env
