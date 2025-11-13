@@ -15,6 +15,7 @@ class ProductListItem(BaseModel):
     slug: str | None
     title: dict
     price: float
+    discountPrice: float | None = None
 
 class ProductDetail(ProductListItem):
     ean: str | None
@@ -50,6 +51,7 @@ def list_products(
                 slug=r.slug,
                 title={"el": r.title_el, "en": r.title_en},
                 price=float(r.price or 0),
+                discountPrice=float(r.compare_at_price) if r.compare_at_price is not None else None,
             )
             for r in rows
         ]
@@ -68,6 +70,7 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         slug=r.slug,
         title={"el": r.title_el, "en": r.title_en},
         price=float(r.price or 0),
+        discountPrice=float(r.compare_at_price) if r.compare_at_price is not None else None,
         ean=r.ean,
         images=r.images or [],
         attributes=r.attributes or {},
