@@ -36,7 +36,7 @@ export default function HomePage() {
   return (
     <div className="space-y-10">
       {/* BIG HERO SLIDER */}
-      <section className="relative w-full h-[60vh] md:h-[75vh] rounded-3xl overflow-hidden">
+      <section className="relative left-1/2 w-screen -translate-x-1/2 h-[75vh] md:h-[90vh] rounded-3xl overflow-hidden">
         {/* Hero image */}
         <img
           src={currentHero}
@@ -52,7 +52,7 @@ export default function HomePage() {
 
         {/* text overlay (centered-ish) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <div className="text-xs md:text-sm font-semibold text-red-500 uppercase tracking-[0.2em]">
+          <div className="text-xs md:text-sm font-semibold text-red-800 uppercase tracking-[0.2em]">
             Premium Eyewear
           </div>
           <h2 className="mt-3 text-3xl md:text-5xl font-semibold text-white leading-tight">
@@ -61,14 +61,13 @@ export default function HomePage() {
             Ηλίου &amp; Οράσεως
           </h2>
           <p className="mt-4 max-w-xl text-sm md:text-base text-slate-100">
-            Δοκίμασε στο κατάστημα και διάλεξε μαζί μας φακούς για οδήγηση,
-            οθόνη ή καθημερινή χρήση. Οπτική φροντίδα με στυλ &amp; άνεση.
+            Ελάτε σήμερα στο κατάστημα μας και διάλεξτε άπο μια πλούσια συλλογή γυαλιών ηλίου και οράσεως.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
             <Link
               to="/shop/sunglasses"
-              className="px-5 py-2.5 rounded-full bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+              className="px-5 py-2.5 rounded-full bg-red-800 text-white text-sm font-medium hover:bg-red-700 transition"
             >
               Γυαλιά Ηλίου
             </Link>
@@ -142,8 +141,11 @@ export default function HomePage() {
                                     font-zen
                                     text-[24px] md:text-[28px]
                                     font-bold
-                                    text-amber-600
-                                    whitespace-nowrap">
+                                    text-amber-700
+                                    whitespace-nowrap
+                                    hover:text-white
+                                    hover:bg-amber-700
+                                    transition">
                 Γυαλιά Ηλίου
             </div>
             </Link>
@@ -163,15 +165,18 @@ export default function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                                px-4 py-2
-                                rounded-full
-                                bg-white/70 backdrop-blur-sm
-                                shadow-lg
-                                font-zen
-                                text-[24px] md:text-[28px]
-                                font-bold
-                                text-amber-600
-                                whitespace-nowrap">
+                            px-4 py-2
+                            rounded-full
+                            bg-white/70 backdrop-blur-sm
+                            shadow-lg
+                            font-zen
+                            text-[24px] md:text-[28px]
+                            font-bold
+                            text-amber-700
+                            whitespace-nowrap 
+                            hover:text-white
+                            hover:bg-amber-700
+                            transition">
                 Σκελετοί Οράσεως
             </div>
 
@@ -193,15 +198,18 @@ export default function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                                px-4 py-2
-                                rounded-full
-                                bg-white/70 backdrop-blur-sm
-                                shadow-lg
-                                font-zen
-                                text-[24px] md:text-[28px]
-                                font-bold
-                                text-amber-600
-                                whitespace-nowrap">
+                            px-4 py-2
+                            rounded-full
+                            bg-white/70 backdrop-blur-sm
+                            shadow-lg
+                            font-zen
+                            text-[24px] md:text-[28px]
+                            font-bold
+                            text-amber-700
+                            whitespace-nowrap 
+                            hover:text-white
+                            hover:bg-amber-700
+                            transition">
                 Φακοί Επαφής
             </div>
             </Link>
@@ -221,15 +229,18 @@ export default function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                                px-4 py-2
-                                rounded-full
-                                bg-white/70 backdrop-blur-sm
-                                shadow-lg
-                                font-zen
-                                text-[24px] md:text-[28px]
-                                font-bold
-                                text-amber-600
-                                whitespace-nowrap">
+                            px-4 py-2
+                            rounded-full
+                            bg-white/70 backdrop-blur-sm
+                            shadow-lg
+                            font-zen
+                            text-[24px] md:text-[28px]
+                            font-bold
+                            text-amber-700
+                            whitespace-nowrap 
+                            hover:text-white
+                            hover:bg-amber-700
+                            transition">
                 Άλλα προϊόντα
             </div>
             </Link>

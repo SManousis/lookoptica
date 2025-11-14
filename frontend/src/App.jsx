@@ -51,19 +51,25 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50">
         <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
-          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 h-24 flex items-center justify-between">
             <Link to="/" className="font-semibold">
-              Look Optica
+            <img src="/logo.png" alt="Look Optica" className="w-24 h-24" />
             </Link>
-            <nav className="text-sm text-slate-600 flex gap-4">
-              <Link to="/shop/sunglasses" className="hover:underline">
+            <nav className="text-sm text-amber-700 flex gap-4 text-[20px] ">
+              <Link to="/shop/sunglasses" className="hover:text-red-800">
                 Γυαλιά Ηλίου
               </Link>
-              <Link to="/shop/frames" className="hover:underline">
+              <Link to="/shop/frames" className="hover:text-red-800">
                 Σκελετοί Οράσεως
               </Link>
-              <Link to="/shop" className="hover:underline">
+              <Link to="/shop/contact-lenses" className="hover:text-red-800">
+                Φακοί Επαφής
+              </Link>
+              <Link to="/shop" className="hover:text-red-800">
                 Όλα τα προϊόντα
+              </Link>
+              <Link to="/contact" className="hover:text-red-800">
+                Επικοινωνία
               </Link>
             </nav>
           </div>
@@ -76,6 +82,7 @@ export default function App() {
             <Route path="/shop/:categorySlug" element={<CategoryPLP />} />
             <Route path="/product/:slug" element={<PDP />} />
             <Route path="/admin/add-product" element={<AddProduct />} />
+            {/* <Route path="/contact" element={<Contact />} /> */}
           </Routes>
         </main>
 
