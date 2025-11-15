@@ -6,6 +6,9 @@ import AddProduct from "./pages/AddProduct";
 import CategoryPLP from "./pages/CategoryPLP"; // 👈 NEW
 import "./index.css";
 import HomePage from "./pages/HomePage";
+import UsageTerms from "./pages/UsageTerms";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import InstagramIcon from "@mui/icons-material/Instagram";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -26,10 +29,10 @@ function ShopPLP() {
       .catch(() => setState("error"));
   }, []);
 
-  if (state === "loading") return <div>Loading…</div>;
+  if (state === "loading") return <div>Loading...</div>;
   if (state === "error") {
     return (
-      <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
         Failed to load products.
       </div>
     );
@@ -38,7 +41,7 @@ function ShopPLP() {
   return items.length === 0 ? (
     <div className="text-slate-600">No products found.</div>
   ) : (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
       {items.map((p) => (
         <ProductCard key={p.slug} p={p} />
       ))}
@@ -50,12 +53,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50">
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
-          <div className="max-w-6xl mx-auto px-4 h-24 flex items-center justify-between">
+        <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+          <div className="flex h-24 w-full items-center justify-between px-6">
             <Link to="/" className="font-semibold">
-            <img src="/logo.png" alt="Look Optica" className="w-24 h-24" />
+              <img src="/logo.png" alt="Look Optica" className="h-24 w-24" />
             </Link>
-            <nav className="text-sm text-amber-700 flex gap-4 text-[20px] ">
+
+            <nav className="flex gap-4 text-sm text-amber-700 md:text-lg">
               <Link to="/shop/sunglasses" className="hover:text-red-800">
                 Γυαλιά Ηλίου
               </Link>
@@ -72,23 +76,54 @@ export default function App() {
                 Επικοινωνία
               </Link>
             </nav>
+
+            <div className="flex gap-2 text-2xl text-slate-500">
+              <FacebookIcon className="text-blue-700" />
+              <InstagramIcon className="text-pink-500" />
+            </div>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-6">
+        <main className="w-full px-6 py-6">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<ShopPLP />} />
             <Route path="/shop/:categorySlug" element={<CategoryPLP />} />
             <Route path="/product/:slug" element={<PDP />} />
             <Route path="/admin/add-product" element={<AddProduct />} />
+            <Route path="/terms" element={<UsageTerms />} />
             {/* <Route path="/contact" element={<Contact />} /> */}
           </Routes>
         </main>
 
-        <footer className="mt-12 border-t">
-          <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-slate-600">
-            © {new Date().getFullYear()} Look Optica — Chalandri
+        <footer className="border-t bg-white/90">
+          <div className="flex w-full flex-col gap-3 px-6 py-8 text-sm text-amber-700 md:flex-row md:items-center md:justify-between">
+            <span>© {new Date().getFullYear()} Look Optica — A different point of view</span>
+            <span className="flex flex-wrap items-center gap-2">
+              <Link to="/faq" className="hover:text-red-800">
+                Faq
+              </Link>
+              <span>|</span>
+              <Link to="/contact" className="hover:text-red-800">
+                Επικοινωνία
+              </Link>
+              <span>|</span>
+              <Link to="/terms" className="hover:text-red-800">
+                Όροι χρήσης
+              </Link>
+            </span>
+            <span className="md:text-right">
+              Αγίας Παρασκευής 30, Χαλάνδρι
+              <br />
+              Τηλ: 210 6898658 |{" "}
+              <a href="mailto:info@lookoptica.gr" className="underline">
+                info@lookoptica.gr
+              </a>{" "}
+              |{" "}
+              <a href="https://www.lookoptica.gr" className="underline">
+                www.lookoptica.gr
+              </a>
+            </span>
           </div>
         </footer>
       </div>
