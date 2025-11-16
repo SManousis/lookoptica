@@ -317,7 +317,7 @@ export default function PDP() {
             {/* Price */}
             {discountPrice ? (
               <div className="flex items-baseline gap-2">
-                <div className="text-xl font-bold text-teal-700">
+                <div className="text-xl font-bold text-amber-700">
                   {discountPrice != null ? `€${discountPrice}` : "—"}
                 </div>
                 <div className="text-sm text-slate-400 line-through">
@@ -325,7 +325,7 @@ export default function PDP() {
                 </div>
               </div>
             ) : (
-              <div className="text-xl font-bold text-teal-700">
+              <div className="text-xl font-bold text-amber-700">
                 {price != null ? `€${price}` : "—"}
               </div>
             )}
@@ -454,7 +454,7 @@ export default function PDP() {
             </div>
 
             <div className="pt-4">
-              <Link to="/shop" className="text-teal-700 hover:underline">
+              <Link to="/shop" className="text-amber-700 hover:underline">
                 ← Back to shop
               </Link>
             </div>

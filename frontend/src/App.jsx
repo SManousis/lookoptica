@@ -7,6 +7,7 @@ import CategoryPLP from "./pages/CategoryPLP"; // 👈 NEW
 import "./index.css";
 import HomePage from "./pages/HomePage";
 import UsageTerms from "./pages/UsageTerms";
+import Contact from "./pages/Contact";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
 
@@ -92,7 +93,7 @@ export default function App() {
             <Route path="/product/:slug" element={<PDP />} />
             <Route path="/admin/add-product" element={<AddProduct />} />
             <Route path="/terms" element={<UsageTerms />} />
-            {/* <Route path="/contact" element={<Contact />} /> */}
+            <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
 
