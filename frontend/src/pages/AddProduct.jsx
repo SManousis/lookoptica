@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
+const CATEGORY_OPTIONS = [
+  { value: "sunglasses", label: "Sunglasses" },
+  { value: "ophthalmic_frames", label: "Ophthalmic Frames" },
+  { value: "contact_lenses", label: "Contact Lenses" },
+  { value: "solutions", label: "Solutions" },
+  { value: "other_products", label: "Other Products" },
+];
+
 const initialForm = {
   titleEl: "",
   titleEn: "",
@@ -288,14 +296,19 @@ export default function AddProduct() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Category</label>
-            <input
-              type="text"
+            <select
               name="category"
               value={form.category}
               onChange={handleChange}
-              placeholder="sunglasses, ophthalmic_frames..."
               className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
+            >
+              <option value="">Select a category</option>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

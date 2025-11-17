@@ -2,14 +2,20 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
+
 import AddProduct from "./pages/AddProduct";
-import CategoryPLP from "./pages/CategoryPLP"; // 👈 NEW
+import CategoryPLP from "./pages/PLP"; // 👈 NEW
 import "./index.css";
 import HomePage from "./pages/HomePage";
 import UsageTerms from "./pages/UsageTerms";
 import Contact from "./pages/Contact";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
+import ScrollToTop from "./components/ScrollToTop";
+import LookAtHome from "./pages/LookAtHome";
+import LowVision from "./pages/LowVision";
+import AboutUs from "./pages/AboutUs";
+
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -53,6 +59,7 @@ function ShopPLP() {
 export default function App() {
   return (
     <BrowserRouter>
+    <ScrollToTop />
       <div className="min-h-screen bg-slate-50">
         <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
           <div className="flex h-24 w-full items-center justify-between px-6">
@@ -60,7 +67,7 @@ export default function App() {
               <img src="/logo.png" alt="Look Optica" className="h-24 w-24" />
             </Link>
 
-            <nav className="flex gap-4 text-sm text-amber-700 md:text-lg">
+            <nav className="flex gap-4 text-sm text-amber-700 md:text-md">
               <Link to="/shop/sunglasses" className="hover:text-red-800">
                 Γυαλιά Ηλίου
               </Link>
@@ -76,6 +83,16 @@ export default function App() {
               <Link to="/contact" className="hover:text-red-800">
                 Επικοινωνία
               </Link>
+              <Link to="/low-vision" className="hover:text-red-800">
+                Βοηθήματα Χαμηλής Όρασης
+              </Link>
+              <Link to="/look-at-home" className="hover:text-red-800">
+                Οπτικά στο σπίτι
+              </Link>
+              <Link to="/about-us" className="hover:text-red-800">
+                Σχετικά με εμάς
+              </Link>
+
             </nav>
 
             <div className="flex gap-2 text-2xl text-slate-500">
@@ -94,6 +111,9 @@ export default function App() {
             <Route path="/admin/add-product" element={<AddProduct />} />
             <Route path="/terms" element={<UsageTerms />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/look-at-home" element={<LookAtHome />} />
+            <Route path="/low-vision" element={<LowVision />} />
+            <Route path="/about-us" element={<AboutUs />} />
           </Routes>
         </main>
 

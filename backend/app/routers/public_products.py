@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.db import SessionLocal
 from app.models.product import Product
@@ -16,12 +16,16 @@ class ProductListItem(BaseModel):
     title: dict
     price: float
     discountPrice: float | None = None
+    brand: Optional[str] = None        # 👈 NEW
+    category: Optional[str] = None     # 👈 NEW
+
 
 class ProductDetail(ProductListItem):
     ean: str | None
     images: list
     attributes: dict
     stock: int
+    description: str | None = None
 
 # DB session dependency (correct pattern)
 def get_db():
@@ -30,7 +34,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 @router.get("", response_model=List[ProductListItem])
 def list_products(
     q: Optional[str] = Query(None),
@@ -42,37 +45,80 @@ def list_products(
         stmt = select(Product).where(Product.status == "published", Product.visible == True)
         if q:
             like = f"%{q.lower()}%"
-            stmt = stmt.where((Product.title_el.ilike(like)) | (Product.title_en.ilike(like)))
+            stmt = stmt.where(
+                (Product.title_el.ilike(like)) | (Product.title_en.ilike(like))
+            )
         stmt = stmt.order_by(Product.created_at.desc()).limit(limit).offset(offset)
         rows = db.execute(stmt).scalars().all()
-        return [
-            ProductListItem(
-                sku=r.sku,
-                slug=r.slug,
-                title={"el": r.title_el, "en": r.title_en},
-                price=float(r.price or 0),
-                discountPrice=float(r.compare_at_price) if r.compare_at_price is not None else None,
+
+        items: List[ProductListItem] = []
+        for r in rows:
+            attrs: Dict[str, Any] = r.attributes or {}
+
+            brand = None
+            category = None
+            if isinstance(attrs, dict):
+                brand = attrs.get("brand_label") or attrs.get("brand")
+                category = (
+                    attrs.get("category_label")
+                    or attrs.get("category")
+                    or attrs.get("category_value")
+                )
+
+            items.append(
+                ProductListItem(
+                    sku=r.sku,
+                    slug=r.slug,
+                    title={"el": r.title_el, "en": r.title_en},
+                    price=float(r.price or 0),
+                    discountPrice=float(r.compare_at_price)
+                    if r.compare_at_price is not None
+                    else None,
+                    brand=brand,
+                    category=category,
+                )
             )
-            for r in rows
-        ]
+
+        return items
+
     except Exception as e:
-        # This surfaces the actual error in the server logs
         print("ERROR /api/products:", repr(e))
         raise HTTPException(status_code=500, detail="Internal error")
 
 @router.get("/{slug}", response_model=ProductDetail)
 def get_product(slug: str, db: Session = Depends(get_db)):
-    r = db.execute(select(Product).where(Product.slug == slug, Product.visible == True)).scalar_one_or_none()
+    r = db.execute(
+        select(Product).where(Product.slug == slug, Product.visible == True)
+    ).scalar_one_or_none()
     if not r:
         raise HTTPException(status_code=404, detail="Not found")
+
+    attrs: Dict[str, Any] = r.attributes or {}
+
+    brand = None
+    category = None
+    if isinstance(attrs, dict):
+        brand = attrs.get("brand_label") or attrs.get("brand")
+        category = (
+            attrs.get("category_label")
+            or attrs.get("category")
+            or attrs.get("category_value")
+        )
+
     return ProductDetail(
         sku=r.sku,
         slug=r.slug,
         title={"el": r.title_el, "en": r.title_en},
         price=float(r.price or 0),
-        discountPrice=float(r.compare_at_price) if r.compare_at_price is not None else None,
+        discountPrice=float(r.compare_at_price)
+        if r.compare_at_price is not None
+        else None,
         ean=r.ean,
         images=r.images or [],
-        attributes=r.attributes or {},
+        attributes=attrs,
         stock=r.stock or 0,
+        brand=brand,
+        category=category,
+        description=r.description,   # 👈 NEW
     )
+

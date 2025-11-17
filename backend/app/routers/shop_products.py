@@ -121,6 +121,7 @@ async def create_product(prod: Product, db: Session = Depends(get_db)):
         attrs["brand_label"] = prod.brand
     if prod.category:
         attrs["category_label"] = prod.category
+        attrs["category"] = prod.category  
     if prod.reorderLevel is not None:
         attrs["reorderLevel"] = prod.reorderLevel
     if prod.status:

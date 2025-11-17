@@ -62,7 +62,7 @@ function FrameSizeSection({ p }) {
   );
 }
 
-function ProductDescription({ product }) { // CHANGED: param name
+function ProductDescription({ product }) {
   const desc =
     product?.description ||
     product?.shortDescription ||
@@ -203,14 +203,20 @@ export default function PDP() {
   const ean = active?.ean || p?.ean;
 
   // images: first prefer active.images, then p.images, then placeholder
-  const rawImages =
-    (active && active.images) ||
-    p?.images ||
-    [];
-  const images = Array.isArray(rawImages) ? rawImages : [];
-  const imageList = images.length > 0 ? images : [placeholder];
+  const variantImages = Array.isArray(active?.images) ? active.images.filter(Boolean) : [];
+  const productImages = Array.isArray(p?.images) ? p.images.filter(Boolean) : [];
+  const imageList =
+    variantImages.length > 0
+      ? variantImages
+      : productImages.length > 0
+        ? productImages
+        : [placeholder];
   const safeImageIndex = Math.min(imageIndex, imageList.length - 1);
   const mainImage = imageList[safeImageIndex];
+
+  const brand = p?.brand || active?.brand;
+  const category = p?.category || active?.category;
+  const statusValue = active?.status || p?.status;
 
   const siteName = "Look Optica";
   const baseUrl = "https://lookoptica.gr";
@@ -294,18 +300,18 @@ export default function PDP() {
           <div className="space-y-4">
             {/* Brand + category */}
             <div className="text-sm text-slate-500 flex items-center gap-2">
-              {(p?.brand || active?.brand) && (
+              {brand && (
                 <span className="font-semibold uppercase tracking-wide">
-                  {p?.brand || active?.brand}
+                  {brand}
                 </span>
               )}
-              {(p?.category || active?.category) && (
+              {category && (
                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide">
-                  {formatCategory(p?.category || active?.category)}
+                  {formatCategory(category)}
                 </span>
               )}
               {/* status pill */}
-              {renderStatus(active?.status || p?.status)}
+              {renderStatus(statusValue)}
             </div>
 
 
@@ -386,7 +392,7 @@ export default function PDP() {
 
             {/* Description + size + shipping */}
             <div className="mt-4 space-y-6">
-              <ProductDescription product={active || p} />
+              <ProductDescription product={p} />
               <FrameSizeSection p={active || p} />
               <div>
                 <h3 className="font-semibold text-sm mb-1">Πληροφορίες</h3>
