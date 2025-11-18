@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models.user import User, Role, UserRole
-from app.schemas.auth import AdminLoginRequest, UserOut, AdminCreateSuperUser
+from app.schemas.auth import (
+    AdminLoginRequest,
+    AdminCreateSuperUser,
+    UserOut,
+)
 from app.security import hash_password, verify_password
+from app.config import settings  # your Settings with hmac_secret
 
 router = APIRouter(
     prefix="/api/admin/auth",
@@ -32,21 +37,26 @@ def _get_or_create_role(db: Session, name: str, description: str = "") -> Role:
 
 
 @router.post("/init-superadmin", response_model=UserOut)
-def init_superadmin(payload: AdminCreateSuperUser, db: Session = Depends(get_db)):
+def init_superadmin(
+    payload: AdminCreateSuperUser,
+    db: Session = Depends(get_db),
+):
     """
     One-time endpoint to create the first superadmin.
-
-    Protect with a SECRET code so random people can't call it.
-    Later, you can delete/disable this route or guard behind env.
+    Protected by settings.hmac_secret so random people can't call it.
     """
-    from app.schemas.config import settings  # your existing Settings
 
-    # simple secret check
+    # 1) Simple shared-secret check
     if payload.secret_code != settings.hmac_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret code")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid secret code",
+        )
 
-    # If superadmin exists, block
-    superadmin_role = _get_or_create_role(db, "superadmin", "Full access")
+    # 2) Ensure superadmin role exists
+    superadmin_role = _get_or_create_role(db, "superadmin", "Full access admin")
+
+    # 3) Check if any superadmin already exists
     existing_superadmin = (
         db.query(User)
         .join(UserRole, User.id == UserRole.user_id)
@@ -55,14 +65,19 @@ def init_superadmin(payload: AdminCreateSuperUser, db: Session = Depends(get_db)
     )
     if existing_superadmin:
         raise HTTPException(
-            status_code=400, detail="Superadmin already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Superadmin already exists",
         )
 
-    # Also check email not taken
+    # 4) Ensure email not already used
     existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already in use")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already in use",
+        )
 
+    # 5) Create user
     user = User(
         email=payload.email,
         full_name=payload.full_name,
@@ -73,7 +88,7 @@ def init_superadmin(payload: AdminCreateSuperUser, db: Session = Depends(get_db)
     db.commit()
     db.refresh(user)
 
-    # attach superadmin role
+    # 6) Attach superadmin role
     link = UserRole(user_id=user.id, role_id=superadmin_role.id)
     db.add(link)
     db.commit()
@@ -88,34 +103,28 @@ def init_superadmin(payload: AdminCreateSuperUser, db: Session = Depends(get_db)
 
 
 @router.post("/login", response_model=UserOut)
-def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
+def admin_login(
+    payload: AdminLoginRequest,
+    db: Session = Depends(get_db),
+):
     """
-    Phase 1: simple login that returns user+roles JSON.
-    In Phase 2 we'll attach sessions + cookies + 2FA.
+    Phase 1: simple login returning user+roles.
+    Later we'll attach sessions, cookies, 2FA.
     """
     user = db.query(User).filter(User.email == payload.email).first()
-    if not user:
+    if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
+
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is inactive",
-        )
 
-    # collect roles
-    role_names = [
-      ur.role.name
-      for ur in user.roles
-      if ur.role is not None
-    ]
+    role_names = [ur.role.name for ur in user.roles if ur.role]
 
     return UserOut(
         id=user.id,

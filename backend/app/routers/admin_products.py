@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 # If you haven't created schemas/product.py yet, comment out this import + the type hints
 from app.schemas.product import ProductUpsert
