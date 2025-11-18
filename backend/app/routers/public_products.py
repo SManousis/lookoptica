@@ -16,9 +16,10 @@ class ProductListItem(BaseModel):
     title: dict
     price: float
     discountPrice: float | None = None
-    brand: Optional[str] = None        # 👈 NEW
-    category: Optional[str] = None     # 👈 NEW
-
+    brand: Optional[str] = None        
+    category: Optional[str] = None     
+    audience: Optional[str] = None
+    images: list[str] = []       
 
 class ProductDetail(ProductListItem):
     ean: str | None
@@ -57,6 +58,7 @@ def list_products(
 
             brand = None
             category = None
+            audience = None
             if isinstance(attrs, dict):
                 brand = attrs.get("brand_label") or attrs.get("brand")
                 category = (
@@ -64,6 +66,7 @@ def list_products(
                     or attrs.get("category")
                     or attrs.get("category_value")
                 )
+                audience = attrs.get("audience")
 
             items.append(
                 ProductListItem(
@@ -76,6 +79,8 @@ def list_products(
                     else None,
                     brand=brand,
                     category=category,
+                    audience=audience,
+                    images=r.images or [],
                 )
             )
 
@@ -97,6 +102,8 @@ def get_product(slug: str, db: Session = Depends(get_db)):
 
     brand = None
     category = None
+    audience = None
+
     if isinstance(attrs, dict):
         brand = attrs.get("brand_label") or attrs.get("brand")
         category = (
@@ -104,6 +111,7 @@ def get_product(slug: str, db: Session = Depends(get_db)):
             or attrs.get("category")
             or attrs.get("category_value")
         )
+        audience = attrs.get("audience")
 
     return ProductDetail(
         sku=r.sku,
@@ -119,6 +127,7 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         stock=r.stock or 0,
         brand=brand,
         category=category,
-        description=r.description,   # 👈 NEW
+        audience=audience,
+        description=r.description,   
     )
 

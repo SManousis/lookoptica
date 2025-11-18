@@ -88,6 +88,13 @@ function formatCategory(category) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function formatAudience(audience) {
+  if (!audience) return "";
+  return audience
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function PDP() {
   const { slug } = useParams();
   const [p, setP] = useState(null);
@@ -123,6 +130,7 @@ export default function PDP() {
         const list = Array.isArray(all) ? all : [];
         const brand = p.brand;
         const category = p.category;
+        const audience = p.audience;
         const slugCurrent = p.slug;
 
         const relatedByBrand = list.filter(
@@ -136,7 +144,15 @@ export default function PDP() {
             (!brand || prod.brand !== brand)
         );
 
-        const combined = [...relatedByBrand, ...relatedByCategory].slice(0, 4);
+        const relatedByAudience = list.filter(
+          (prod) =>
+            prod.slug !== slugCurrent &&
+            audience &&
+            prod.audience === audience &&
+            (!brand || prod.brand !== brand)
+        );
+
+        const combined = [...relatedByBrand, ...relatedByCategory, ...relatedByAudience].slice(0, 4);
         setRelated(combined);
       })
       .catch(() => {
@@ -216,6 +232,7 @@ export default function PDP() {
 
   const brand = p?.brand || active?.brand;
   const category = p?.category || active?.category;
+  const audience = p?.audience || active?.audience;
   const statusValue = active?.status || p?.status;
 
   const siteName = "Look Optica";
@@ -279,7 +296,7 @@ export default function PDP() {
                     onClick={() => setImageIndex(idx)}
                     className={`w-16 h-16 rounded-md overflow-hidden border ${
                       idx === safeImageIndex
-                        ? "border-teal-600 ring-1 ring-teal-600"
+                        ? "border-amber-600 ring-1 ring-amber-600"
                         : "border-slate-200"
                     }`}
                     aria-label={`Εικόνα ${idx + 1}`}
@@ -308,6 +325,11 @@ export default function PDP() {
               {category && (
                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide">
                   {formatCategory(category)}
+                </span>
+              )}
+              {audience && (
+                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide">
+                  {formatAudience(audience)}
                 </span>
               )}
               {/* status pill */}
@@ -379,7 +401,7 @@ export default function PDP() {
                       }}
                       className={`px-3 py-1 rounded-full border text-xs ${
                         idx === variantIndex
-                          ? "border-teal-600 bg-teal-50 text-teal-800"
+                          ? "border-amber-600 bg-amber-50 text-amber-800"
                           : "border-slate-300 text-slate-700"
                       }`}
                     >
@@ -436,7 +458,7 @@ export default function PDP() {
                           {rpTitle}
                         </div>
                         {rpPrice != null && (
-                          <div className="text-xs text-teal-700 font-semibold">
+                          <div className="text-xs text-amber-700 font-semibold">
                             €{rpPrice}
                           </div>
                         )}

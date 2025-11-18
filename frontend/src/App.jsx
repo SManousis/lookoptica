@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
-
+import { NAV_CATEGORIES } from "./components/NavConfig";
 import AddProduct from "./pages/AddProduct";
 import CategoryPLP from "./pages/PLP"; // 👈 NEW
 import "./index.css";
@@ -57,6 +57,8 @@ function ShopPLP() {
 }
 
 export default function App() {
+  const [openCategory, setOpenCategory] = useState(null);
+
   return (
     <BrowserRouter>
     <ScrollToTop />
@@ -68,12 +70,41 @@ export default function App() {
             </Link>
 
             <nav className="flex gap-4 text-sm text-amber-700 md:text-md">
-              <Link to="/shop/sunglasses" className="hover:text-red-800">
-                Γυαλιά Ηλίου
-              </Link>
-              <Link to="/shop/frames" className="hover:text-red-800">
-                Σκελετοί Οράσεως
-              </Link>
+            {NAV_CATEGORIES.map((cat) => (
+              <div
+                key={cat.slug}
+                className="relative"
+                onMouseEnter={() => setOpenCategory(cat.slug)}
+                onMouseLeave={() => setOpenCategory(null)}
+              >
+                {/* Main link */}
+                <Link
+                  to={`/shop/${cat.slug}`}
+                  className="hover:text-amber-600"
+                  onClick={() => setOpenCategory(null)}
+                >
+                  {cat.label}
+                </Link>
+
+                {/* Dropdown */}
+                <div
+                  className={`absolute left-1/2 w-full top-full ${
+                    openCategory === cat.slug ? "flex" : "hidden"
+                  } -translate-x-1/2 flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
+                >
+                  {cat.audiences.map((aud) => (
+                    <Link
+                      key={aud.slug}
+                      to={`/shop/${cat.slug}/${aud.slug}`}
+                      className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                      onClick={() => setOpenCategory(null)}
+                    >
+                      {aud.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
               <Link to="/shop/contact-lenses" className="hover:text-red-800">
                 Φακοί Επαφής
               </Link>
@@ -107,6 +138,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<ShopPLP />} />
             <Route path="/shop/:categorySlug" element={<CategoryPLP />} />
+            <Route path="/shop/:categorySlug/:audienceSlug" element={<CategoryPLP />} />
             <Route path="/product/:slug" element={<PDP />} />
             <Route path="/admin/add-product" element={<AddProduct />} />
             <Route path="/terms" element={<UsageTerms />} />

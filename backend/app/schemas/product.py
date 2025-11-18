@@ -1,9 +1,12 @@
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+
 
 class LocaleString(BaseModel):
-    el: str
-    en: str
+    el: Optional[str] = None
+    en: Optional[str] = None
+
 
 class ProductUpsert(BaseModel):
     sku: str
@@ -12,10 +15,14 @@ class ProductUpsert(BaseModel):
     slug: Optional[str] = None
     brand: str
     category: str
+    audience: Optional[str] = Field(
+        default=None,
+        description="male | female | unisex | boy | girl | kids_unisex",
+    )
     price: float
     compare_at_price: Optional[float] = None
     stock: int
     status: str = Field(pattern=r"^(draft|published|archived)$")
-    attributes: Dict[str, Any] = {}
+    attributes: Dict[str, Any] = Field(default_factory=dict)
     seo: Optional[Dict[str, Any]] = None
     version: int = 1

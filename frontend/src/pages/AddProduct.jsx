@@ -11,12 +11,22 @@ const CATEGORY_OPTIONS = [
   { value: "other_products", label: "Other Products" },
 ];
 
+const audienceOptions = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "unisex", label: "Unisex" },
+  { value: "boy", label: "Boy" },
+  { value: "girl", label: "Girl" },
+  { value: "kids_unisex", label: "Kids Unisex" },
+];
+
 const initialForm = {
   titleEl: "",
   titleEn: "",
   slug: "",
   brand: "",
   category: "",
+  audience: "",
   price: "",
   discountPrice: "",
   sku: "",
@@ -179,6 +189,7 @@ export default function AddProduct() {
       },
       description: form.description || null,
       images: images,
+      audience: form.audience || null,
       attributes: {
         eyeSize: form.eyeSize || undefined,
         bridgeSize: form.bridgeSize || undefined,
@@ -283,16 +294,24 @@ export default function AddProduct() {
 
 
         {/* Brand / category */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Brand</label>
-            <input
-              type="text"
-              name="brand"
-              value={form.brand}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-1">Brand</label>
+              <input
+                type="text"
+                name="brand"
+                value={form.brand}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              className="px-1.5 py-2 text-sm border rounded-lg bg-slate-50"
+            >
+              +
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Category</label>
@@ -310,6 +329,23 @@ export default function AddProduct() {
               ))}
             </select>
           </div>
+           <div>
+            <label className="block text-sm font-medium mb-1">Audience</label>
+            <select
+              name="audience"
+              value={form.audience}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Select audience</option>
+              {audienceOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
         </div>
 
         {/* Price / SKU / EAN */}

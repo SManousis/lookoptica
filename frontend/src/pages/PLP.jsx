@@ -4,7 +4,7 @@ import ProductCard from "../components/ProductCard";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
-// Map URL slug -> config + possible category values
+// Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
   sunglasses: {
     labelEl: "Γυαλιά Ηλίου",
@@ -32,16 +32,49 @@ const CATEGORY_CONFIG = {
   },
 };
 
+// Map audience slug in URL -> which backend audience values we accept
+const AUDIENCE_CONFIG = {
+  men: {
+    labelEl: "Άνδρας",
+    subtitle:
+      "Σκελετοί και γυαλιά ηλίου για άνδρες – από κλασικά έως μοντέρνα σχέδια.",
+    allowed: ["male", "unisex"],
+  },
+  women: {
+    labelEl: "Γυναίκα",
+    subtitle:
+      "Γυναικεία γυαλιά με έμφαση στο στυλ και την άνεση για κάθε στιγμή της ημέρας.",
+    allowed: ["female", "unisex"],
+  },
+  unisex: {
+    labelEl: "Unisex",
+    subtitle:
+      "Σχέδια που ταιριάζουν άνετα σε άνδρες και γυναίκες, για ευέλικτο στυλ.",
+    allowed: ["unisex"],
+  },
+  kids: {
+    labelEl: "Παιδί",
+    subtitle:
+      "Παιδικά σκελετά και γυαλιά ηλίου, ανθεκτικά και ασφαλή για τους μικρούς μας φίλους.",
+    allowed: ["boy", "girl", "kids_unisex"],
+  },
+};
+
 export default function CategoryPLP() {
-  const { categorySlug } = useParams();
+  // 👉 Expect two params from the route: /shop/:categorySlug/:audienceSlug?
+  const { categorySlug, audienceSlug } = useParams();
+
   const config = CATEGORY_CONFIG[categorySlug];
+  const audienceConfig = audienceSlug ? AUDIENCE_CONFIG[audienceSlug] : null;
 
   const [items, setItems] = useState([]);
-  const [all, setAll] = useState([]); // for debug / inspection
+  //const [all, setAll] = useState([]); // for debug / inspection
   const [state, setState] = useState("loading"); // loading | ok | error
 
-  // 🔍 log on every render so we *know* component runs
-  console.log("CategoryPLP render, slug =", categorySlug, "config =", config);
+  console.log(
+    "CategoryPLP render",
+    { categorySlug, audienceSlug, config, audienceConfig }
+  );
 
   useEffect(() => {
     if (!config) {
@@ -59,20 +92,42 @@ export default function CategoryPLP() {
       })
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
-        setAll(list); // keep everything for debug
+        //setAll(list);
 
         console.log("ALL PRODUCTS FOR CATEGORY PAGE:", list);
 
         const filtered = list.filter((p) => {
-          const raw = (p.category || "").toString().toLowerCase().trim();
-          return config.matches.some((m) => raw === m.toLowerCase());
+          const rawCategory = (p.category || "").toString().toLowerCase().trim();
+          const categoryMatch = config.matches.some(
+            (m) => rawCategory === m.toLowerCase()
+          );
+
+          if (!categoryMatch) return false;
+
+          // If no audience filter in URL, show all audiences for this category
+          if (!audienceConfig) return true;
+
+          const rawAudience = (p.audience || "")
+            .toString()
+            .toLowerCase()
+            .trim();
+
+          const allowed = audienceConfig.allowed || [];
+          if (allowed.length === 0) return true; // safety
+
+          return allowed.includes(rawAudience);
         });
 
         console.log(
           "FILTERED PRODUCTS FOR",
           categorySlug,
+          audienceSlug,
           "=>",
-          filtered.map((p) => ({ slug: p.slug, category: p.category }))
+          filtered.map((p) => ({
+            slug: p.slug,
+            category: p.category,
+            audience: p.audience,
+          }))
         );
 
         setItems(filtered);
@@ -82,7 +137,7 @@ export default function CategoryPLP() {
         console.error("Error loading products for category page:", err);
         setState("error");
       });
-  }, [categorySlug, config]);
+  }, [categorySlug, audienceSlug, config, audienceConfig]);
 
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
@@ -118,16 +173,20 @@ export default function CategoryPLP() {
           Κατάστημα
         </Link>{" "}
         <span>›</span>{" "}
-        <span className="text-slate-700">{config.labelEl}</span>
+        <span className="text-slate-700">
+          {config.labelEl}
+          {audienceConfig ? ` · ${audienceConfig.labelEl}` : ""}
+        </span>
       </nav>
 
       {/* Category hero */}
       <header className="space-y-2">
         <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
           {config.labelEl}
+          {audienceConfig ? ` – ${audienceConfig.labelEl}` : ""}
         </h1>
         <p className="text-sm md:text-base text-slate-600 max-w-2xl">
-          {config.subtitle}
+          {audienceConfig?.subtitle || config.subtitle}
         </p>
       </header>
 
@@ -148,7 +207,7 @@ export default function CategoryPLP() {
             Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία αυτή τη στιγμή.
           </div>
 
-          {/* 🔍 Debug panel so we can *see* what categories come from backend */}
+          {/* Debug panel
           <details className="text-xs text-slate-500 bg-slate-50 border rounded-lg p-3">
             <summary className="cursor-pointer">
               Debug: Προϊόντα που επιστρέφει το /api/products
@@ -157,11 +216,12 @@ export default function CategoryPLP() {
               {all.map((p) => (
                 <div key={p.slug}>
                   slug: <code>{p.slug}</code> — category:{" "}
-                  <code>{String(p.category)}</code>
+                  <code>{String(p.category)}</code> — audience:{" "}
+                  <code>{String(p.audience)}</code>
                 </div>
               ))}
             </div>
-          </details>
+          </details> */}
         </div>
       )}
 

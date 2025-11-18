@@ -85,7 +85,7 @@ export default function HomePage() {
 
         {/* text overlay (centered-ish) */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <div className="text-xs md:text-sm font-semibold text-red-800 uppercase tracking-[0.2em]">
+          <div className="text-xs md:text-sm font-semibold text-amber-800 uppercase tracking-[0.2em]">
             Premium Eyewear
           </div>
           <h2 className="mt-3 text-3xl md:text-5xl font-semibold text-white leading-tight">
@@ -100,7 +100,7 @@ export default function HomePage() {
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
             <Link
               to="/shop/sunglasses"
-              className="px-5 py-2.5 rounded-full bg-red-800 text-white text-sm font-medium hover:bg-red-700 transition"
+              className="px-5 py-2.5 rounded-full bg-amber-800 text-white text-sm font-medium hover:bg-amber-700 transition"
             >
               Γυαλιά Ηλίου
             </Link>
@@ -151,6 +151,7 @@ export default function HomePage() {
                       e.currentTarget.src = "/placeholder.png";
                     }}
                   />
+                  
                 </div>
               ))}
             </div>
@@ -320,7 +321,7 @@ export default function HomePage() {
           <div className="text-sm text-slate-500">Φόρτωση προϊόντων…</div>
         )}
         {state === "error" && (
-          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
             Δεν ήταν δυνατή η φόρτωση των προϊόντων.
           </div>
         )}
@@ -365,7 +366,7 @@ export default function HomePage() {
 
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-amber-700 hover:bg-red-700
+              className="px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-600
                         text-white font-semibold shadow-lg transition"
             >
               Εγγραφή

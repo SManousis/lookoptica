@@ -47,6 +47,7 @@ async def get_product_admin(sku: str):
             "slug": "sample-product",
             "brand": "DemoBrand",
             "category": "ophthalmic_frames",
+            "audience": "male",
             "price": 99.0,
             "compare_at_price": 129.0,
             "stock": 4,

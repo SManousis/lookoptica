@@ -36,6 +36,7 @@ class Product(BaseModel):
     slug: str
     brand: Optional[str] = None
     category: Optional[str] = None
+    audience: Optional[str] = None
     price: Optional[float] = None
     discountPrice: Optional[float] = None
     sku: Optional[str] = None
@@ -68,6 +69,7 @@ def _to_product_schema(row: ProductModel) -> Product:
         slug=row.slug,
         brand=attrs.get("brand_label"),
         category=attrs.get("category_label"),
+        audience=attrs.get("audience"),
         price=float(row.price) if row.price is not None else None,
         discountPrice=float(row.compare_at_price) if row.compare_at_price is not None else None,
         sku=row.sku,
@@ -75,7 +77,7 @@ def _to_product_schema(row: ProductModel) -> Product:
         title=Title(el=row.title_el, en=row.title_en),
         description=row.description,
         images=row.images or [],
-        attributes={k: v for k, v in attrs.items() if k not in {"variants", "brand_label", "category_label", "reorderLevel", "catalog_status"}},
+        attributes={k: v for k, v in attrs.items() if k not in {"variants", "brand_label", "category_label", "audience", "reorderLevel", "catalog_status"}},
         stock=row.stock,
         reorderLevel=attrs.get("reorderLevel"),
         variants=[Variant(**v) for v in variants if isinstance(v, dict)],
@@ -122,6 +124,8 @@ async def create_product(prod: Product, db: Session = Depends(get_db)):
     if prod.category:
         attrs["category_label"] = prod.category
         attrs["category"] = prod.category  
+    if prod.audience:
+        attrs["audience"] = prod.audience
     if prod.reorderLevel is not None:
         attrs["reorderLevel"] = prod.reorderLevel
     if prod.status:
