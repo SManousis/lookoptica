@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 # If you haven't created schemas/product.py yet, comment out this import + the type hints
 from app.schemas.product import ProductUpsert
+from app.deps.auth import require_roles
 
 router = APIRouter(
     prefix="/api/admin/products",
@@ -14,6 +15,7 @@ async def upsert_product(
     request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     authorization: str | None = Header(default=None, alias="Authorization"),
+    user = Depends(require_roles("admin", "superadmin")),
 ):
     """
     This will eventually:
@@ -34,7 +36,7 @@ async def upsert_product(
     }
 
 @router.get("/{sku}")
-async def get_product_admin(sku: str):
+async def get_product_admin(sku: str, user = Depends(require_roles("admin", "superadmin"))):
     """
     TODO: fetch from DB by SKU.
     For now just return dummy so FastAPI docs work.
@@ -58,7 +60,7 @@ async def get_product_admin(sku: str):
     raise HTTPException(status_code=404, detail="Not found")
 
 @router.post("/{sku}/unpublish")
-async def unpublish_product(sku: str):
+async def unpublish_product(sku: str, user = Depends(require_roles("admin", "superadmin"))):
     """
     TODO: mark product as archived in DB.
     """
