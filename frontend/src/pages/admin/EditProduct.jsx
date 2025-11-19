@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -65,37 +65,97 @@ function makeSlug(str) {
     .replace(/^-+|-+$/g, "");
 }
 
-function makeDuplicateSlug(slug) {
-  if (!slug) return "";
+export default function EditProduct() {
+  const { slug: originalSlug } = useParams();
+  const navigate = useNavigate();
 
-  const match = slug.match(/^(.*?)-copy-(\d+)$/);
-  if (match) {
-    const [, base, num] = match;
-    return `${base}-copy-${Number(num) + 1}`;
-  }
-
-  if (slug.endsWith("-copy")) {
-    return `${slug}-2`;
-  }
-
-  return `${slug}-copy`;
-}
-
-export default function AddProduct() {
   const [form, setForm] = useState(initialForm);
   const [variants, setVariants] = useState([]);
-  const [state, setState] = useState("idle"); // idle | saving | error | success
-  const [errorMsg, setErrorMsg] = useState("");
-  const navigate = useNavigate();
-  const [localImages, setLocalImages] = useState([]);
-  const [slugTouched, setSlugTouched] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // ⭐ NEW: brand options + modal state
   const [brandOptions, setBrandOptions] = useState([]);
+  const [localImages, setLocalImages] = useState([]);
+  const [slugTouched, setSlugTouched] = useState(true); // editing: do not auto-change slug
+  const [state, setState] = useState("loading"); // loading | idle | saving | error | success
+  const [errorMsg, setErrorMsg] = useState("");
+
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
 
+  const fileInputRef = useRef(null);
+
+  // ---------- Load existing product ----------
+  useEffect(() => {
+    if (!originalSlug) return;
+
+    setState("loading");
+    fetch(`${API}/api/products/${originalSlug}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+      .then((data) => {
+        // map API shape -> form state
+        const attrs = data.attributes || {};
+        const eyeSize = attrs.eyeSize || "";
+        const bridgeSize = attrs.bridgeSize || "";
+        const templeLength = attrs.templeLength || "";
+
+        const variantList = Array.isArray(data.variants) ? data.variants : [];
+        const defaultVariant =
+          variantList.find((v) => v.isDefault) || variantList[0] || null;
+
+        setForm({
+          titleEl: data.title?.el || "",
+          titleEn: data.title?.en || "",
+          slug: data.slug || "",
+          brand: data.brand || "",
+          category: data.category || "",
+          audience: data.audience || "",
+          price: data.price ?? "",
+          discountPrice: data.discountPrice ?? "",
+          sku: data.sku || "",
+          ean: data.ean || "",
+          description: data.description || "",
+          imagesText: Array.isArray(data.images)
+            ? data.images.join("\n")
+            : "",
+          eyeSize,
+          bridgeSize,
+          templeLength,
+          stock: data.stock ?? "",
+          reorderLevel: data.reorderLevel ?? "",
+          isDefault: defaultVariant?.isDefault || false,
+          status: data.status || "in_stock",
+          color: defaultVariant?.color || "",
+        });
+
+        setVariants(
+          variantList.map((v) => ({
+            ...initialVariant,
+            ...v,
+            imageUrl: Array.isArray(v.images) && v.images.length > 0
+              ? v.images[0]
+              : "",
+          }))
+        );
+
+        if (data.brand) {
+          setBrandOptions([data.brand]);
+        }
+
+        // local preview from URLs only – not original files
+        setLocalImages(
+          Array.isArray(data.images)
+            ? data.images.map((url) => ({ file: null, url }))
+            : []
+        );
+
+        setState("idle");
+      })
+      .catch((err) => {
+        console.error("Failed to load product", err);
+        setErrorMsg("Failed to load product");
+        setState("error");
+      });
+  }, [originalSlug]);
+
+  // ---------- Form handlers ----------
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((f) => {
@@ -107,7 +167,8 @@ export default function AddProduct() {
       }
 
       if (!slugTouched && (name === "titleEl" || name === "titleEn")) {
-        const base = name === "titleEl" ? value || f.titleEn : value || f.titleEl;
+        const base =
+          name === "titleEl" ? value || f.titleEn : value || f.titleEl;
         if (base) {
           next.slug = makeSlug(base);
         }
@@ -118,7 +179,9 @@ export default function AddProduct() {
   }
 
   function setDefaultVariant(idx) {
-    setVariants((prev) => prev.map((v, i) => ({ ...v, isDefault: i === idx })));
+    setVariants((prev) =>
+      prev.map((v, i) => ({ ...v, isDefault: i === idx }))
+    );
   }
 
   function addVariant() {
@@ -144,7 +207,7 @@ export default function AddProduct() {
     setLocalImages(previews);
   }
 
-  // ⭐ NEW: handle adding a brand from the popup
+  // brand modal
   function handleOpenBrandModal() {
     setNewBrandName("");
     setShowBrandModal(true);
@@ -159,12 +222,13 @@ export default function AddProduct() {
       return [...prev, trimmed].sort((a, b) => a.localeCompare(b));
     });
 
-    // set form brand to this new brand
     setForm((f) => ({ ...f, brand: trimmed }));
     setShowBrandModal(false);
   }
 
-  async function saveProduct({ duplicate = false } = {}) {
+  // ---------- Submit (PUT) ----------
+  async function handleSubmit(e) {
+    e.preventDefault();
     setState("saving");
     setErrorMsg("");
 
@@ -194,9 +258,13 @@ export default function AddProduct() {
           sku: form.sku || null,
           ean: form.ean || null,
           price: form.price ? Number(form.price) : null,
-          discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
+          discountPrice: form.discountPrice
+            ? Number(form.discountPrice)
+            : null,
           stock: form.stock ? Number(form.stock) : null,
-          reorderLevel: form.reorderLevel ? Number(form.reorderLevel) : null,
+          reorderLevel: form.reorderLevel
+            ? Number(form.reorderLevel)
+            : null,
           allowBackorder: false,
           images: images.length > 0 ? [images[0]] : [],
           isDefault: true,
@@ -210,7 +278,9 @@ export default function AddProduct() {
       brand: form.brand || null,
       category: form.category || null,
       price: form.price ? Number(form.price) : null,
-      discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
+      discountPrice: form.discountPrice
+        ? Number(form.discountPrice)
+        : null,
       sku: form.sku || null,
       ean: form.ean || null,
       title: {
@@ -230,54 +300,50 @@ export default function AddProduct() {
       status: form.status || null,
       variants: variantsPayload,
     };
-    const slugForNavigation = form.slug;
 
     try {
-      const res = await fetch(`${API}/api/products`, {
-        method: "POST",
+      const res = await fetch(`${API}/api/products/${originalSlug}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Failed to save product");
-      }
-
-      if (duplicate) {
-        setState("idle");
-        setSlugTouched(true);
-        setForm((prev) => ({
-          ...prev,
-          slug: makeDuplicateSlug(prev.slug),
-        }));
-        return;
+        throw new Error(text || "Failed to update product");
       }
 
       setState("success");
-      navigate(`/product/${slugForNavigation}`);
+      navigate(`/product/${form.slug}`);
     } catch (err) {
       setState("error");
-      setErrorMsg(err.message || "Error saving product");
+      setErrorMsg(err.message || "Error updating product");
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    await saveProduct();
+  if (state === "loading") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        Φόρτωση προϊόντος…
+      </div>
+    );
   }
 
-  async function handleDuplicateSave() {
-    await saveProduct({ duplicate: true });
-  }
-
-  function handleCancel() {
-    navigate(-1);
+  if (state === "error") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+          {errorMsg || "Δεν ήταν δυνατή η φόρτωση του προϊόντος."}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-semibold mb-4 text-amber-700 border rounded-xl border-amber-700 border-b-2 bg-amber-50 p-2">Add product</h1>
+      <h1 className="text-2xl font-semibold mb-4">
+        Edit product: {originalSlug}
+      </h1>
 
       {state === "error" && (
         <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
@@ -333,8 +399,8 @@ export default function AddProduct() {
               onClick={() => {
                 const base = form.titleEl || form.titleEn || "";
                 if (!base) return;
-                const slug = makeSlug(base);
-                setForm((f) => ({ ...f, slug }));
+                const newSlug = makeSlug(base);
+                setForm((f) => ({ ...f, slug: newSlug }));
                 setSlugTouched(true);
               }}
               className="px-3 py-2 text-xs rounded-lg border bg-slate-50"
@@ -367,7 +433,6 @@ export default function AddProduct() {
               type="button"
               onClick={handleOpenBrandModal}
               className="px-1.5 py-2 text-sm border rounded-lg bg-slate-50"
-              title="Προσθήκη νέου brand"
             >
               +
             </button>
@@ -537,283 +602,266 @@ export default function AddProduct() {
             className="w-full border rounded-lg px-3 py-2 text-sm"
           />
         </div>
-        {/* Variants / Colors */}
+
+        {/* Variants */}
         <div className="border rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Χρώματα & Διαθεσιμότητα</h2>
             <button
-            type="button"
-            onClick={addVariant}
-            className="px-3 py-1 rounded-full text-xs bg-amber-700 text-white"
+              type="button"
+              onClick={addVariant}
+              className="px-3 py-1 rounded-full text-xs bg-teal-600 text-white"
             >
-            + Προσθήκη χρώματος
+              + Προσθήκη χρώματος
             </button>
-        </div>
+          </div>
 
-    {variants.length === 0 && (
-        <p className="text-xs text-slate-500">
-        Δεν έχουν προστεθεί χρώματα. Μπορείς να χρησιμοποιήσεις μόνο τα γενικά
-        στοιχεία SKU/τιμής ή να προσθέσεις χρώματα εδώ.
-        </p>
-    )}
+          {variants.length === 0 && (
+            <p className="text-xs text-slate-500">
+              Δεν έχουν προστεθεί χρώματα. Μπορείς να χρησιμοποιήσεις μόνο τα γενικά στοιχεία
+              SKU/τιμής ή να προσθέσεις χρώματα εδώ.
+            </p>
+          )}
 
-    <div className="space-y-4">
-        {variants.map((v, idx) => (
-        <div
-            key={idx}
-            className="border rounded-lg p-3 space-y-3 bg-slate-50"
-        >
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
+          <div className="space-y-4">
+            {variants.map((v, idx) => (
+              <div
+                key={idx}
+                className="border rounded-lg p-3 space-y-3 bg-slate-50"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
                     Χρώμα #{idx + 1}
-                </span>
-                <div className="flex items-center gap-3">
+                  </span>
+                  <div className="flex items-center gap-3">
                     <label className="flex items-center gap-1 text-xs text-slate-700">
-                    <input
+                      <input
                         type="radio"
                         name="defaultColor"
                         checked={v.isDefault}
                         onChange={() => setDefaultVariant(idx)}
-                    />
-                    Προεπιλεγμένο χρώμα
+                      />
+                      Προεπιλεγμένο χρώμα
                     </label>
                     <button
-                    type="button"
-                    onClick={() => removeVariant(idx)}
-                    className="text-xs text-red-600 hover:underline"
+                      type="button"
+                      onClick={() => removeVariant(idx)}
+                      className="text-xs text-red-600 hover:underline"
                     >
-                    Αφαίρεση
+                      Αφαίρεση
                     </button>
+                  </div>
                 </div>
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-3">
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                Χρώμα (π.χ. Havana / Brown)
-                </label>
-                <input
-                type="text"
-                value={v.color}
-                onChange={(e) =>
-                    updateVariant(idx, "color", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                SKU
-                </label>
-                <input
-                type="text"
-                value={v.sku}
-                onChange={(e) =>
-                    updateVariant(idx, "sku", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                EAN
-                </label>
-                <input
-                type="text"
-                value={v.ean}
-                onChange={(e) =>
-                    updateVariant(idx, "ean", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-3">
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                Τιμή (€)
-                </label>
-                <input
-                type="number"
-                step="0.01"
-                value={v.price}
-                onChange={(e) =>
-                    updateVariant(idx, "price", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                Τιμή προσφοράς (€)
-                </label>
-                <input
-                type="number"
-                step="0.01"
-                value={v.discountPrice}
-                onChange={(e) =>
-                    updateVariant(idx, "discountPrice", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-                <div>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
                     <label className="block text-xs font-medium mb-1">
-                    Κατάσταση
+                      Χρώμα (π.χ. Havana / Brown)
+                    </label>
+                    <input
+                      type="text"
+                      value={v.color}
+                      onChange={(e) =>
+                        updateVariant(idx, "color", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      SKU
+                    </label>
+                    <input
+                      type="text"
+                      value={v.sku}
+                      onChange={(e) =>
+                        updateVariant(idx, "sku", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      EAN
+                    </label>
+                    <input
+                      type="text"
+                      value={v.ean}
+                      onChange={(e) =>
+                        updateVariant(idx, "ean", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      Τιμή (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={v.price}
+                      onChange={(e) =>
+                        updateVariant(idx, "price", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      Τιμή προσφοράς (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={v.discountPrice}
+                      onChange={(e) =>
+                        updateVariant(idx, "discountPrice", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      Κατάσταση
                     </label>
                     <select
-                    value={v.status}
-                    onChange={(e) =>
+                      value={v.status}
+                      onChange={(e) =>
                         updateVariant(idx, "status", e.target.value)
-                        }
-                        className="w-full border rounded-lg px-3 py-2 text-xs"
-                        >
-                        <option value="in_stock">Διαθέσιμο</option>
-                        <option value="preorder">Κατόπιν παραγγελίας</option>
-                        <option value="unavailable">Μη διαθέσιμο</option>
-                        </select>
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    >
+                      <option value="in_stock">Διαθέσιμο</option>
+                      <option value="preorder">Κατόπιν παραγγελίας</option>
+                      <option value="unavailable">Μη διαθέσιμο</option>
+                    </select>
+                  </div>
                 </div>
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-3">
-            <div>
-                <label className="block text-xs font-medium mb-1">
-                Σημείο επαναπαραγγελίας
-                </label>
-                <input
-                type="number"
-                value={v.reorderLevel}
-                onChange={(e) =>
-                    updateVariant(idx, "reorderLevel", e.target.value)
-                }
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-                />
-            </div>
-            <div className="flex items-center gap-2 mt-5">
-                <input
-                id={`allowBackorder-${idx}`}
-                type="checkbox"
-                checked={v.allowBackorder}
-                onChange={(e) =>
-                    updateVariant(idx, "allowBackorder", e.target.checked)
-                }
-                />
-                <label
-                htmlFor={`allowBackorder-${idx}`}
-                className="text-xs text-slate-700"
-                >
-                Επιτρέπεται παραγγελία χωρίς απόθεμα
-                </label>
-            </div>
-            </div>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">
+                      Σημείο επαναπαραγγελίας
+                    </label>
+                    <input
+                      type="number"
+                      value={v.reorderLevel}
+                      onChange={(e) =>
+                        updateVariant(idx, "reorderLevel", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <input
+                      id={`allowBackorder-${idx}`}
+                      type="checkbox"
+                      checked={v.allowBackorder}
+                      onChange={(e) =>
+                        updateVariant(idx, "allowBackorder", e.target.checked)
+                      }
+                    />
+                    <label
+                      htmlFor={`allowBackorder-${idx}`}
+                      className="text-xs text-slate-700"
+                    >
+                      Επιτρέπεται παραγγελία χωρίς απόθεμα
+                    </label>
+                  </div>
+                </div>
 
-            <div>
-            <label className="block text-xs font-medium mb-1">
-                Εικόνα για αυτό το χρώμα (URL)
-            </label>
-            <input
-                type="text"
-                value={v.imageUrl}
-                onChange={(e) =>
-                updateVariant(idx, "imageUrl", e.target.value)
-                }
-                placeholder="https://..."
-                className="w-full border rounded-lg px-3 py-2 text-xs"
-            />
-            </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Εικόνα για αυτό το χρώμα (URL)
+                  </label>
+                  <input
+                    type="text"
+                    value={v.imageUrl}
+                    onChange={(e) =>
+                      updateVariant(idx, "imageUrl", e.target.value)
+                    }
+                    placeholder="https://..."
+                    className="w-full border rounded-lg px-3 py-2 text-xs"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        ))}
-    </div>
-    </div>
+
         {/* Images */}
         <div className="space-y-3">
-            <div>
-                <label className="block text-sm font-medium mb-1">
-                Image URLs (μία ανά γραμμή)
-                </label>
-                <textarea
-                name="imagesText"
-                value={form.imagesText}
-                onChange={handleChange}
-                rows={3}
-                placeholder="https://...\nhttps://..."
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Εικόνες από τον υπολογιστή
-              </label>
-
-              {/* hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              {/* nice explicit button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                className="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-sm hover:bg-slate-100"
-              >
-                Προσθήκη εικόνων…
-              </button>
-
-              {localImages.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {localImages.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="w-16 h-16 rounded-md overflow-hidden border border-slate-300"
-                    >
-                      <img
-                        src={img.url}
-                        alt={`Τοπική εικόνα ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Image URLs (μία ανά γραμμή)
+            </label>
+            <textarea
+              name="imagesText"
+              value={form.imagesText}
+              onChange={handleChange}
+              rows={3}
+              placeholder="https://...\nhttps://..."
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
           </div>
 
-        <div className="flex flex-wrap gap-3">
-          
-          <button
-            type="submit"
-            disabled={state === "saving"}
-            className="px-4 py-2 rounded-xl bg-amber-700 text-white text-sm disabled:opacity-60"
-          >
-            {state === "saving" ? "Saving…" : "Save product"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDuplicateSave}
-            disabled={state === "saving"}
-            className="px-4 py-2 rounded-xl bg-amber-100 border border-amber-700 text-amber-700 text-sm disabled:opacity-60"
-          >
-            {state === "saving" ? "Saving…" : "Save & Duplicate"}
-          </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={state === "saving"}
-            className="px-4 py-2 rounded-xl border border-amber-700 text-amber-700 text-sm disabled:opacity-60"
-          >
-            Cancel
-          </button>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Εικόνες από τον υπολογιστή
+            </label>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                fileInputRef.current && fileInputRef.current.click()
+              }
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-sm hover:bg-slate-100"
+            >
+              Προσθήκη εικόνων…
+            </button>
+
+            {localImages.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {localImages.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="w-16 h-16 rounded-md overflow-hidden border border-slate-300"
+                  >
+                    <img
+                      src={img.url}
+                      alt={`Τοπική εικόνα ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        <button
+          type="submit"
+          disabled={state === "saving"}
+          className="px-4 py-2 rounded-xl bg-teal-600 text-white text-sm disabled:opacity-60"
+        >
+          {state === "saving" ? "Saving…" : "Save changes"}
+        </button>
       </form>
 
-      {/* ⭐ NEW: Add Brand Modal */}
+      {/* Add Brand Modal */}
       {showBrandModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg space-y-3">
@@ -847,11 +895,3 @@ export default function AddProduct() {
     </div>
   );
 }
-
-        {/* Variants */}
-        {/* ... keep your variants block as is ... */}
-
-        {/* Images */}
-        {/* ... keep your images block as is ... */}
-
-        

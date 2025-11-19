@@ -166,6 +166,87 @@ async def create_product(prod: Product, db: Session = Depends(get_db)):
     db.refresh(db_product)
     return _to_product_schema(db_product)
 
+@router.put("/{slug}")
+async def update_product(slug: str, prod: Product, db: Session = Depends(get_db)):
+    """
+    Update an existing product by slug.
+    """
+    existing = db.execute(
+        select(ProductModel).where(ProductModel.slug == slug)
+    ).scalar_one_or_none()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # --- rebuild attributes, preserving unknown keys ---
+    base_attrs = existing.attributes or {}
+    reserved_keys = {
+        "variants",
+        "brand_label",
+        "category_label",
+        "category",
+        "audience",
+        "reorderLevel",
+        "catalog_status",
+    }
+    clean_base = {k: v for k, v in base_attrs.items() if k not in reserved_keys}
+
+    attrs = dict(clean_base)
+    attrs.update(prod.attributes or {})
+
+    # controlled fields
+    attrs["variants"] = _variant_dump(prod.variants)
+    if prod.brand:
+        attrs["brand_label"] = prod.brand
+    if prod.category:
+        attrs["category_label"] = prod.category
+        attrs["category"] = prod.category
+    if prod.audience:
+        attrs["audience"] = prod.audience
+    if prod.reorderLevel is not None:
+        attrs["reorderLevel"] = prod.reorderLevel
+    if prod.status:
+        attrs["catalog_status"] = prod.status
+
+    price = _ensure_price(prod.price if prod.price is not None else prod.discountPrice)
+    compare_at = (
+        _ensure_price(prod.discountPrice)
+        if prod.discountPrice is not None
+        else None
+    )
+
+    # --- update main columns ---
+    if prod.sku:
+        existing.sku = prod.sku
+    existing.ean = prod.ean
+    if prod.slug:
+        existing.slug = prod.slug
+
+    existing.title_el = prod.title.el or prod.title.en or existing.title_el
+    existing.title_en = prod.title.en or prod.title.el or existing.title_en
+    existing.description = prod.description
+    existing.images = prod.images
+    existing.price = price
+    existing.compare_at_price = compare_at
+    existing.attributes = attrs
+
+    # recompute stock
+    stock = prod.stock
+    if stock is None and prod.variants:
+        stock = sum(filter(None, (v.stock for v in prod.variants)))
+    if stock is None:
+        stock = existing.stock or 0
+    existing.stock = stock
+
+    catalog_status = (prod.status or "").lower()
+    db_status = "published" if catalog_status not in {"draft", "published"} else catalog_status
+    existing.status = db_status
+
+    db.add(existing)
+    db.commit()
+    db.refresh(existing)
+
+    return _to_product_schema(existing)
 
 @router.get("/{slug}")
 async def get_product(slug: str, db: Session = Depends(get_db)):
