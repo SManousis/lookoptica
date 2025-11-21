@@ -1,7 +1,8 @@
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = import.meta.env.VITE_API_BASE || "";
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -12,6 +13,39 @@ export default function Contact() {
   });
   const [status, setStatus] = useState(null); // "success" | "error" | null
   const [isSending, setIsSending] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const widgetIdRef = useRef(null);
+
+  // Load Turnstile script & render widget
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+
+    function renderWidget() {
+      if (!window.turnstile || widgetIdRef.current) return;
+      widgetIdRef.current = window.turnstile.render("#turnstile-container", {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setTurnstileToken(token),
+        "error-callback": () => setTurnstileToken(""),
+        "expired-callback": () => setTurnstileToken(""),
+      });
+    }
+
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+    script.onload = renderWidget;
+    document.body.appendChild(script);
+
+    return () => {
+      script.onload = null;
+    };
+  }, [TURNSTILE_SITE_KEY]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -22,6 +56,12 @@ export default function Contact() {
     e.preventDefault();
     setIsSending(true);
     setStatus(null);
+
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setStatus("turnstile");
+      setIsSending(false);
+      return;
+    }
 
     try {
       const res = await fetch(`${API}/api/contact`, {
@@ -34,6 +74,7 @@ export default function Contact() {
           email: form.email,
           subject: form.subject,
           message: form.message,
+          turnstileToken: turnstileToken || "",
         }),
       });
 
@@ -41,6 +82,10 @@ export default function Contact() {
 
       setStatus("success");
       setForm({ name: "", email: "", subject: "", message: "" });
+      if (window.turnstile && widgetIdRef.current) {
+        window.turnstile.reset(widgetIdRef.current);
+      }
+      setTurnstileToken("");
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -190,11 +235,22 @@ export default function Contact() {
               τηλεφωνικά.
             </div>
           )}
+          {status === "turnstile" && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              Παρακαλούμε ολοκληρώστε την επαλήθευση Turnstile πριν στείλετε τη φόρμα.
+            </div>
+          )}
+
+          {TURNSTILE_SITE_KEY && (
+            <div className="flex justify-center">
+              <div id="turnstile-container" className="my-2" />
+            </div>
+          )}
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSending}
+            disabled={isSending || (TURNSTILE_SITE_KEY && !turnstileToken)}
             className="w-full md:w-auto px-8 py-3 rounded-xl 
                        bg-amber-700 hover:bg-red-700 
                        text-white font-semibold shadow-lg 

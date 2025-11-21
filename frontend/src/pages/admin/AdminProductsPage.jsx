@@ -1,7 +1,7 @@
 // src/pages/admin/AdminProductsPage.jsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../../context/AdminAuthContext";
+import { useAdminAuth } from "../../context/useAdminAuth";
 import { adminApiFetch } from "../../utils/adminApiFetch";
 
 const API = import.meta.env.VITE_API_BASE || "";
@@ -13,8 +13,8 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminProductsPage() {
-  const { admin } = useAdminAuth();
   const navigate = useNavigate();
+  const { csrfToken } = useAdminAuth();
 
   const [items, setItems] = useState([]);
   const [state, setState] = useState("loading"); // loading | ok | error
@@ -103,7 +103,7 @@ export default function AdminProductsPage() {
           method: "POST",
           body: JSON.stringify(payload),
         },
-        admin
+        csrfToken
       );
 
       if (!res.ok) {
@@ -139,7 +139,7 @@ export default function AdminProductsPage() {
         {
           method: "POST",
         },
-        admin
+        csrfToken
       );
 
       if (!res.ok) {

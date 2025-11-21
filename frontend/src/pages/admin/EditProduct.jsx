@@ -76,7 +76,7 @@ export default function EditProduct() {
   const [slugTouched, setSlugTouched] = useState(true); // editing: do not auto-change slug
   const [state, setState] = useState("loading"); // loading | idle | saving | error | success
   const [errorMsg, setErrorMsg] = useState("");
-
+  
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
 
@@ -135,9 +135,9 @@ export default function EditProduct() {
           }))
         );
 
-        if (data.brand) {
-          setBrandOptions([data.brand]);
-        }
+        // if (data.brand) {
+        //   setBrandOptions([data.brand]);
+        // }
 
         // local preview from URLs only – not original files
         setLocalImages(
@@ -320,6 +320,32 @@ export default function EditProduct() {
       setErrorMsg(err.message || "Error updating product");
     }
   }
+
+  useEffect(() => {
+    async function loadBrands() {
+      try {
+        const res = await fetch(`${API}/api/products`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+
+        const unique = Array.from(
+          new Set(
+            list
+              .map((p) => p.brand)
+              .filter((b) => typeof b === "string" && b.trim().length > 0)
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setBrandOptions(unique);
+      } catch (err) {
+        console.error("Failed to load brands", err);
+      }
+    }
+
+    loadBrands();
+  }, []);
+
 
   if (state === "loading") {
     return (

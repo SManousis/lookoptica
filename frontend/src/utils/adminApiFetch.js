@@ -1,13 +1,20 @@
-export function adminApiFetch(url, options = {}, admin) {
+export function adminApiFetch(url, options = {}, csrfToken) {
   const headers = {
-    ...(options.headers || {}),
     "Content-Type": "application/json",
+    ...(options.headers || {}),
   };
 
-  // Phase 1: send admin email in header
-  if (admin?.email) {
-    headers["X-Admin-Email"] = admin.email;
+  const method = (options.method || "GET").toUpperCase();
+  if (
+    csrfToken &&
+    (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE")
+  ) {
+    headers["X-CSRF-Token"] = csrfToken;
   }
 
-  return fetch(url, { ...options, headers });
+  return fetch(url, {
+    credentials: "include",
+    ...options,
+    headers,
+  });
 }

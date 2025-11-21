@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../../context/AdminAuthContext";
+import { useAdminAuth } from "../../context/useAdminAuth";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -9,6 +9,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [state, setState] = useState("idle"); // idle | loading | error
   const [errorMsg, setErrorMsg] = useState("");
+  const [otp, setOtp] = useState("");
 
   const { login } = useAdminAuth();
   const navigate = useNavigate();
@@ -22,7 +23,8 @@ export default function AdminLogin() {
       const res = await fetch(`${API}/api/admin/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "include",
+        body: JSON.stringify({ email, password, otp: otp || undefined }),
       });
 
       if (!res.ok) {
@@ -31,7 +33,7 @@ export default function AdminLogin() {
       }
 
       const data = await res.json();
-      login(data);             // save admin to context & localStorage
+      login(data.user, data.csrf_token);             // sync context with logged-in user & CSRF token
       navigate("/admin");      // redirect to admin dashboard
     } catch (err) {
       setState("error");
@@ -72,6 +74,22 @@ export default function AdminLogin() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm"
               required
+            />
+          </div>
+
+          {/* OTP */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              OTP (αν απαιτείται)
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="\d*"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+              placeholder="6-digit code"
             />
           </div>
 

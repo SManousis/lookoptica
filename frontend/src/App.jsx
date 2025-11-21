@@ -12,6 +12,7 @@ import Contact from "./pages/Contact";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import ScrollToTop from "./components/ScrollToTop";
+import AddContactLens from "./pages/admin/AddContactLens";
 import LookAtHome from "./pages/LookAtHome";
 import LowVision from "./pages/LowVision";
 import AboutUs from "./pages/AboutUs";
@@ -21,6 +22,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import EditProduct from "./pages/admin/EditProduct";
+import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
+import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -164,6 +167,9 @@ export default function App() {
               {/* Admin auth route (public) */}
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/products/:slug/edit" element={<ProtectAdminRoute><EditProduct /></ProtectAdminRoute>}/>
+              <Route path="/admin/contact-lenses" element={<ProtectAdminRoute><AdminContactLensesPage /></ProtectAdminRoute>}/>
+              <Route path="/admin/contact-lenses/add" element={<ProtectAdminRoute><AddContactLens /></ProtectAdminRoute>}/>
+              <Route path="/admin/contact-lenses/:sku/variants" element={<ProtectAdminRoute><AdminContactLensVariantsPage /></ProtectAdminRoute>}/>
               {/* Admin dashboard (protected) */}
               <Route path="/admin" element={<ProtectAdminRoute><AdminDashboard /></ProtectAdminRoute>}/>
 

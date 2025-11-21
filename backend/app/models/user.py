@@ -2,6 +2,7 @@
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.db import Base  # assuming you already have this
 
@@ -15,6 +16,10 @@ class User(Base):
     full_name = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
+    # 🔐 NEW for 2FA
+    totp_secret = Column(String(32), nullable=True)
+    is_totp_enabled = Column(Boolean, nullable=False, default=False)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
@@ -24,7 +29,11 @@ class User(Base):
     )
 
     roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
-
+    admin_sessions = relationship(
+        "AdminSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 class Role(Base):
     __tablename__ = "roles"

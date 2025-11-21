@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE || "";
@@ -90,6 +90,7 @@ export default function AddProduct() {
   const [localImages, setLocalImages] = useState([]);
   const [slugTouched, setSlugTouched] = useState(false);
   const fileInputRef = useRef(null);
+  
 
   // ⭐ NEW: brand options + modal state
   const [brandOptions, setBrandOptions] = useState([]);
@@ -274,6 +275,32 @@ export default function AddProduct() {
   function handleCancel() {
     navigate(-1);
   }
+
+  useEffect(() => {
+    async function loadBrands() {
+      try {
+        const res = await fetch(`${API}/api/products`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+
+        const unique = Array.from(
+          new Set(
+            list
+              .map((p) => p.brand)
+              .filter((b) => typeof b === "string" && b.trim().length > 0)
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setBrandOptions(unique);
+      } catch (err) {
+        console.error("Failed to load brands from products", err);
+      }
+    }
+
+    loadBrands();
+  }, []);
+
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

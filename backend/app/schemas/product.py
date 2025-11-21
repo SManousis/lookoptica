@@ -22,7 +22,11 @@ class ProductUpsert(BaseModel):
     price: float
     compare_at_price: Optional[float] = None
     stock: int
-    status: str = Field(pattern=r"^(draft|published|archived)$")
+    status: str = Field(
+        default="draft",
+        pattern=r"^[a-z_]+$",
+        description="draft/published/archived plus storefront availability states like in_stock, preorder, unavailable",
+    )
     attributes: Dict[str, Any] = Field(default_factory=dict)
     seo: Optional[Dict[str, Any]] = None
     version: int = 1
