@@ -7,12 +7,14 @@ import AddProduct from "./pages/AddProduct";
 import CategoryPLP from "./pages/PLP"; // 👈 NEW
 import "./index.css";
 import HomePage from "./pages/HomePage";
+import CartPage from "./pages/CartPage";
 import UsageTerms from "./pages/UsageTerms";
 import Contact from "./pages/Contact";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import ScrollToTop from "./components/ScrollToTop";
 import AddContactLens from "./pages/admin/AddContactLens";
+import EditContactLens from "./pages/admin/EditContactLens";
 import LookAtHome from "./pages/LookAtHome";
 import LowVision from "./pages/LowVision";
 import AboutUs from "./pages/AboutUs";
@@ -20,10 +22,13 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import ProtectAdminRoute from "./components/ProtectAdminRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
+import { useCart } from "./context/CartContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ContactLensPDP from "./pages/ContactLensPDP";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -66,6 +71,7 @@ function ShopPLP() {
 
 export default function App() {
   const [openCategory, setOpenCategory] = useState(null);
+  const { totals } = useCart();
 
   return (
     <BrowserRouter>
@@ -133,6 +139,10 @@ export default function App() {
                 <Link to="/about-us" className="hover:text-red-800">
                   Σχετικά με εμάς
                 </Link>
+                <Link to="/cart" className="font-semibold text-amber-700 hover:text-red-800">
+                  <ShoppingCartIcon className="inline-block" />
+                  Cart ({totals.itemCount})
+                </Link>
                 {/* Optional: tiny admin entry, can hide later
                 <Link to="/admin" className="hover:text-red-800">
                   Admin
@@ -141,8 +151,8 @@ export default function App() {
               </nav>
 
               <div className="flex gap-2 text-2xl text-slate-500">
-                <FacebookIcon className="text-blue-700" />
-                <InstagramIcon className="text-pink-500" />
+                <Link to="https://www.facebook.com/lookoptikahalandri" target="_blank"><FacebookIcon className="text-blue-700" /></Link>
+                <Link to="https://www.instagram.com/lookopticahalandri" target="_blank"><InstagramIcon className="text-red-700" /></Link>
               </div>
             </div>
           </header>
@@ -157,9 +167,11 @@ export default function App() {
                 path="/shop/:categorySlug/:audienceSlug"
                 element={<CategoryPLP />}
               />
+              <Route path="/contact-lens/:slug" element={<ContactLensPDP />} />
               <Route path="/product/:slug" element={<PDP />} />
               <Route path="/terms" element={<UsageTerms />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/cart" element={<CartPage />} />
               <Route path="/look-at-home" element={<LookAtHome />} />
               <Route path="/low-vision" element={<LowVision />} />
               <Route path="/about-us" element={<AboutUs />} />
@@ -169,6 +181,7 @@ export default function App() {
               <Route path="/admin/products/:slug/edit" element={<ProtectAdminRoute><EditProduct /></ProtectAdminRoute>}/>
               <Route path="/admin/contact-lenses" element={<ProtectAdminRoute><AdminContactLensesPage /></ProtectAdminRoute>}/>
               <Route path="/admin/contact-lenses/add" element={<ProtectAdminRoute><AddContactLens /></ProtectAdminRoute>}/>
+              <Route path="/admin/contact-lenses/:sku/edit" element={<ProtectAdminRoute><EditContactLens /></ProtectAdminRoute>}/>
               <Route path="/admin/contact-lenses/:sku/variants" element={<ProtectAdminRoute><AdminContactLensVariantsPage /></ProtectAdminRoute>}/>
               {/* Admin dashboard (protected) */}
               <Route path="/admin" element={<ProtectAdminRoute><AdminDashboard /></ProtectAdminRoute>}/>

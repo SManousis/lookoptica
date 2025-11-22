@@ -602,14 +602,14 @@ export default function AddProduct() {
                         checked={v.isDefault}
                         onChange={() => setDefaultVariant(idx)}
                     />
-                    Προεπιλεγμένο χρώμα
+                    ???????????????????????? ?????????
                     </label>
                     <button
                     type="button"
                     onClick={() => removeVariant(idx)}
                     className="text-xs text-red-600 hover:underline"
                     >
-                    Αφαίρεση
+                    ???????????????
                     </button>
                 </div>
             </div>

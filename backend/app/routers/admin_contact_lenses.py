@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 from enum import Enum
 from typing import List, Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
@@ -93,6 +93,33 @@ class ContactLensVariantUpdate(BaseModel):
 class ContactLensVariantsUpdatePayload(BaseModel):
     variants: List[ContactLensVariantUpdate]
 
+
+class ContactLensVariantCreate(BaseModel):
+    sphere: float
+    cylinder: Optional[float] = None
+    axis: Optional[int] = None
+    addition: Optional[float] = None
+    addition_label: Optional[str] = None
+    ean: Optional[str] = None
+    availability: str = Field(
+        default="preorder",
+        pattern=r"^(in_stock|preorder|unavailable)$",
+        description="Availability per variant",
+    )
+    quantity: int = Field(
+        default=0,
+        ge=0,
+        description="Stock quantity for this specific variant",
+    )
+
+
+class ContactLensVariantKey(BaseModel):
+    sphere: Optional[float] = None
+    cylinder: Optional[float] = None
+    axis: Optional[int] = None
+    addition: Optional[float] = None
+    addition_label: Optional[str] = None
+
 # ---------- Payload ----------
 
 class ContactLensPayload(BaseModel):
@@ -178,6 +205,13 @@ class ContactLensPayload(BaseModel):
                 raise ValueError("cyl_min/cyl_max must be empty for multifocal lenses")
 
         return self
+
+
+class ContactLensUpdatePayload(ContactLensPayload):
+    regenerate_variants: bool = Field(
+        default=False,
+        description="If true, regenerate all variants from the provided ranges (overwrites stock/EAN data).",
+    )
 
 
 # ---------- Variant generation ----------
@@ -364,7 +398,8 @@ def create_contact_lens(
     product.slug = payload.slug or product.slug
     product.title_el = payload.title or product.title_el
     product.title_en = payload.title or product.title_en
-    product.ean = payload.ean
+    if payload.ean is not None:
+        product.ean = payload.ean
     product.price = _decimal(payload.price)
     product.compare_at_price = None
     product.description = payload.description
@@ -454,15 +489,179 @@ def list_contact_lenses(
     return [serialize_contact_lens(p) for p in products]
 
 
+@router.get("/{sku}")
+def get_contact_lens(
+    sku: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
+    """
+    Return the base contact lens product with attributes (without expanding all variants).
+    """
+    product = (
+        db.query(ProductModel)
+        .filter(ProductModel.sku == sku)
+        .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
+        .first()
+    )
+    if not product:
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Contact lens not found")
+    return serialize_contact_lens(product)
+
+
+@router.put("/{sku}")
+def update_contact_lens(
+    sku: str,
+    payload: ContactLensUpdatePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
+    """
+    Update base contact lens information. Optionally regenerate all variants from the provided ranges.
+    """
+    product = (
+        db.query(ProductModel)
+        .filter(ProductModel.sku == sku)
+        .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
+        .first()
+    )
+    if not product:
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Contact lens not found")
+
+    if payload.sku != sku:
+        raise HTTPException(
+            status_code=400, detail="Payload SKU does not match contact lens."
+        )
+
+    product.slug = payload.slug or product.slug
+    product.title_el = payload.title or product.title_el
+    product.title_en = payload.title or product.title_en
+    product.ean = payload.ean
+    product.price = _decimal(payload.price)
+    product.compare_at_price = None
+    product.description = payload.description
+
+    attrs: Dict[str, Any] = dict(product.attributes or {})
+    if attrs.get("product_type") != "contact_lens":
+        attrs["product_type"] = "contact_lens"
+
+    existing_lens_type = attrs.get("lens_type")
+    if (
+        existing_lens_type
+        and existing_lens_type != payload.lens_type.value
+        and not payload.regenerate_variants
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Changing lens type requires variant regeneration.",
+        )
+
+    attrs["product_type"] = "contact_lens"
+    attrs["brand_label"] = payload.brand
+    attrs["lens_family"] = payload.family.value
+    attrs["duration"] = payload.duration.value
+    attrs["lens_type"] = payload.lens_type.value
+    attrs["bc"] = payload.bc
+    attrs["diameter"] = payload.diameter
+    attrs["sph_min"] = payload.sph_min
+    attrs["sph_max"] = payload.sph_max
+    attrs["cyl_min"] = payload.cyl_min
+    attrs["cyl_max"] = payload.cyl_max
+    attrs["addition_scheme"] = (
+        payload.addition_scheme.value if payload.addition_scheme else None
+    )
+
+    regenerated = False
+    if payload.regenerate_variants:
+        regenerated = True
+        if payload.lens_type == LensType.spherical:
+            variants = generate_spherical_variants(payload)
+        elif payload.lens_type == LensType.astigmatic:
+            variants = generate_astigmatic_variants(payload)
+        else:
+            variants = generate_multifocal_variants(payload)
+        attrs["variants"] = variants
+
+        if variants:
+            attrs["availability"] = "preorder"
+            product.status = "preorder"
+            product.visible = True
+        else:
+            attrs["availability"] = "unavailable"
+            product.status = "unavailable"
+            product.visible = False
+    else:
+        variants = attrs.get("variants", [])
+        attrs["variants"] = variants
+
+    product.attributes = attrs
+    product.images = [payload.image] if payload.image else []
+    product.version = (product.version or 0) + 1
+
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    log_admin_action(
+        db=db,
+        admin=current_admin,
+        action="contact_lens_update",
+        resource_type="product",
+        resource_id=product.id,
+        metadata={
+            "sku": product.sku,
+            "regenerated": regenerated,
+            "variants_total": len(attrs.get("variants", [])),
+        },
+        request=request,
+    )
+
+    return {
+        "ok": True,
+        "product": serialize_contact_lens(product),
+        "regenerated": regenerated,
+    }
+
+
+def _variant_signature(obj: Dict[str, Any]) -> tuple:
+    """Create a normalized signature (sphere, cyl, axis, add, add_label) for comparison."""
+
+    def _num(val):
+        try:
+            return f"{float(val):.2f}"
+        except Exception:
+            return None
+
+    def _axis(val):
+        try:
+            return int(val)
+        except Exception:
+            return None
+
+    label = obj.get("addition_label") if isinstance(obj, dict) else getattr(obj, "addition_label", None)
+    label = label.strip() if isinstance(label, str) else label
+    return (
+        _num(obj.get("sphere") if isinstance(obj, dict) else getattr(obj, "sphere", None)),
+        _num(obj.get("cylinder") if isinstance(obj, dict) else getattr(obj, "cylinder", None)),
+        _axis(obj.get("axis") if isinstance(obj, dict) else getattr(obj, "axis", None)),
+        _num(obj.get("addition") if isinstance(obj, dict) else getattr(obj, "addition", None)),
+        label or None,
+    )
+
+
 def _variant_match(v: Dict[str, Any], u: ContactLensVariantUpdate) -> bool:
     """Match a stored variant dict with an update payload by optical parameters."""
-    return (
-        v.get("sphere") == u.sphere
-        and v.get("cylinder") == u.cylinder
-        and v.get("axis") == u.axis
-        and v.get("addition") == u.addition
-        and (v.get("addition_label") or None) == (u.addition_label or None)
-    )
+    return _variant_signature(v) == _variant_signature(u.model_dump())
+
+
+def _variant_match_key(v: Dict[str, Any], k: ContactLensVariantKey) -> bool:
+    """Match a stored variant with a lightweight identifier payload."""
+    return _variant_signature(v) == _variant_signature(k.model_dump())
 @router.get("/{sku}/variants")
 def get_contact_lens_variants(
     sku: str,
@@ -479,6 +678,10 @@ def get_contact_lens_variants(
         .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
         .first()
     )
+    if not product:
+        # Fallback for legacy records that were created without product_type
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+
     if not product:
         raise HTTPException(status_code=404, detail="Contact lens not found")
 
@@ -510,6 +713,153 @@ def get_contact_lens_variants(
         "variants": variants_sorted,
     }
 
+
+@router.post("/{sku}/variants", status_code=201)
+def create_contact_lens_variant(
+    sku: str,
+    payload: ContactLensVariantCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
+    """
+    Append a single variant to a contact lens, validating required optical fields
+    based on the lens type.
+    """
+    product = (
+        db.query(ProductModel)
+        .filter(ProductModel.sku == sku)
+        .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
+        .first()
+    )
+    if not product:
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Contact lens not found")
+
+    attrs: Dict[str, Any] = dict(product.attributes or {})
+    if attrs.get("product_type") != "contact_lens":
+        attrs["product_type"] = "contact_lens"
+    variants: List[Dict[str, Any]] = attrs.get("variants", [])
+
+    lens_type = attrs.get("lens_type")
+    if not lens_type:
+        raise HTTPException(status_code=400, detail="Lens type unspecified for this product")
+
+    sphere = payload.sphere
+    cylinder = payload.cylinder
+    axis = payload.axis
+    addition = payload.addition
+    addition_label = (payload.addition_label or "").strip() or None
+
+    if lens_type == "spherical":
+        cylinder = None
+        axis = None
+        addition = None
+        addition_label = None
+    elif lens_type == "astigmatic":
+        if cylinder is None or axis is None:
+            raise HTTPException(status_code=400, detail="Cylinder and axis are required for astigmatic variants")
+        # Astigmatic variants use negative cylinders
+        try:
+            axis = int(axis)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Axis must be an integer between 0 and 180")
+        if axis < 0 or axis > 180:
+            raise HTTPException(status_code=400, detail="Axis must be in the 0-180 range")
+        if cylinder > 0:
+            cylinder = -cylinder
+        addition = None
+        addition_label = None
+    elif lens_type == "multifocal":
+        scheme = attrs.get("addition_scheme")
+        if not scheme:
+            raise HTTPException(status_code=400, detail="Addition scheme missing for multifocal lens")
+        if not addition_label:
+            raise HTTPException(status_code=400, detail="Addition label is required for multifocal variants")
+        if scheme == "DN_RANGE":
+            if addition is None:
+                raise HTTPException(status_code=400, detail="Addition numeric value is required for DN_RANGE variants")
+        else:
+            addition = None
+        cylinder = None
+        axis = None
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported lens type: {lens_type}")
+
+    candidate_signature = _variant_signature(
+        {
+            "sphere": sphere,
+            "cylinder": cylinder,
+            "axis": axis,
+            "addition": addition,
+            "addition_label": addition_label,
+        }
+    )
+    if any(_variant_signature(v) == candidate_signature for v in variants):
+        raise HTTPException(status_code=400, detail="Variant already exists for this lens")
+
+    new_variant = {
+        "sphere": sphere,
+        "cylinder": cylinder,
+        "axis": axis,
+        "addition": addition,
+        "addition_label": addition_label,
+        "ean": payload.ean,
+        "availability": payload.availability,
+        "quantity": int(payload.quantity) if payload.quantity is not None else 0,
+    }
+    variants.append(new_variant)
+    attrs["variants"] = variants
+
+    if any(v.get("availability") == "in_stock" and v.get("quantity", 0) > 0 for v in variants):
+        attrs["availability"] = "in_stock"
+        product.status = "in_stock"
+        product.visible = True
+    elif any(v.get("availability") == "preorder" for v in variants):
+        attrs["availability"] = "preorder"
+        product.status = "preorder"
+        product.visible = True
+    else:
+        attrs["availability"] = "unavailable"
+        product.status = "unavailable"
+        product.visible = False
+
+    product.attributes = attrs
+    product.version = (product.version or 0) + 1
+
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    log_admin_action(
+        db=db,
+        admin=current_admin,
+        action="contact_lens_variant_create",
+        resource_type="product",
+        resource_id=product.id,
+        metadata={
+            "sku": product.sku,
+            "variant": {
+                "sphere": sphere,
+                "cylinder": cylinder,
+                "axis": axis,
+                "addition": addition,
+                "addition_label": addition_label,
+            },
+            "variants_total": len(variants),
+        },
+        request=request,
+    )
+
+    return {
+        "ok": True,
+        "variant": new_variant,
+        "variants_total": len(variants),
+        "availability": attrs["availability"],
+    }
+
+
 @router.put("/{sku}/variants")
 def update_contact_lens_variants(
     sku: str,
@@ -529,9 +879,15 @@ def update_contact_lens_variants(
         .first()
     )
     if not product:
+        # Fallback for legacy records that were created without product_type
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+
+    if not product:
         raise HTTPException(status_code=404, detail="Contact lens not found")
 
-    attrs: Dict[str, Any] = product.attributes or {}
+    attrs: Dict[str, Any] = dict(product.attributes or {})
+    if attrs.get("product_type") != "contact_lens":
+        attrs["product_type"] = "contact_lens"
     variants: List[Dict[str, Any]] = attrs.get("variants", [])
 
     if not variants:
@@ -540,25 +896,30 @@ def update_contact_lens_variants(
             detail="No variants defined for this contact lens",
         )
 
-    updated_count = 0
-    # For quick lookup, just iterate (lists are fine unless we have huge ranges)
+    updated_variants: List[Dict[str, Any]] = []
     for upd in payload.variants:
-        for v in variants:
-            if _variant_match(v, upd):
-                v["availability"] = upd.availability
-                v["quantity"] = int(upd.quantity)
-                v["ean"] = upd.ean
-                updated_count += 1
-                break
+        updated_variants.append(
+            {
+                "sphere": upd.sphere,
+                "cylinder": upd.cylinder,
+                "axis": upd.axis,
+                "addition": upd.addition,
+                "addition_label": upd.addition_label,
+                "ean": upd.ean,
+                "availability": upd.availability,
+                "quantity": int(upd.quantity) if upd.quantity is not None else 0,
+            }
+        )
 
-    attrs["variants"] = variants
+    updated_count = len(updated_variants)
+    attrs["variants"] = updated_variants
 
     # Derive base availability from variants (simple rule)
-    if any(v.get("availability") == "in_stock" and v.get("quantity", 0) > 0 for v in variants):
+    if any(v.get("availability") == "in_stock" and v.get("quantity", 0) > 0 for v in updated_variants):
         attrs["availability"] = "in_stock"
         product.status = "in_stock"
         product.visible = True
-    elif any(v.get("availability") == "preorder" for v in variants):
+    elif any(v.get("availability") == "preorder" for v in updated_variants):
         attrs["availability"] = "preorder"
         product.status = "preorder"
         product.visible = True
@@ -594,4 +955,126 @@ def update_contact_lens_variants(
         "updated_count": updated_count,
         "availability": attrs["availability"],
         "variants_total": len(variants),
+    }
+
+
+@router.delete("/{sku}")
+def delete_contact_lens(
+    sku: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
+    """
+    Permanently delete a contact lens product (base + variants) by SKU.
+    """
+    product = (
+        db.query(ProductModel)
+        .filter(ProductModel.sku == sku)
+        .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
+        .first()
+    )
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Contact lens not found")
+
+    db.delete(product)
+    db.commit()
+
+    log_admin_action(
+        db=db,
+        admin=current_admin,
+        action="contact_lens_delete",
+        resource_type="product",
+        resource_id=product.id,
+        metadata={"sku": product.sku, "slug": product.slug},
+        request=request,
+    )
+
+    return {"ok": True, "sku": sku}
+
+
+@router.delete("/{sku}/variants")
+def delete_contact_lens_variant(
+    sku: str,
+    request: Request,
+    key: ContactLensVariantKey = Body(...),
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
+    """
+    Delete a single variant (by optical parameters) from a contact lens.
+    """
+    product = (
+        db.query(ProductModel)
+        .filter(ProductModel.sku == sku)
+        .filter(ProductModel.attributes["product_type"].astext == "contact_lens")
+        .first()
+    )
+    if not product:
+        product = db.query(ProductModel).filter(ProductModel.sku == sku).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Contact lens not found")
+
+    attrs: Dict[str, Any] = dict(product.attributes or {})
+    variants: List[Dict[str, Any]] = attrs.get("variants", [])
+
+    if not variants:
+        raise HTTPException(status_code=400, detail="No variants to delete")
+
+    remaining: List[Dict[str, Any]] = []
+    deleted = False
+    for v in variants:
+        if not deleted and _variant_match_key(v, key):
+            deleted = True
+            continue
+        remaining.append(v)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Variant not found")
+
+    attrs["variants"] = remaining
+    if attrs.get("product_type") != "contact_lens":
+        attrs["product_type"] = "contact_lens"
+
+    # recompute availability based on remaining
+    if any(v.get("availability") == "in_stock" and v.get("quantity", 0) > 0 for v in remaining):
+        attrs["availability"] = "in_stock"
+        product.status = "in_stock"
+        product.visible = True
+    elif any(v.get("availability") == "preorder" for v in remaining):
+        attrs["availability"] = "preorder"
+        product.status = "preorder"
+        product.visible = True
+    else:
+        attrs["availability"] = "unavailable"
+        product.status = "unavailable"
+        product.visible = False
+
+    product.attributes = attrs
+    product.version = (product.version or 0) + 1
+
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    log_admin_action(
+        db=db,
+        admin=current_admin,
+        action="contact_lens_variant_delete",
+        resource_type="product",
+        resource_id=product.id,
+        metadata={
+            "sku": product.sku,
+            "variant_deleted": key.model_dump(),
+            "variants_remaining": len(remaining),
+        },
+        request=request,
+    )
+
+    return {
+        "ok": True,
+        "sku": sku,
+        "variants_remaining": len(remaining),
+        "availability": attrs.get("availability"),
     }

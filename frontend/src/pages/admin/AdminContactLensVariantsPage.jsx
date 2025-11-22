@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdminAuth } from "../../context/useAdminAuth";
 import { adminApiFetch } from "../../utils/adminApiFetch";
@@ -36,8 +36,7 @@ export default function AdminContactLensVariantsPage() {
   const [meta, setMeta] = useState(null); // title, lens_type, etc.
   const [variants, setVariants] = useState([]);
 
-  // Load variants
-  useEffect(() => {
+  const loadVariants = useCallback(() => {
     if (!sku) return;
     setState("loading");
     setErrorMsg("");
@@ -82,6 +81,11 @@ export default function AdminContactLensVariantsPage() {
         setState("error");
       });
   }, [sku, csrfToken]);
+
+  // Load variants on mount/sku change
+  useEffect(() => {
+    loadVariants();
+  }, [loadVariants]);
 
   const handleVariantChange = (index, field, value) => {
     setVariants((prev) =>
@@ -140,12 +144,70 @@ export default function AdminContactLensVariantsPage() {
 
       const data = await res.json();
       setSuccessMsg(
-        `Saved successfully. Updated ${data.updated_count} variants. Overall availability: ${data.availability}.`
+        `Saved successfully. Updated ${data.updated_count ?? "?"} variants. Overall availability: ${data.availability ?? "?"}.`
       );
+      loadVariants();
       setState("ok");
     } catch (err) {
       console.error("Failed to save variants", err);
       setErrorMsg(err.message || "Failed to save variants");
+      setState("error");
+    }
+  };
+
+  const handleDelete = async (v) => {
+    if (
+      !window.confirm(
+        "Delete this variant? This cannot be undone and will remove it from the list."
+      )
+    ) {
+      return;
+    }
+
+    setErrorMsg("");
+    setSuccessMsg("");
+    setState("saving");
+    try {
+      const res = await adminApiFetch(
+        `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sphere: v.sphere ?? null,
+            cylinder: v.cylinder ?? null,
+            axis: v.axis ?? null,
+            addition: v.addition ?? null,
+            addition_label: v.addition_label ?? null,
+          }),
+        },
+        csrfToken
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to delete variant");
+      }
+
+      // optimistic local update
+      setVariants((prev) =>
+        prev.filter(
+          (item) =>
+            !(
+              (item.sphere ?? null) === (v.sphere ?? null) &&
+              (item.cylinder ?? null) === (v.cylinder ?? null) &&
+              (item.axis ?? null) === (v.axis ?? null) &&
+              (item.addition ?? null) === (v.addition ?? null) &&
+              (item.addition_label ?? null) === (v.addition_label ?? null)
+            )
+        )
+      );
+      setSuccessMsg("Variant deleted.");
+      loadVariants();
+      setState("ok");
+    } catch (err) {
+      console.error("Failed to delete variant", err);
+      setErrorMsg(err.message || "Failed to delete variant");
       setState("error");
     }
   };
@@ -259,6 +321,7 @@ export default function AdminContactLensVariantsPage() {
                   <th className="px-2 py-2">EAN</th>
                   <th className="px-2 py-2">Availability</th>
                   <th className="px-2 py-2">Quantity</th>
+                  <th className="px-2 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -326,6 +389,16 @@ export default function AdminContactLensVariantsPage() {
                           }
                           className="w-20 rounded border px-2 py-1 text-[11px]"
                         />
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => handleDelete(v)}
+                          className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-700 disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   );

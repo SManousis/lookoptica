@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import metrics from "/metrics.png";
 import { usePageSEO } from "../hooks/usePageSEO"; 
+import { useCart } from "../context/CartContext";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -104,6 +105,8 @@ export default function PDP() {
   const [related, setRelated] = useState([]);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
 
   useEffect(() => {
     if (!slug) return;
@@ -234,6 +237,8 @@ export default function PDP() {
   const category = p?.category || active?.category;
   const audience = p?.audience || active?.audience;
   const statusValue = active?.status || p?.status;
+  const variantLabel =
+    active?.color || active?.colour || active?.name || active?.variantLabel || "";
 
   const siteName = "Look Optica";
   const baseUrl = "https://lookoptica.gr";
@@ -256,6 +261,29 @@ export default function PDP() {
     url: canonicalUrl,
     image: mainImageUrl,
   });
+
+  useEffect(() => {
+    setAdded(false);
+  }, [variantIndex, slug]);
+
+  const handleAddToCart = () => {
+    if (!p) return;
+    const unitPrice = Number(price ?? 0) || 0;
+    addItem(
+      {
+        id: active?.id || p?.id || sku,
+        sku,
+        slug: p.slug,
+        title,
+        price: unitPrice,
+        image: mainImage,
+        variantLabel,
+        variantKey: hasVariants ? `${sku || active?.id || variantIndex}` : undefined,
+      },
+      1
+    );
+    setAdded(true);
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -471,14 +499,23 @@ export default function PDP() {
 
 
             {/* Buttons & back link */}
-            <div className="pt-4">
+            <div className="pt-4 space-y-2">
               <button
-                disabled
-                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 cursor-not-allowed"
-                title="Coming soon"
+                type="button"
+                onClick={handleAddToCart}
+                className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800"
+                disabled={!price}
               >
-                Add to cart (soon)
+                Add to cart
               </button>
+              {added && (
+                <p className="text-sm text-red-700">
+                  Added to cart!{" "}
+                  <Link to="/cart" className="underline">
+                    View cart
+                  </Link>
+                </p>
+              )}
             </div>
 
             <div className="pt-4">

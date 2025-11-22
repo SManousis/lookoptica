@@ -13,11 +13,22 @@ export default function ProductCard({ p }) {
   if (!p) return null;
 
   const title = p?.title?.el || p?.title?.en || "Product";
+  const isContactLens =
+    String(p?.category || "").toLowerCase().includes("contact") ||
+    p?.attributes?.product_type === "contact_lens";
+  const productUrl = isContactLens
+    ? `/contact-lens/${p.slug || ""}`
+    : `/product/${p.slug || ""}`;
+
+  const firstImage =
+    (Array.isArray(p?.images) && p.images.find(Boolean)) ||
+    p?.image ||
+    placeholder;
 
   return (
-    <Link to={`/product/${p.slug || ""}`} className="block group">
+    <Link to={productUrl} className="block group">
       <img
-        src={placeholder}
+        src={firstImage}
         alt={title}
         className="w-full aspect-square object-cover rounded-xl bg-gray-100"
         onError={(e) => {

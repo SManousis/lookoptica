@@ -659,24 +659,24 @@ export default function EditProduct() {
                   <span className="text-sm font-medium">
                     Χρώμα #{idx + 1}
                   </span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1 text-xs text-slate-700">
-                      <input
-                        type="radio"
-                        name="defaultColor"
-                        checked={v.isDefault}
-                        onChange={() => setDefaultVariant(idx)}
-                      />
-                      Προεπιλεγμένο χρώμα
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(idx)}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Αφαίρεση
-                    </button>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-xs text-slate-700">
+                    <input
+                      type="radio"
+                      name="defaultColor"
+                      checked={v.isDefault}
+                      onChange={() => setDefaultVariant(idx)}
+                    />
+                    ???????????????????????? ?????????
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(idx)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    ???????????????
+                  </button>
+                </div>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-3">

@@ -27,6 +27,7 @@ class ProductDetail(ProductListItem):
     attributes: dict
     stock: int
     description: str | None = None
+    # variants omitted in public detail
 
 # DB session dependency (correct pattern)
 def get_db():
@@ -35,6 +36,9 @@ def get_db():
         yield db
     finally:
         db.close()
+ALLOWED_STATUSES = {"published", "in_stock", "preorder"}
+
+
 @router.get("", response_model=List[ProductListItem])
 def list_products(
     q: Optional[str] = Query(None),
@@ -43,7 +47,10 @@ def list_products(
     db: Session = Depends(get_db),
 ):
     try:
-        stmt = select(Product).where(Product.status == "published", Product.visible == True)
+        stmt = select(Product).where(
+            Product.visible.is_(True),
+            Product.status.in_(ALLOWED_STATUSES),
+        )
         if q:
             like = f"%{q.lower()}%"
             stmt = stmt.where(
@@ -67,6 +74,8 @@ def list_products(
                     or attrs.get("category_value")
                 )
                 audience = attrs.get("audience")
+                if not category and attrs.get("product_type") == "contact_lens":
+                    category = "contact_lenses"
 
             items.append(
                 ProductListItem(
@@ -112,6 +121,8 @@ def get_product(slug: str, db: Session = Depends(get_db)):
             or attrs.get("category_value")
         )
         audience = attrs.get("audience")
+        if not category and attrs.get("product_type") == "contact_lens":
+            category = "contact_lenses"
 
     return ProductDetail(
         sku=r.sku,
@@ -128,6 +139,5 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         brand=brand,
         category=category,
         audience=audience,
-        description=r.description,   
+        description=r.description,
     )
-
