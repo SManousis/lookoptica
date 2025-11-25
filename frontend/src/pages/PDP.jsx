@@ -268,7 +268,8 @@ export default function PDP() {
 
   const handleAddToCart = () => {
     if (!p) return;
-    const unitPrice = Number(price ?? 0) || 0;
+    const salePrice = discountPrice ?? price;
+    const unitPrice = Number(salePrice ?? 0) || 0;
     addItem(
       {
         id: active?.id || p?.id || sku,

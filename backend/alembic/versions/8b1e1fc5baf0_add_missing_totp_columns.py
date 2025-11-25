@@ -19,24 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add columns only if they don't exist yet
-    op.add_column(
-        "users",
-        sa.Column("totp_secret", sa.String(length=32), nullable=True),
-    )
-    op.add_column(
-        "users",
-        sa.Column(
-            "is_totp_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("FALSE"),
-        ),
+    # Only add columns if they are missing (safety patch for older DBs).
+    op.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS "totp_secret" VARCHAR(32)')
+    op.execute(
+        'ALTER TABLE users ADD COLUMN IF NOT EXISTS "is_totp_enabled" BOOLEAN DEFAULT FALSE NOT NULL'
     )
     op.execute("UPDATE users SET is_totp_enabled = FALSE WHERE is_totp_enabled IS NULL")
     op.alter_column("users", "is_totp_enabled", server_default=None)
 
 
 def downgrade() -> None:
-    op.drop_column("users", "is_totp_enabled")
-    op.drop_column("users", "totp_secret")
+    # This revision only ensured the columns existed; nothing to remove explicitly.
+    pass

@@ -41,5 +41,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("users", "is_totp_enabled")
-    op.drop_column("users", "totp_secret")
+    op.execute('ALTER TABLE users DROP COLUMN IF EXISTS "is_totp_enabled"')
+    op.execute('ALTER TABLE users DROP COLUMN IF EXISTS "totp_secret"')

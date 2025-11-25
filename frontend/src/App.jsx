@@ -33,7 +33,7 @@ import AccountRegisterPage from "./pages/AccountRegisterPage";
 import AccountLoginPage from "./pages/AccountLoginPage";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
-
+import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
 
@@ -207,9 +207,10 @@ function AppShell() {
           <Route path="/terms" element={<UsageTerms />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout/details" element={<CheckoutDetailsPage />} />
           {/* Checkout gate (login/register/guest) */}
           <Route path="/checkout" element={<CheckoutIdentifyPage />} />
-
+                
           <Route path="/look-at-home" element={<LookAtHome />} />
           <Route path="/low-vision" element={<LowVision />} />
           <Route path="/about-us" element={<AboutUs />} />

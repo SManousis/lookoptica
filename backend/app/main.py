@@ -5,7 +5,7 @@ from app.routers import admin_products, shop_products, admin_auth
 from app.routers import public_products
 from app.routers import contact
 from app.routers import admin_contact_lenses
-
+from app.routers import checkout
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
 
@@ -88,6 +88,7 @@ app.include_router(admin_auth.router)
 app.include_router(public_products.router)
 app.include_router(shop_products.router)
 app.include_router(contact.router)
+app.include_router(checkout.router)
 
 @app.get("/healthz")
 async def healthz():

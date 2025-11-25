@@ -363,7 +363,8 @@ export default function ContactLensPDP() {
       return;
     }
 
-    const unitPrice = Number(price ?? 0) || 0;
+    const salePrice = discountPrice ?? price;
+    const unitPrice = Number(salePrice ?? 0) || 0;
 
     let variantLabel = `Sph ${formatDiopter(selectedVariant.sphere)}`;
     if (lensType === "astigmatic") {
