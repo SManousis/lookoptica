@@ -9,6 +9,7 @@ export default function AccountRegisterPage() {
   const [form, setForm] = useState({
     email: "",
     password: "",
+    passwordConfirm: "",
     full_name: "",
     phone: "",
     marketing_opt_in: true,
@@ -25,17 +26,32 @@ export default function AccountRegisterPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setLoading(true);
+  e.preventDefault();
+  setErrorMsg("");
+  setLoading(true);
 
-    try {
-      const res = await fetch(`${API}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(form),
-      });
+  if (form.password !== form.passwordConfirm) {
+    setErrorMsg("Οι κωδικοί δεν ταιριάζουν.");
+    setLoading(false);
+    return;
+  }
+
+  const payload = {
+    email: form.email,
+    password: form.password,
+    password_confirm: form.passwordConfirm,
+    full_name: form.full_name || null,
+    phone: form.phone || null,
+    marketing_opt_in: form.marketing_opt_in,
+  };
+
+  try {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
 
       if (!res.ok) {
         const text = await res.text();
@@ -86,7 +102,9 @@ export default function AccountRegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-700">Κωδικός (τουλάχιστον 8 χαρακτήρες)</label>
+          <label className="block text-xs font-medium text-slate-700">
+            Κωδικός (τουλάχιστον 8 χαρακτήρες με γράμματα αριθμούς και σύμβολα)
+          </label>
           <input
             type="password"
             name="password"
@@ -97,6 +115,22 @@ export default function AccountRegisterPage() {
             className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
           />
         </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Επιβεβαίωση κωδικού
+          </label>
+          <input
+            type="password"
+            name="passwordConfirm"
+            value={form.passwordConfirm}
+            onChange={handleChange}
+            required
+            minLength={8}
+            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          />
+        </div>
+
         <div>
           <label className="block text-xs font-medium text-slate-700">Τηλέφωνο (προαιρετικό)</label>
           <input

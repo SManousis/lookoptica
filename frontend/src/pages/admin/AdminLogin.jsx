@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../context/useAdminAuth";
+import { useTurnstile } from "../../hooks/useTurnstile";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -10,21 +11,37 @@ export default function AdminLogin() {
   const [state, setState] = useState("idle"); // idle | loading | error
   const [errorMsg, setErrorMsg] = useState("");
   const [otp, setOtp] = useState("");
+  const { isEnabled: hasTurnstile, turnstileToken, resetTurnstile, containerRef: turnstileRef } =
+    useTurnstile();
 
   const { login } = useAdminAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setState("loading");
     setErrorMsg("");
 
+    if (hasTurnstile && !turnstileToken) {
+      setState("error");
+      setErrorMsg("Please complete the Turnstile verification before logging in.");
+      return;
+    }
+
+    setState("loading");
+
     try {
+      const payload = {
+        email,
+        password,
+        otp: otp || undefined,
+        ...(hasTurnstile ? { turnstileToken } : {}),
+      };
+
       const res = await fetch(`${API}/api/admin/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, otp: otp || undefined }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -33,11 +50,14 @@ export default function AdminLogin() {
       }
 
       const data = await res.json();
-      login(data.user, data.csrf_token);             // sync context with logged-in user & CSRF token
-      navigate("/admin");      // redirect to admin dashboard
+      login(data.user, data.csrf_token); // sync context with logged-in user & CSRF token
+      navigate("/admin"); // redirect to admin dashboard
     } catch (err) {
       setState("error");
       setErrorMsg(err.message || "Login failed");
+      if (hasTurnstile) {
+        resetTurnstile();
+      }
     }
   }
 
@@ -93,9 +113,15 @@ export default function AdminLogin() {
             />
           </div>
 
+          {hasTurnstile && (
+            <div className="flex justify-center">
+              <div ref={turnstileRef} className="my-2" />
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={state === "loading"}
+            disabled={state === "loading" || (hasTurnstile && !turnstileToken)}
             className="w-full py-2 rounded-lg bg-amber-700 text-white font-medium disabled:opacity-60"
           >
             {state === "loading" ? "Logging in…" : "Login"}

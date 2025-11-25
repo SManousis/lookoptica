@@ -13,8 +13,10 @@ from app.models.customer_session import CustomerSession
 from app.schemas.customer_auth import CustomerRegisterRequest, CustomerLoginRequest, CustomerOut
 from app.security import hash_password, verify_password
 from app.services.audit import log_admin_action  # or create a generic audit, but reuse is fine
-
+from app.services.turnstile import verify_turnstile_token
 import logging
+import anyio
+
 logger = logging.getLogger("customer_auth")
 
 router = APIRouter(
@@ -167,6 +169,17 @@ def customer_login(
 ):
     rate_limit_login(request)
 
+     # 0) Turnstile check
+    ip = request.client.host if request.client else None
+    ok = anyio.run(lambda: verify_turnstile_token(payload.turnstile_token, ip)) \
+         if hasattr(anyio, "run") else False
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Η επαλήθευση ασφαλείας απέτυχε. Δοκίμασε ξανά.",
+        )
+
+    # 1) find customer
     customer = db.query(Customer).filter(Customer.email == payload.email).first()
     if not customer or not customer.password_hash:
         logger.warning(
@@ -174,7 +187,7 @@ def customer_login(
             extra={
                 "email": payload.email,
                 "reason": "not_found_or_no_password",
-                "ip": request.client.host if request.client else None,
+                "ip": ip,
             },
         )
         raise HTTPException(
@@ -182,20 +195,18 @@ def customer_login(
             detail="Λάθος email ή κωδικός.",
         )
 
+    # 2) password check
     if not verify_password(payload.password, customer.password_hash):
         logger.warning(
             "customer_login_failed",
-            extra={
-                "email": payload.email,
-                "reason": "wrong_password",
-                "ip": request.client.host if request.client else None,
-            },
+            extra={"email": payload.email, "reason": "wrong_password", "ip": ip},
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Λάθος email ή κωδικός.",
         )
 
+    # 3) active check
     if not customer.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

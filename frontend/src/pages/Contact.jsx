@@ -1,8 +1,8 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useTurnstile } from "../hooks/useTurnstile";
 
 const API = import.meta.env.VITE_API_BASE || "";
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -13,39 +13,8 @@ export default function Contact() {
   });
   const [status, setStatus] = useState(null); // "success" | "error" | null
   const [isSending, setIsSending] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const widgetIdRef = useRef(null);
-
-  // Load Turnstile script & render widget
-  useEffect(() => {
-    if (!TURNSTILE_SITE_KEY) return;
-
-    function renderWidget() {
-      if (!window.turnstile || widgetIdRef.current) return;
-      widgetIdRef.current = window.turnstile.render("#turnstile-container", {
-        sitekey: TURNSTILE_SITE_KEY,
-        callback: (token) => setTurnstileToken(token),
-        "error-callback": () => setTurnstileToken(""),
-        "expired-callback": () => setTurnstileToken(""),
-      });
-    }
-
-    if (window.turnstile) {
-      renderWidget();
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    script.onload = renderWidget;
-    document.body.appendChild(script);
-
-    return () => {
-      script.onload = null;
-    };
-  }, [TURNSTILE_SITE_KEY]);
+  const { isEnabled: hasTurnstile, turnstileToken, resetTurnstile, containerRef: turnstileRef } =
+    useTurnstile();
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -57,7 +26,7 @@ export default function Contact() {
     setIsSending(true);
     setStatus(null);
 
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+    if (hasTurnstile && !turnstileToken) {
       setStatus("turnstile");
       setIsSending(false);
       return;
@@ -82,10 +51,9 @@ export default function Contact() {
 
       setStatus("success");
       setForm({ name: "", email: "", subject: "", message: "" });
-      if (window.turnstile && widgetIdRef.current) {
-        window.turnstile.reset(widgetIdRef.current);
+      if (hasTurnstile) {
+        resetTurnstile();
       }
-      setTurnstileToken("");
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -241,16 +209,16 @@ export default function Contact() {
             </div>
           )}
 
-          {TURNSTILE_SITE_KEY && (
+          {hasTurnstile && (
             <div className="flex justify-center">
-              <div id="turnstile-container" className="my-2" />
+              <div ref={turnstileRef} className="my-2" />
             </div>
           )}
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSending || (TURNSTILE_SITE_KEY && !turnstileToken)}
+            disabled={isSending || (hasTurnstile && !turnstileToken)}
             className="w-full md:w-auto px-8 py-3 rounded-xl 
                        bg-amber-700 hover:bg-red-700 
                        text-white font-semibold shadow-lg 
