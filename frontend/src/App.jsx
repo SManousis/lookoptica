@@ -36,6 +36,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
+import CheckoutPaymentPage from "./pages/CheckoutPaymentPage";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -210,7 +211,7 @@ function AppShell() {
           <Route path="/checkout/details" element={<CheckoutDetailsPage />} />
           {/* Checkout gate (login/register/guest) */}
           <Route path="/checkout" element={<CheckoutIdentifyPage />} />
-                
+          <Route path="/checkout/payment" element={<CheckoutPaymentPage />} />      
           <Route path="/look-at-home" element={<LookAtHome />} />
           <Route path="/low-vision" element={<LowVision />} />
           <Route path="/about-us" element={<AboutUs />} />
