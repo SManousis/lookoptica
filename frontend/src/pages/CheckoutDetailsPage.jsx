@@ -190,9 +190,8 @@ export default function CheckoutDetailsPage() {
       setState("ok");
 
       // Next step of checkout – adjust route if you want another page (payment, confirmation, etc.)
-      // For now, go back to cart.
-      // navigate("/checkout/confirm");
-      setTimeout(() => navigate("/cart"), 800);
+      // Continue to payment step once details are saved.
+      setTimeout(() => navigate("/checkout/payment"), 400);
     } catch (err) {
       console.error("Failed to save checkout details", err);
       setErrorMsg(err.message || "Failed to save checkout details");

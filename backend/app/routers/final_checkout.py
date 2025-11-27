@@ -2,7 +2,7 @@
 
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -30,7 +30,8 @@ class PaymentMethod(str, Enum):
     card = "card"          # Viva later
     paypal = "paypal"
     cod = "cod"
-    iris = "iris"          # pay at store
+    iris = "iris"
+    pay_in_store = "pay_in_store"
 
 
 # ---------- Configurable prices (tune later) ----------
@@ -51,6 +52,15 @@ def _to_decimal(value) -> Decimal:
         return Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
         return Decimal("0.00")
+
+
+def _maybe_decimal(value) -> Optional[Decimal]:
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
 
 
 def compute_shipping_and_cod(
@@ -110,6 +120,7 @@ def compute_shipping_and_cod(
 class CheckoutItem(BaseModel):
     sku: str
     quantity: int = Field(ge=1)
+    unit_price: float | None = Field(default=None, ge=0)
 
     @field_validator("sku")
     @classmethod
@@ -176,8 +187,11 @@ def get_checkout_quote(
                 detail=f"Product with SKU '{item.sku}' not found",
             )
 
-        # you can add extra checks: visibility, status != 'archived', etc
-        unit_price = _to_decimal(product.price)
+        provided_price = _maybe_decimal(item.unit_price)
+        unit_price = (
+            provided_price if provided_price is not None else _to_decimal(product.price)
+        ).quantize(Decimal("0.01"))
+
         line_subtotal = (unit_price * item.quantity).quantize(Decimal("0.01"))
         subtotal_dec += line_subtotal
 

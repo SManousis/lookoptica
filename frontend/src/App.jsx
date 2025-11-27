@@ -37,6 +37,7 @@ import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
 import CheckoutPaymentPage from "./pages/CheckoutPaymentPage";
+import BankTransferIrisPage from "./pages/BankTransferIrisPage";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -217,6 +218,8 @@ function AppShell() {
           <Route path="/about-us" element={<AboutUs />} />
           <Route path="/account/register" element={<AccountRegisterPage />} />
           <Route path="/account/login" element={<AccountLoginPage />} />
+          <Route path="/checkout/bank-transfer" element={<BankTransferIrisPage />} />
+
           {/* Admin products list (protected) */}
           <Route
             path="/admin/products"

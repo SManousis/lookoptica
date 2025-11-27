@@ -5,8 +5,8 @@ import { useCart } from "../context/CartContext";
 const API = import.meta.env.VITE_API_BASE || "";
 
 const SHIPPING_OPTIONS = [
-  { value: "pickup", label: "Παραλαβή από κατάστημα" },
-  { value: "courier", label: "Courier (ΕΛΤΑ / άλλος)" },
+  { value: "pickup_store", label: "Παραλαβή από κατάστημα" },
+  { value: "courier_home", label: "Courier (ΕΛΤΑ / άλλος)" },
   { value: "boxnow", label: "Box Now locker" },
 ];
 
@@ -15,14 +15,15 @@ const PAYMENT_OPTIONS = [
   { value: "bank_transfer", label: "Τραπεζική κατάθεση" },
   { value: "paypal", label: "PayPal" },
   { value: "cod", label: "Αντικαταβολή" },
-  { value: "iris", label: "IRIS / πληρωμή στο κατάστημα" },
+  { value: "iris", label: "IRIS" },
+  { value: "pay_in_store", label: "Πληρωμή στο κατάστημα" },
 ];
 
 export default function CheckoutPaymentPage() {
   const { items } = useCart();
   const navigate = useNavigate();
 
-  const [shippingMethod, setShippingMethod] = useState("courier");
+  const [shippingMethod, setShippingMethod] = useState("courier_home");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [selectedLockerId, setSelectedLockerId] = useState(""); // future BoxNow integration
 
@@ -52,8 +53,8 @@ export default function CheckoutPaymentPage() {
       quantity: Number(it.quantity || 1),
       unit_price: Number(it.price || 0),
     })),
-    shipping_method: shippingMethod, // pickup | courier | boxnow
-    payment_method: paymentMethod, // card | bank_transfer | paypal | cod | iris
+    shipping_method: shippingMethod, // pickup_store | courier_home | boxnow
+    payment_method: paymentMethod, // card | bank_transfer | paypal | cod | iris | pay_in_store
     boxnow_locker_id:
       shippingMethod === "boxnow" && selectedLockerId.trim().length > 0
         ? selectedLockerId.trim()
@@ -93,10 +94,28 @@ export default function CheckoutPaymentPage() {
   }, [shippingMethod, paymentMethod, selectedLockerId, subtotal]);
 
   const handlePlaceOrder = () => {
+    if (!quote) {
+      setQuoteError("Υπολογίστε πρώτα το συνολικό ποσό πριν προχωρήσετε.");
+      setQuoteState("error");
+      return;
+    }
+
+    if (paymentMethod === "bank_transfer" || paymentMethod === "iris") {
+      navigate("/checkout/bank-transfer", {
+        state: {
+          total: quote.total,
+          currency: quote.currency || "EUR",
+          paymentMethod,
+          paymentReference: `QUOTE-${Date.now()}`,
+        },
+      });
+      return;
+    }
+
     // Later:
     // - Validate quote
     // - Redirect to Viva / PayPal / bank details / confirmation page
-    alert("Next step: create order + integrate Viva/PayPal. For now this is just the pricing step 🙂");
+    alert("Next step: create order + integrate Viva/PayPal. Για την ώρα είναι demo.");
   };
 
     const formattedSubtotal = subtotal.toFixed(2);
@@ -222,21 +241,32 @@ export default function CheckoutPaymentPage() {
 
             {paymentMethod === "card" && (
               <p className="mt-2 text-xs text-slate-500">
-                Η πληρωμή με κάρτα θα γίνει μέσω{" "}
-                <strong>Viva Wallet</strong> (ασφαλές περιβάλλον πληρωμής).
+                Η πληρωμή με κάρτα ολοκληρώνεται στο ασφαλές περιβάλλον της{" "}
+                <strong>Viva Wallet</strong>.
               </p>
             )}
             {paymentMethod === "bank_transfer" && (
               <p className="mt-2 text-xs text-slate-500">
-                Θα λάβετε στοιχεία τραπεζικού λογαριασμού μετά την ολοκλήρωση
-                της παραγγελίας.
+                Μετά την ολοκλήρωση θα λάβετε οδηγίες για κατάθεση στον
+                τραπεζικό μας λογαριασμό.
               </p>
             )}
             {paymentMethod === "cod" && (
               <p className="mt-2 text-xs text-slate-500">
-                Αντικαταβολή με μετρητά κατά την παράδοση. Τα έξοδα
-                αντικαταβολής υπολογίζονται αυτόματα βάσει του ποσού και του
-                τρόπου αποστολής.
+                Πληρώνετε με αντικαταβολή στον courier κατά την παράδοση.
+                Η υπηρεσία έχει μια μικρή προμήθεια.
+              </p>
+            )}
+            {paymentMethod === "iris" && (
+              <p className="mt-2 text-xs text-slate-500">
+                Πληρώνετε μέσω <strong>IRIS</strong> με άμεση μεταφορά από το
+                e-banking σας.
+              </p>
+            )}
+            {paymentMethod === "pay_in_store" && (
+              <p className="mt-2 text-xs text-slate-500">
+                Διατηρούμε την παραγγελία σας και πληρώνετε στο κατάστημα
+                κατά την παραλαβή.
               </p>
             )}
           </section>

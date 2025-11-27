@@ -8,3 +8,4 @@ from .customer import Customer
 from .customer_session import CustomerSession
 from .customer_address import CustomerAddress
 from .order import Order
+from .checkout_draft import CheckoutDraft

@@ -16,6 +16,10 @@ class ShippingAddress(BaseModel):
     notes: Optional[str] = None
 
 
+class CheckoutDetailsShipping(ShippingAddress):
+    is_default: Optional[bool] = False
+
+
 class InvoiceDetails(BaseModel):
     wants_invoice: bool = False
     invoice_type: Optional[str] = Field(default=None, max_length=30)
@@ -30,6 +34,7 @@ class InvoiceDetails(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     postcode: Optional[str] = Field(default=None, max_length=20)
     region: Optional[str] = Field(default=None, max_length=100)
+    country: Optional[str] = Field(default="Greece", max_length=100)
 
 
 class CheckoutShippingPayload(BaseModel):
@@ -43,3 +48,13 @@ class CheckoutShippingPayload(BaseModel):
 class CheckoutShippingResponse(BaseModel):
     order_id: int
     status: str
+
+
+class CheckoutDetailsPayload(BaseModel):
+    shipping: CheckoutDetailsShipping
+    invoice: Optional[InvoiceDetails] = None
+
+
+class CheckoutDetailsResponse(BaseModel):
+    shipping: Optional[CheckoutDetailsShipping] = None
+    invoice: Optional[InvoiceDetails] = None
