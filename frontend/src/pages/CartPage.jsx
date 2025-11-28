@@ -2,13 +2,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useCustomerAuth } from "../context/customerAuthShared";
 
 export default function CheckoutIdentifyPage() {
   const { items, totals } = useCart();
   const navigate = useNavigate();
+  const { guestEmail: savedGuestEmail, setGuestEmail: setGuestEmailCtx } =
+    useCustomerAuth();
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [guestEmail, setGuestEmail] = useState("");
+  const [guestEmail, setGuestEmail] = useState(savedGuestEmail || "");
   const [errorMsg, setErrorMsg] = useState("");
 
   // If cart is empty, send user back to cart
@@ -41,14 +44,16 @@ export default function CheckoutIdentifyPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!guestEmail) {
+    const normalizedGuestEmail = guestEmail.trim();
+    if (!normalizedGuestEmail) {
       setErrorMsg("Συμπλήρωσε το email σου για να συνεχίσεις ως επισκέπτης.");
       return;
     }
 
-    // TODO: Save guest email in context or localStorage
-    // For now just go to next checkout step placeholder:
-    navigate("/checkout/details");
+    setGuestEmailCtx(normalizedGuestEmail);
+    navigate("/checkout/details", {
+      state: { guestEmail: normalizedGuestEmail },
+    });
   };
 
   const totalItems = totals?.itemCount ?? 0;

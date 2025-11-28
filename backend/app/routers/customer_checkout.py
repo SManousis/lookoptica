@@ -3,8 +3,9 @@ import secrets
 from threading import Lock
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
+from pydantic import EmailStr
 
 from app.db import SessionLocal, engine
 from app.models.checkout_draft import CheckoutDraft
@@ -66,6 +67,12 @@ def _resolve_customer(request: Request, db: Session) -> Optional[int]:
     return session.customer_id
 
 
+def _normalize_email(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    return value.strip().lower()
+
+
 def _normalize_block(data: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not data:
         return None
@@ -102,6 +109,7 @@ def _get_checkout_draft(
 @router.get("/checkout-details", response_model=CheckoutDetailsResponse)
 def get_checkout_details(
     request: Request,
+    guest_email: Optional[EmailStr] = Query(default=None),
     db: Session = Depends(get_db),
 ):
     _ensure_checkout_table()
@@ -112,6 +120,20 @@ def get_checkout_details(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Checkout details not found",
         )
+
+    normalized_guest_email = _normalize_email(str(guest_email)) if guest_email else None
+    if customer_id is None:
+        if not normalized_guest_email:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Checkout details not found",
+            )
+        stored_guest = _normalize_email(draft.guest_email)
+        if not stored_guest or stored_guest != normalized_guest_email:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Checkout details not found",
+            )
 
     return CheckoutDetailsResponse(
         shipping=_normalize_block(draft.shipping_data),
@@ -129,10 +151,24 @@ def upsert_checkout_details(
     _ensure_checkout_table()
     customer_id = _resolve_customer(request, db)
     draft = _get_checkout_draft(request, db, customer_id)
+    cookie_token = request.cookies.get(DRAFT_COOKIE)
+
+    guest_email = _normalize_email(payload.shipping.email)
+    if customer_id is None:
+        if not guest_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Guest checkout requires a contact email.",
+            )
+        if draft:
+            stored_guest = _normalize_email(draft.guest_email)
+            if not stored_guest or stored_guest != guest_email:
+                draft = None
+                cookie_token = None
 
     if not draft:
         draft = CheckoutDraft(
-            token=request.cookies.get(DRAFT_COOKIE) or secrets.token_urlsafe(32),
+            token=cookie_token or secrets.token_urlsafe(32),
         )
 
     if customer_id:

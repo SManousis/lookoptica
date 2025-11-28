@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import admin_products, shop_products, admin_auth
+from app.routers import admin_products, shop_products, admin_auth, customer_auth
 from app.routers import public_products
 from app.routers import contact
 from app.routers import admin_contact_lenses
@@ -93,6 +93,7 @@ app.include_router(contact.router)
 app.include_router(checkout.router)
 app.include_router(final_checkout.router)
 app.include_router(customer_checkout.router)
+app.include_router(customer_auth.router)
 
 @app.get("/healthz")
 async def healthz():

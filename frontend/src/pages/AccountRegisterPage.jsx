@@ -1,11 +1,11 @@
 // src/pages/AccountRegisterPage.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
-const API = import.meta.env.VITE_API_BASE || "";
+import { useCustomerAuth } from "../context/customerAuthShared";
 
 export default function AccountRegisterPage() {
   const navigate = useNavigate();
+  const { register } = useCustomerAuth();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -26,43 +26,31 @@ export default function AccountRegisterPage() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setErrorMsg("");
-  setLoading(true);
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
 
-  if (form.password !== form.passwordConfirm) {
-    setErrorMsg("Οι κωδικοί δεν ταιριάζουν.");
-    setLoading(false);
-    return;
-  }
+    if (form.password !== form.passwordConfirm) {
+      setErrorMsg("Οι κωδικοί δεν ταιριάζουν.");
+      setLoading(false);
+      return;
+    }
 
-  const payload = {
-    email: form.email,
-    password: form.password,
-    password_confirm: form.passwordConfirm,
-    full_name: form.full_name || null,
-    phone: form.phone || null,
-    marketing_opt_in: form.marketing_opt_in,
-  };
+    try {
+      await register({
+        email: form.email,
+        password: form.password,
+        passwordConfirm: form.passwordConfirm,
+        fullName: form.full_name,
+        phone: form.phone,
+        marketing_opt_in: form.marketing_opt_in,
+      });
 
-  try {
-    const res = await fetch(`${API}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Registration failed");
-      }
-
-      // auto-login via cookie; redirect to checkout or account page
-      navigate("/checkout");
+      // Auto-login via cookie + context; redirect to homepage/checkout
+      navigate("/");
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || "Registration failed");
+      setErrorMsg(err?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -103,7 +91,7 @@ export default function AccountRegisterPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-700">
-            Κωδικός (τουλάχιστον 8 χαρακτήρες με γράμματα αριθμούς και σύμβολα)
+            Κωδικός (τουλάχιστον 8 χαρακτήρες με γράμματα, αριθμούς και σύμβολα)
           </label>
           <input
             type="password"
@@ -150,7 +138,7 @@ export default function AccountRegisterPage() {
             className="h-4 w-4"
           />
           <label htmlFor="marketing_opt_in">
-            Θέλω να λαμβάνω ενημερωτικά email (μπορείς να το αλλάξεις ανά πάσα στιγμή).
+            Θέλω να λαμβάνω ενημερωτικά email (μπορείτε να το αλλάξετε ανά πάσα στιγμή).
           </label>
         </div>
 

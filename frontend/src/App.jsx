@@ -31,6 +31,7 @@ import ContactLensPDP from "./pages/ContactLensPDP";
 import CheckoutIdentifyPage from "./pages/CheckoutIdentifyPage";
 import AccountRegisterPage from "./pages/AccountRegisterPage";
 import AccountLoginPage from "./pages/AccountLoginPage";
+import AccountHomePage from "./pages/AccountHomePage";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
@@ -218,6 +219,7 @@ function AppShell() {
           <Route path="/about-us" element={<AboutUs />} />
           <Route path="/account/register" element={<AccountRegisterPage />} />
           <Route path="/account/login" element={<AccountLoginPage />} />
+          <Route path="/account" element={<AccountHomePage />} />
           <Route path="/checkout/bank-transfer" element={<BankTransferIrisPage />} />
 
           {/* Admin products list (protected) */}

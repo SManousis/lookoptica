@@ -1,79 +1,254 @@
 // src/pages/CheckoutDetailsPage.jsx
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useCustomerAuth } from "../context/customerAuthShared";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
 export default function CheckoutDetailsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isLoggedIn, guestEmail, customer, setGuestEmail } =
+    useCustomerAuth();
+  const routeGuestEmail = (location.state?.guestEmail || "").trim();
+  const contextGuestEmail = (guestEmail || "").trim();
+  const customerEmail = (customer?.email || "").trim();
+
+  useEffect(() => {
+    if (!isLoggedIn && routeGuestEmail && routeGuestEmail !== contextGuestEmail) {
+      setGuestEmail(routeGuestEmail);
+    }
+  }, [isLoggedIn, routeGuestEmail, contextGuestEmail, setGuestEmail]);
+
+  const effectiveGuestEmail = !isLoggedIn
+    ? routeGuestEmail || contextGuestEmail
+    : "";
+  const effectiveEmail =
+    (isLoggedIn ? customerEmail : effectiveGuestEmail) || "";
+
+  const storageKey = useMemo(() => {
+    const prefix = "look_checkout_details";
+    if (isLoggedIn) {
+      const identifier =
+        customer?.id != null
+          ? `id:${customer.id}`
+          : customerEmail
+          ? `email:${customerEmail.toLowerCase()}`
+          : null;
+      return identifier ? `${prefix}:customer:${identifier}` : null;
+    }
+    return effectiveGuestEmail
+      ? `${prefix}:guest:${effectiveGuestEmail.toLowerCase()}`
+      : null;
+  }, [isLoggedIn, customer?.id, customerEmail, effectiveGuestEmail]);
 
   const [state, setState] = useState("loading"); // loading | ok | saving | error
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const [shipping, setShipping] = useState({
-    full_name: "",
-    phone: "",
-    address_line1: "",
-    address_line2: "",
-    city: "",
-    postcode: "",
-    region: "",
-    country: "Greece",
-    is_default: true,
-  });
+  const buildEmptyShipping = useCallback(
+    () => ({
+      full_name: "",
+      email: effectiveEmail,
+      phone: "",
+      address_line1: "",
+      address_line2: "",
+      city: "",
+      postcode: "",
+      region: "",
+      country: "Greece",
+      is_default: true,
+    }),
+    [effectiveEmail]
+  );
+  const [shipping, setShipping] = useState(() => buildEmptyShipping());
 
   const [wantInvoice, setWantInvoice] = useState(false);
   const [invoiceSameAsShipping, setInvoiceSameAsShipping] = useState(true);
-  const [invoice, setInvoice] = useState({
-    company_name: "",
-    vat_number: "",
-    tax_office: "",
-    profession: "",
-    address_line1: "",
-    address_line2: "",
-    city: "",
-    postcode: "",
-    region: "",
-    country: "Greece",
-  });
+  const buildEmptyInvoice = useCallback(
+    () => ({
+      company_name: "",
+      vat_number: "",
+      tax_office: "",
+      profession: "",
+      address_line1: "",
+      address_line2: "",
+      city: "",
+      postcode: "",
+      region: "",
+      country: "Greece",
+    }),
+    []
+  );
+  const [invoice, setInvoice] = useState(() => buildEmptyInvoice());
+
+  const mergeWithDefaults = useCallback((base, incoming) => {
+    const result = { ...base };
+    if (!incoming) {
+      return result;
+    }
+    Object.keys(result).forEach((key) => {
+      const value = incoming[key];
+      if (value === null || value === undefined) {
+        return;
+      }
+      result[key] = value;
+    });
+    return result;
+  }, []);
+
+  const applyLocalDraft = useCallback(
+    (key) => {
+      if (!key || typeof window === "undefined") {
+        return false;
+      }
+      try {
+        const raw = window.sessionStorage.getItem(key);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        setShipping(
+          parsed.shipping
+            ? { ...buildEmptyShipping(), ...parsed.shipping }
+            : buildEmptyShipping()
+        );
+        setInvoice(
+          parsed.invoice
+            ? { ...buildEmptyInvoice(), ...parsed.invoice }
+            : buildEmptyInvoice()
+        );
+        setWantInvoice(Boolean(parsed.wantInvoice));
+        setInvoiceSameAsShipping(
+          parsed.invoiceSameAsShipping !== undefined
+            ? parsed.invoiceSameAsShipping
+            : true
+        );
+        return true;
+      } catch (err) {
+        console.warn("Failed to restore checkout details draft", err);
+        return false;
+      }
+    },
+    [buildEmptyInvoice, buildEmptyShipping]
+  );
+
+  const resetFormState = useCallback(
+    (preferLocalDraft = true) => {
+      const restored =
+        preferLocalDraft && storageKey ? applyLocalDraft(storageKey) : false;
+      if (restored) return;
+      setShipping(buildEmptyShipping());
+      setInvoice(buildEmptyInvoice());
+      setWantInvoice(false);
+      setInvoiceSameAsShipping(true);
+    },
+    [applyLocalDraft, buildEmptyInvoice, buildEmptyShipping, storageKey]
+  );
+
+  useEffect(() => {
+    if (!storageKey) {
+      resetFormState(false);
+      return;
+    }
+    const restored = applyLocalDraft(storageKey);
+    if (!restored) {
+      resetFormState(false);
+    }
+  }, [storageKey, applyLocalDraft, resetFormState]);
+
+  useEffect(() => {
+    if (!effectiveEmail) return;
+    setShipping((prev) => {
+      if (prev.email && prev.email.trim().length > 0) {
+        return prev;
+      }
+      return { ...prev, email: effectiveEmail };
+    });
+  }, [effectiveEmail]);
+
+  useEffect(() => {
+    if (!storageKey || typeof window === "undefined") return;
+    try {
+      const payload = {
+        shipping,
+        invoice,
+        wantInvoice,
+        invoiceSameAsShipping,
+      };
+      window.sessionStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (err) {
+      console.warn("Failed to persist checkout details draft", err);
+    }
+  }, [storageKey, shipping, invoice, wantInvoice, invoiceSameAsShipping]);
 
   // ---------- Load existing checkout details ----------
   useEffect(() => {
-    setState("loading");
-    setErrorMsg("");
-    setSuccessMsg("");
+    let cancelled = false;
 
-    fetch(`${API}/api/customer/checkout-details`, {
-      method: "GET",
-      credentials: "include",
-    })
-      .then(async (res) => {
+    const loadDetails = async () => {
+      if (!isLoggedIn && !effectiveEmail) {
+        resetFormState(false);
+        setState("ok");
+        return;
+      }
+
+      setState("loading");
+      setErrorMsg("");
+      setSuccessMsg("");
+
+      const params = new URLSearchParams();
+      if (!isLoggedIn && effectiveEmail) {
+        params.set("guest_email", effectiveEmail);
+      }
+      const query = params.toString();
+      const url = query
+        ? `${API}/api/customer/checkout-details?${query}`
+        : `${API}/api/customer/checkout-details`;
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (res.status === 404) {
+          if (cancelled) return;
+          resetFormState();
+          setState("ok");
+          return;
+        }
+
         if (!res.ok) {
-          // If 404 or 401, just treat as "no data yet"
-          if (res.status === 404) return null;
           const text = await res.text();
           throw new Error(text || "Failed to load checkout details");
         }
-        return res.json();
-      })
-      .then((data) => {
+
+        const data = await res.json();
+        if (cancelled) return;
+
         if (data) {
           if (data.shipping) {
-            setShipping((prev) => ({
-              ...prev,
-              ...data.shipping,
-              country: data.shipping.country || "Greece",
-            }));
+            const sanitizedShipping = mergeWithDefaults(
+              buildEmptyShipping(),
+              data.shipping
+            );
+            sanitizedShipping.country =
+              data.shipping.country || sanitizedShipping.country || "Greece";
+            if (!sanitizedShipping.email) {
+              sanitizedShipping.email = effectiveEmail;
+            }
+            setShipping(sanitizedShipping);
+          } else {
+            setShipping(buildEmptyShipping());
           }
           if (data.invoice) {
-            setInvoice((prev) => ({
-              ...prev,
-              ...data.invoice,
-              country: data.invoice.country || "Greece",
-            }));
+            const sanitizedInvoice = mergeWithDefaults(
+              buildEmptyInvoice(),
+              data.invoice
+            );
+            sanitizedInvoice.country =
+              data.invoice.country || sanitizedInvoice.country || "Greece";
+            setInvoice(sanitizedInvoice);
             setWantInvoice(true);
-            // naive guess: if invoice address exactly matches shipping → sameAsShipping
             const s = data.shipping || {};
             const i = data.invoice || {};
             const same =
@@ -84,16 +259,35 @@ export default function CheckoutDetailsPage() {
               i.region === s.region &&
               i.country === s.country;
             setInvoiceSameAsShipping(same);
+          } else {
+            setInvoice(buildEmptyInvoice());
+            setWantInvoice(false);
+            setInvoiceSameAsShipping(true);
           }
         }
         setState("ok");
-      })
-      .catch((err) => {
+      } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load checkout details", err);
         setErrorMsg(err.message || "Failed to load checkout details");
         setState("error");
-      });
-  }, []);
+      }
+    };
+
+    loadDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    effectiveEmail,
+    isLoggedIn,
+    resetFormState,
+    buildEmptyShipping,
+    buildEmptyInvoice,
+    mergeWithDefaults,
+  ]);
+
 
   // ---------- Handlers ----------
 
@@ -142,8 +336,15 @@ export default function CheckoutDetailsPage() {
     setSuccessMsg("");
 
     // Basic client validation
-    if (!shipping.full_name || !shipping.address_line1 || !shipping.city || !shipping.postcode || !shipping.phone) {
-      setErrorMsg("Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία αποστολής.");
+    if (
+      !shipping.full_name ||
+      !shipping.email ||
+      !shipping.address_line1 ||
+      !shipping.city ||
+      !shipping.postcode ||
+      !shipping.phone
+    ) {
+      setErrorMsg("����?����?�? �?�?��?�?���?�?�?�?�? �?�?�� �?�� �?�?���?�?�?�?�?���? �?�?�?�?�� ��?���?�?���?�?�?.");
       return;
     }
 
@@ -162,7 +363,10 @@ export default function CheckoutDetailsPage() {
     }
 
     const payload = {
-      shipping,
+      shipping: {
+        ...shipping,
+        email: shipping.email?.trim() || "",
+      },
       invoice: wantInvoice
         ? {
             ...invoice,
@@ -256,6 +460,19 @@ export default function CheckoutDetailsPage() {
               />
               Χρήση ως προεπιλεγμένη διεύθυνση
             </label>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700">
+              Email *
+            </label>
+            <input
+              name="email"
+              type="email"
+              value={shipping.email}
+              onChange={handleShippingChange}
+              disabled={disabled}
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">

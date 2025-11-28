@@ -2,17 +2,21 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTurnstile } from "../hooks/useTurnstile";
-
-const API = import.meta.env.VITE_API_BASE || "";
+import { useCustomerAuth } from "../context/customerAuthShared";
 
 export default function AccountLoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useCustomerAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const { isEnabled: hasTurnstile, turnstileToken, resetTurnstile, containerRef: turnstileRef } =
-    useTurnstile();
+  const {
+    isEnabled: hasTurnstile,
+    turnstileToken,
+    resetTurnstile,
+    containerRef: turnstileRef,
+  } = useTurnstile();
 
   const redirectTo = location.state?.from || "/checkout";
 
@@ -33,26 +37,15 @@ export default function AccountLoginPage() {
     }
 
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ...form,
-          ...(hasTurnstile ? { turnstileToken } : {}),
-        }),
+      await login({
+        email: form.email,
+        password: form.password,
+        turnstileToken: hasTurnstile ? turnstileToken : "",
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Login failed");
-      }
-
-      await res.json(); // we ignore payload for now, rely on cookie
       navigate(redirectTo);
     } catch (err) {
       console.error(err);
-      setErrorMsg("Λάθος email ή κωδικός.");
+      setErrorMsg(err?.message || "Λάθος email ή κωδικός.");
       if (hasTurnstile) {
         resetTurnstile();
       }
@@ -100,8 +93,6 @@ export default function AccountLoginPage() {
             <div ref={turnstileRef} className="my-2" />
           </div>
         )}
-
-        {/* Later: Google / Facebook buttons here */}
 
         <button
           type="submit"

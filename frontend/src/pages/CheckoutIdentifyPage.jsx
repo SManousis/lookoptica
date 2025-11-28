@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { useTurnstile } from "../hooks/useTurnstile";
 
 export default function CheckoutIdentifyPage() {
   const { isLoggedIn, customer, login, register, guestEmail, setGuestEmail } =
     useCustomerAuth();
+  const {
+    isEnabled: hasTurnstile,
+    turnstileToken,
+    resetTurnstile,
+    containerRef: turnstileRef,
+  } = useTurnstile();
   const navigate = useNavigate();
 
   const [loginEmail, setLoginEmail] = useState("");
@@ -20,6 +27,27 @@ export default function CheckoutIdentifyPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // When a guest lands on the identify step, clear any guest drafts from prior sessions
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const prefix = "look_checkout_details:guest:";
+    if (typeof window === "undefined") return;
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < window.sessionStorage.length; i += 1) {
+        const key = window.sessionStorage.key(i);
+        if (key && key.startsWith(prefix)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => window.sessionStorage.removeItem(k));
+      setGuestEmail("");
+      setGuestInput("");
+    } catch (err) {
+      console.warn("Failed to clear guest checkout drafts", err);
+    }
+  }, [isLoggedIn, setGuestEmail]);
+
   // If already logged in, just show a small message and button to continue
   if (isLoggedIn && customer) {
     return (
@@ -28,11 +56,15 @@ export default function CheckoutIdentifyPage() {
           Checkout – Στοιχεία πελάτη
         </h1>
         <p className="text-sm text-slate-700">
-          Έχετε συνδεθεί ως{" "}
+          Εχετε συνδεθεί ως{" "}
           <span className="font-semibold">{customer.email}</span>.
         </p>
         <button
-          onClick={() => navigate("/checkout/details")}
+          onClick={() =>
+            navigate("/checkout/details", {
+              state: { guestEmail: customer?.email || "" },
+            })
+          }
           className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white"
         >
           Συνέχεια στα στοιχεία αποστολής
@@ -52,10 +84,23 @@ export default function CheckoutIdentifyPage() {
     setErrorMsg("");
     setSaving(true);
     try {
-      await login(loginEmail, loginPassword); // will call backend later
+      if (hasTurnstile && !turnstileToken) {
+        throw new Error("Παρακαλούμε ολοκληρώστε την επαλήθευση ασφαλείας.");
+      }
+      await login({
+        email: loginEmail,
+        password: loginPassword,
+        turnstileToken: hasTurnstile ? turnstileToken : "",
+      });
       navigate("/checkout/details");
-    } catch {
-      setErrorMsg("Δεν ήταν δυνατή η σύνδεση. Ελέγξτε τα στοιχεία σας.");
+    } catch (err) {
+      setErrorMsg(
+        err?.message ||
+          "Δεν ήταν δυνατή η σύνδεση. Ελέγξτε τα στοιχεία σας."
+      );
+      if (hasTurnstile) {
+        resetTurnstile();
+      }
     } finally {
       setSaving(false);
     }
@@ -66,7 +111,12 @@ export default function CheckoutIdentifyPage() {
     setErrorMsg("");
     setSaving(true);
     try {
-      await register(regData); // will call backend later
+      await register({
+        email: regData.email,
+        password: regData.password,
+        passwordConfirm: regData.password,
+        fullName: regData.fullName,
+      });
       navigate("/checkout/details");
     } catch {
       setErrorMsg("Δεν ήταν δυνατή η εγγραφή. Δοκιμάστε ξανά.");
@@ -79,11 +129,14 @@ export default function CheckoutIdentifyPage() {
     e.preventDefault();
     setErrorMsg("");
     if (!guestInput || !guestInput.includes("@")) {
-      setErrorMsg("Συμπληρώστε ένα έγκυρο email για να συνεχίσετε ως επισκέπτης.");
+      setErrorMsg(
+        "Συμπληρώστε ένα έγκυρο email για να συνεχίσετε ως επισκέπτης."
+      );
       return;
     }
-    setGuestEmail(guestInput);
-    navigate("/checkout/details");
+    const normalized = guestInput.trim();
+    setGuestEmail(normalized);
+    navigate("/checkout/details", { state: { guestEmail: normalized } });
   };
 
   return (
@@ -130,9 +183,14 @@ export default function CheckoutIdentifyPage() {
                 className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               />
             </div>
+            {hasTurnstile && (
+              <div className="flex justify-center">
+                <div ref={turnstileRef} className="my-2" />
+              </div>
+            )}
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || (hasTurnstile && !turnstileToken)}
               className="mt-2 w-full rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
               Σύνδεση
