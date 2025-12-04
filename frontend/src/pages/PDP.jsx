@@ -64,20 +64,36 @@ function FrameSizeSection({ p }) {
 }
 
 function ProductDescription({ product }) {
-  const desc =
+  const raw =
     product?.description ||
     product?.shortDescription ||
     product?.excerpt ||
-    null;
+    "";
 
-  if (!desc) return null;
+  if (!raw) return null;
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const bulletLines = lines.filter((l) => l.startsWith("-") || l.startsWith("•"));
+  const hasBullets = bulletLines.length >= 2;
 
   return (
     <div className="space-y-2">
       <h3 className="font-semibold text-sm">Description</h3>
-      <p className="text-sm text-slate-700 leading-relaxed">
-        {desc}
-      </p>
+      {hasBullets ? (
+        <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
+          {lines.map((l, idx) => (
+            <li key={idx}>{l.replace(/^[-•]\s*/, "")}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+          {raw}
+        </p>
+      )}
     </div>
   );
 }
@@ -302,6 +318,7 @@ export default function PDP() {
         </div>
       )}
       {state === "ok" && p && (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* images */}
           <div>
@@ -340,6 +357,10 @@ export default function PDP() {
                 ))}
               </div>
             )}
+            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="font-semibold text-sm mb-2">Πληροφορίες</h3>
+              <ShippingInfo />
+            </div>
           </div>
 
           {/* info */}
@@ -441,64 +462,12 @@ export default function PDP() {
               </div>
             )}
 
-            {/* Description + size + shipping */}
+            {/* Description + size */}
             <div className="mt-4 space-y-6">
               <ProductDescription product={p} />
               <FrameSizeSection p={active || p} />
-              <div>
-                <h3 className="font-semibold text-sm mb-1">Πληροφορίες</h3>
-                <ShippingInfo />
-              </div>
             </div>
             
-            {/* Related products */}
-            {related.length > 0 && (
-              <div className="pt-6 border-t border-slate-200 mt-4">
-                <h3 className="text-sm font-semibold mb-3">
-                  Παρόμοια προϊόντα
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {related.map((rp) => {
-                    const rpTitle =
-                      rp?.title?.el || rp?.title?.en || "Product";
-                    const rpPrice = rp?.discountPrice ?? rp?.price;
-                    const rpImage =
-                      Array.isArray(rp.images) && rp.images.length > 0
-                        ? rp.images[0]
-                        : "/placeholder.png";
-
-                    return (
-                      <Link
-                        key={rp.slug}
-                        to={`/product/${rp.slug}`}
-                        className="block text-xs"
-                      >
-                        <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100 mb-1">
-                          <img
-                            src={rpImage}
-                            alt={rpTitle}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = "/placeholder.png";
-                            }}
-                          />
-                        </div>
-                        <div className="font-medium line-clamp-2">
-                          {rpTitle}
-                        </div>
-                        {rpPrice != null && (
-                          <div className="text-xs text-amber-700 font-semibold">
-                            €{rpPrice}
-                          </div>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-)}
-
-
             {/* Buttons & back link */}
             <div className="pt-4 space-y-2">
               <button
@@ -525,7 +494,58 @@ export default function PDP() {
               </Link>
             </div>
           </div>
-          <div className="pt-6 border-t border-slate-200 mt-4">
+          {/* end info column */}
+        </div>
+
+          {/* Related products full width */}
+          {related.length > 0 && (
+            <div className="pt-6 border-t border-slate-200 mt-10">
+              <h3 className="text-sm font-semibold mb-3">
+                Παρόμοια προϊόντα
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {related.map((rp) => {
+                  const rpTitle =
+                    rp?.title?.el || rp?.title?.en || "Product";
+                  const rpPrice = rp?.discountPrice ?? rp?.price;
+                  const rpImage =
+                    Array.isArray(rp.images) && rp.images.length > 0
+                      ? rp.images[0]
+                      : "/placeholder.png";
+
+                  return (
+                    <Link
+                      key={rp.slug}
+                      to={`/product/${rp.slug}`}
+                      className="block text-xs"
+                    >
+                      <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100 mb-1">
+                        <img
+                          src={rpImage}
+                          alt={rpTitle}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.png";
+                          }}
+                        />
+                      </div>
+                      <div className="font-medium line-clamp-2">
+                        {rpTitle}
+                      </div>
+                      {rpPrice != null && (
+                        <div className="text-xs text-amber-700 font-semibold">
+                          €{rpPrice}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Reviews full width */}
+          <div className="pt-6 border-t border-slate-200 mt-6">
             <h3 className="text-sm font-semibold mb-2">Αξιολογήσεις</h3>
 
             <div className="mb-2 flex items-center gap-1">
@@ -564,7 +584,7 @@ export default function PDP() {
               Υποβολή αξιολόγησης
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
