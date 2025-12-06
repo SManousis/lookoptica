@@ -37,7 +37,8 @@ class ProductListItem(BaseModel):
     brand: Optional[str] = None        
     category: Optional[str] = None     
     audience: Optional[str] = None
-    images: list[str] = []       
+    images: list[str] = []
+    status: Optional[str] = None
 
 class ProductDetail(ProductListItem):
     ean: str | None
@@ -86,6 +87,7 @@ def list_products(
             brand = None
             category = None
             audience = None
+            status = None
             if isinstance(attrs, dict):
                 brand = attrs.get("brand_label") or attrs.get("brand")
                 category = (
@@ -96,6 +98,7 @@ def list_products(
                 audience = attrs.get("audience")
                 if not category and attrs.get("product_type") == "contact_lens":
                     category = "contact_lenses"
+                status = attrs.get("catalog_status")
 
             items.append(
                 ProductListItem(
@@ -111,6 +114,7 @@ def list_products(
                     category=category,
                     audience=audience,
                     images=r.images or [],
+                    status=status or r.status,
                 )
             )
 

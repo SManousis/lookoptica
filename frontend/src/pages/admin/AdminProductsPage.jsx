@@ -108,6 +108,7 @@ export default function AdminProductsPage() {
           ...p,
           categoryNormalized: resolveCategoryValue(p.category),
           categoryLabel: categoryLabelFromValue(p.category),
+          _mainImage: Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : "",
           _editPrice: p.discountPrice ?? "",
           _editDiscountPrice: p.price ?? "",
           _editStatus: p.status || "in_stock",
@@ -166,7 +167,7 @@ export default function AdminProductsPage() {
   }, []);
 
   function handleChangePrice(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) =>
         p.sku === sku ? { ...p, _editPrice: value } : p
       )
@@ -174,7 +175,7 @@ export default function AdminProductsPage() {
   }
 
   function handleChangeDiscountPrice(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) =>
         p.sku === sku ? { ...p, _editDiscountPrice: value } : p
       )
@@ -182,7 +183,7 @@ export default function AdminProductsPage() {
   }
 
   function handleChangeStock(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) =>
         p.sku === sku ? { ...p, _editStock: value } : p
       )
@@ -190,7 +191,7 @@ export default function AdminProductsPage() {
   }
 
   function handleChangeStatus(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) =>
         p.sku === sku ? { ...p, _editStatus: value } : p
       )
@@ -245,26 +246,6 @@ export default function AdminProductsPage() {
       console.log("Saved product", product.sku);
 
       // Optimistically update the row so the table reflects the saved values
-      setItems((prev) =>
-        prev.map((p) => {
-          if (p.sku !== product.sku) return p;
-          return {
-            ...p,
-            brand: payload.brand,
-            category: payload.category,
-            price: payload.price,
-            discountPrice: payload.compare_at_price,
-            stock: payload.stock,
-            status: payload.status,
-            _editBrand: payload.brand,
-            _editCategory: payload.category,
-            _editPrice: payload.compare_at_price ?? "",
-            _editDiscountPrice: payload.price ?? "",
-            _editStock: payload.stock,
-            _editStatus: payload.status,
-          };
-        })
-      );
       setAllItems((prev) =>
         prev.map((p) => {
           if (p.sku !== product.sku) return p;
@@ -314,13 +295,13 @@ export default function AdminProductsPage() {
   }
 
   function handleChangeBrand(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) => (p.sku === sku ? { ...p, _editBrand: value } : p))
     );
   }
 
   function handleChangeCategory(sku, value) {
-    setItems((prev) =>
+    setAllItems((prev) =>
       prev.map((p) => (p.sku === sku ? { ...p, _editCategory: value } : p))
     );
   }
@@ -344,7 +325,7 @@ export default function AdminProductsPage() {
         throw new Error(txt || "Failed to unpublish");
       }
 
-      setItems((prev) => prev.filter((p) => p.sku !== product.sku));
+      setAllItems((prev) => prev.filter((p) => p.sku !== product.sku));
     } catch (err) {
       console.error("Error unpublishing product:", err);
       setErrorMsg(err.message || "Σφάλμα κατά την αρχειοθέτηση.");
@@ -495,6 +476,7 @@ export default function AdminProductsPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 border-b">
                 <tr>
+                  <th className="px-3 py-2 text-left font-medium text-slate-600 w-20">Image</th>
                   <th className="px-3 py-2 text-left font-medium text-slate-600">Τίτλος</th>
                   <th className="px-3 py-2 text-left font-medium text-slate-600">Brand</th>
                   <th className="px-3 py-2 text-left font-medium text-slate-600">Κατηγορία</th>
@@ -508,8 +490,22 @@ export default function AdminProductsPage() {
               <tbody>
               {paginatedItems.map((p) => {
                 const title = p?.title?.el || p?.title?.en || p.slug || p.sku;
+                const mainImage = p._mainImage;
                 return (
                   <tr key={p.sku} className="border-b last:border-b-0">
+                    <td className="px-3 py-2">
+                      {mainImage ? (
+                        <img
+                          src={mainImage}
+                          alt={title}
+                          className="w-14 h-14 rounded-md object-cover border"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-md border bg-slate-50 flex items-center justify-center text-[10px] text-slate-400">
+                          No image
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-xs">
                       <div className="font-medium text-slate-800 line-clamp-2">
                         {title}
@@ -593,32 +589,34 @@ export default function AdminProductsPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-2 text-xs text-right space-x-1">
-                      <button
-                        onClick={() => handleSaveRow(p)}
-                        disabled={savingSku === p.sku}
-                        className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-600 text-white disabled:opacity-60"
-                      >
-                        {savingSku === p.sku ? "Αποθήκευση…" : "Αποθήκευση"}
-                      </button>
-                      <button
-                        onClick={() => handleEdit(p)}
-                        className="inline-flex items-center px-2 py-1 rounded-md border border-slate-300 text-slate-700"
-                      >
-                        Επεξεργασία
-                      </button>
-                      <button
-                        onClick={() => handleDuplicate(p)}
-                        className="inline-flex items-center px-2 py-1 rounded-md border border-slate-300 text-slate-700"
-                      >
-                        Διπλασιασμός
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p)}
-                        className="inline-flex items-center px-2 py-1 rounded-md border border-red-200 text-red-700"
-                      >
-                        Διαγραφή
-                      </button>
+                    <td className="px-2 py-2 text-xs">
+                      <div className="grid grid-cols-2 gap-1 text-right">
+                        <button
+                          onClick={() => handleSaveRow(p)}
+                          disabled={savingSku === p.sku}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-emerald-600 text-white disabled:opacity-60"
+                        >
+                          {savingSku === p.sku ? "Αποθήκευση…" : "Αποθήκευση"}
+                        </button>
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md border border-slate-300 text-slate-700"
+                        >
+                          Επεξεργασία
+                        </button>
+                        <button
+                          onClick={() => handleDuplicate(p)}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md border border-slate-300 text-slate-700"
+                        >
+                          Διπλασιασμός
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p)}
+                          className="inline-flex items-center justify-center px-2 py-1 rounded-md border border-red-200 text-red-700"
+                        >
+                          Διαγραφή
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

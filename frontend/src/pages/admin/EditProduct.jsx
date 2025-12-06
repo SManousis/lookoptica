@@ -164,9 +164,8 @@ export default function EditProduct() {
           brand: data.brand || "",
           category: categoryValue,
           audience: data.audience || "",
-          // Regular/original price comes from discountPrice (compare_at); offer/current from price
-          price: data.discountPrice ?? "",
-          discountPrice: data.price ?? "",
+          price: data.price ?? "",
+          discountPrice: data.discountPrice ?? "",
           sku: data.sku || "",
           ean: data.ean || "",
           description: data.description || "",
@@ -189,8 +188,8 @@ export default function EditProduct() {
           variantList.map((v) => ({
             ...initialVariant,
             ...v,
-            price: v.discountPrice ?? v.price ?? "",
-            discountPrice: v.price ?? v.discountPrice ?? "",
+            price: v.price ?? "",
+            discountPrice: v.discountPrice ?? "",
             imageUrl: Array.isArray(v.images) && v.images.length > 0
               ? v.images[0]
               : "",
@@ -303,9 +302,8 @@ export default function EditProduct() {
       color: v.color,
       sku: v.sku || null,
       ean: v.ean || null,
-      // offer/current price goes to price, regular to discountPrice for API consistency
-      price: v.discountPrice ? Number(v.discountPrice) : null,
-      discountPrice: v.price ? Number(v.price) : null,
+      price: v.price ? Number(v.price) : null,
+      discountPrice: v.discountPrice ? Number(v.discountPrice) : null,
       stock: v.stock ? Number(v.stock) : null,
       reorderLevel: v.reorderLevel ? Number(v.reorderLevel) : null,
       allowBackorder: !!v.allowBackorder,
@@ -320,9 +318,9 @@ export default function EditProduct() {
           color: form.color,
           sku: form.sku || null,
           ean: form.ean || null,
-          price: form.discountPrice ? Number(form.discountPrice) : null,
-          discountPrice: form.price
-            ? Number(form.price)
+          price: form.price ? Number(form.price) : null,
+          discountPrice: form.discountPrice
+            ? Number(form.discountPrice)
             : null,
           stock: form.stock ? Number(form.stock) : null,
           reorderLevel: form.reorderLevel
@@ -340,9 +338,9 @@ export default function EditProduct() {
       slug: form.slug,
       brand: form.brand || initialBrand || null,
       category: form.category || null,
-      price: form.discountPrice ? Number(form.discountPrice) : null,
-      discountPrice: form.price
-        ? Number(form.price)
+      price: form.price ? Number(form.price) : null,
+      discountPrice: form.discountPrice
+        ? Number(form.discountPrice)
         : null,
       sku: form.sku || null,
       ean: form.ean || null,

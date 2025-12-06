@@ -88,6 +88,7 @@ export default function CategoryPLP() {
   const [state, setState] = useState("loading"); // loading | ok | error
   const [searchTerm, setSearchTerm] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
+  const [sortBy, setSortBy] = useState("newest"); // newest | oldest | price | brand
 
   console.log(
     "CategoryPLP render",
@@ -179,7 +180,7 @@ export default function CategoryPLP() {
 
   const displayItems = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return items.filter((p) => {
+    const filtered = items.filter((p) => {
       if (brandFilter && p.brand !== brandFilter) return false;
       if (!q) return true;
       const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
@@ -195,7 +196,76 @@ export default function CategoryPLP() {
         color.includes(q)
       );
     });
-  }, [items, brandFilter, searchTerm]);
+    const sorted = [...filtered];
+
+    const parseDate = (value) => {
+      const raw = value ?? "";
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) return numeric;
+      const parsed = Date.parse(raw);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    const normalizePrice = (raw) => {
+      if (raw == null) return Number.POSITIVE_INFINITY;
+      const cleaned = String(raw)
+        .replace(/[^0-9,.-]/g, "")
+        .replace(",", ".");
+      if (cleaned.trim() === "") return Number.POSITIVE_INFINITY;
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : Number.POSITIVE_INFINITY;
+    };
+
+    const getEffectivePrice = (p) => {
+      // Prefer discount price; if not present/invalid, fall back to current price
+      const discount = normalizePrice(p?.discountPrice);
+      const price = normalizePrice(p?.price);
+      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
+        return discount;
+      }
+      if (Number.isFinite(price) && price > 0 && price !== Number.POSITIVE_INFINITY) {
+        return price;
+      }
+      // Treat missing/zero/invalid prices as the most expensive so they sink to bottom
+      return Number.POSITIVE_INFINITY;
+    };
+
+    switch (sortBy) {
+      case "price":
+        sorted.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+        break;
+      case "price-desc":
+        sorted.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+        break;
+      case "brand":
+        sorted.sort((a, b) =>
+          (a?.brand || "").localeCompare(b?.brand || "", undefined, { sensitivity: "base" })
+        );
+        break;
+      case "brand-desc":
+        sorted.sort((a, b) =>
+          (b?.brand || "").localeCompare(a?.brand || "", undefined, { sensitivity: "base" })
+        );
+        break;
+      case "oldest":
+        sorted.sort(
+          (a, b) =>
+            parseDate(a?.createdAt || a?.created_at) -
+            parseDate(b?.createdAt || b?.created_at)
+        );
+        break;
+      case "newest":
+      default:
+        sorted.sort(
+          (a, b) =>
+            parseDate(b?.createdAt || b?.created_at) -
+            parseDate(a?.createdAt || a?.created_at)
+        );
+        break;
+    }
+
+    return sorted;
+  }, [items, brandFilter, searchTerm, sortBy]);
 
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
@@ -279,6 +349,21 @@ export default function CategoryPLP() {
               ))}
             </select>
           </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Sort by</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="border rounded-md px-3 py-1 text-sm md:w-52"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="price">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="brand">Brand: A to Z</option>
+              <option value="brand-desc">Brand: Z to A</option>
+            </select>
+          </div>
         </div>
       </header>
 
@@ -327,3 +412,4 @@ export default function CategoryPLP() {
     </div>
   );
 }
+
