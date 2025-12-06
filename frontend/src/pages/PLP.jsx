@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 
 const API = import.meta.env.VITE_API_BASE || "";
+
+function normalizeCategoryString(str = "") {
+  return str
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9α-ω]/g, "");
+}
 
 // Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
@@ -10,25 +19,32 @@ const CATEGORY_CONFIG = {
     labelEl: "Γυαλιά Ηλίου",
     subtitle:
       "Στυλάτα και προστατευτικά γυαλιά ηλίου για πόλη, θάλασσα και οδήγηση.",
-    matches: ["sunglasses", "γυαλιά ηλίου", "γυαλια ηλιου"],
+    aliases: ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου", "γυαλια_ηλιου"],
   },
   frames: {
     labelEl: "Σκελετοί Οράσεως",
     subtitle:
       "Σκελετοί για καθημερινή χρήση, γραφείο και οδήγηση – από minimal μέχρι statement.",
-    matches: ["ophthalmic_frames", "frames", "σκελετοί οράσεως", "σκελετοι ορασεως"],
+    aliases: [
+      "ophthalmic_frames",
+      "frames",
+      "σκελετοι ορασεως",
+      "σκελετοί οράσεως",
+      "γυαλια ορασεως",
+      "ophthalmic-frames",
+    ],
   },
   "contact-lenses": {
     labelEl: "Φακοί Επαφής",
     subtitle:
       "Ημερήσιοι, μηνιαίοι και ειδικές λύσεις ανάλογα με τις ανάγκες της όρασής σου.",
-    matches: ["contact_lenses", "contact-lenses", "φακοί επαφής", "φακοι επαφης"],
+    aliases: ["contact_lenses", "contact-lenses", "φακοι επαφης", "φακοί επαφής"],
   },
   "other-products": {
     labelEl: "Άλλα προϊόντα",
     subtitle:
       "Αξεσουάρ, θήκες, καθαριστικά και άλλα προϊόντα φροντίδας για τα γυαλιά σου.",
-    matches: ["other_products", "other-products", "άλλα προϊόντα", "αλλα προιοντα"],
+    aliases: ["other_products", "other-products", "αλλα προιοντα", "αλλα"],
   },
 };
 
@@ -70,6 +86,8 @@ export default function CategoryPLP() {
   const [items, setItems] = useState([]);
   //const [all, setAll] = useState([]); // for debug / inspection
   const [state, setState] = useState("loading"); // loading | ok | error
+  const [searchTerm, setSearchTerm] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
 
   console.log(
     "CategoryPLP render",
@@ -85,21 +103,33 @@ export default function CategoryPLP() {
 
     setState("loading");
 
-    fetch(`${API}/api/products`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Fetch failed");
-        return r.json();
-      })
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
+    async function loadAllProducts() {
+      const limit = 200; // batch size
+      let offset = 0;
+      const all = [];
+      while (true) {
+        const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+        if (!res.ok) throw new Error(`Fetch failed (offset ${offset})`);
+        const batch = await res.json();
+        const list = Array.isArray(batch) ? batch : [];
+        all.push(...list);
+        if (list.length < limit) break;
+        offset += limit;
+        if (offset > 5000) break; // safety guard
+      }
+      return all;
+    }
+
+    loadAllProducts()
+      .then((list) => {
         //setAll(list);
 
         console.log("ALL PRODUCTS FOR CATEGORY PAGE:", list);
 
         const filtered = list.filter((p) => {
-          const rawCategory = (p.category || "").toString().toLowerCase().trim();
-          const categoryMatch = config.matches.some(
-            (m) => rawCategory === m.toLowerCase()
+          const rawCategory = normalizeCategoryString(p.category || "");
+          const categoryMatch = config.aliases.some(
+            (m) => rawCategory === normalizeCategoryString(m)
           );
 
           if (!categoryMatch) return false;
@@ -138,6 +168,34 @@ export default function CategoryPLP() {
         setState("error");
       });
   }, [categorySlug, audienceSlug, config, audienceConfig]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set();
+    items.forEach((p) => {
+      if (p?.brand) set.add(p.brand);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const displayItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return items.filter((p) => {
+      if (brandFilter && p.brand !== brandFilter) return false;
+      if (!q) return true;
+      const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
+      const brand = (p?.brand || "").toLowerCase();
+      const color =
+        (p?.attributes?.color ||
+          p?.attributes?.colour ||
+          p?.variantLabel ||
+          "").toLowerCase();
+      return (
+        title.includes(q) ||
+        brand.includes(q) ||
+        color.includes(q)
+      );
+    });
+  }, [items, brandFilter, searchTerm]);
 
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
@@ -179,15 +237,49 @@ export default function CategoryPLP() {
         </span>
       </nav>
 
-      {/* Category hero */}
-      <header className="space-y-2">
-        <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
-          {config.labelEl}
-          {audienceConfig ? ` – ${audienceConfig.labelEl}` : ""}
-        </h1>
-        <p className="text-sm md:text-base text-slate-600 max-w-2xl">
-          {audienceConfig?.subtitle || config.subtitle}
-        </p>
+      {/* Category hero + compact filters */}
+      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
+            {config.labelEl}
+            {audienceConfig ? ` – ${audienceConfig.labelEl}` : ""}
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 max-w-2xl">
+            {audienceConfig?.subtitle || config.subtitle}
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-2 md:items-end text-sm">
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">
+              Αναζήτηση (brand / τίτλος / χρώμα)
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="π.χ. harrison ή havana"
+              className="border rounded-md px-3 py-1 text-sm md:w-64"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Brand</label>
+            <select
+              value={brandFilter}
+              onChange={(e) => {
+                setBrandFilter(e.target.value);
+              }}
+              className="border rounded-md px-3 py-1 text-sm md:w-48"
+            >
+              <option value="">Όλα τα brands</option>
+              {availableBrands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </header>
 
       {/* State handling */}
@@ -201,7 +293,7 @@ export default function CategoryPLP() {
         </div>
       )}
 
-      {state === "ok" && items.length === 0 && (
+      {state === "ok" && displayItems.length === 0 && (
         <div className="space-y-4">
           <div className="text-slate-600">
             Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία αυτή τη στιγμή.
@@ -225,9 +317,9 @@ export default function CategoryPLP() {
         </div>
       )}
 
-      {state === "ok" && items.length > 0 && (
+      {state === "ok" && displayItems.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {items.map((p) => (
+          {displayItems.map((p) => (
             <ProductCard key={p.slug} p={p} />
           ))}
         </div>

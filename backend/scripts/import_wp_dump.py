@@ -391,18 +391,32 @@ def _build_variants(parent_id: int, posts: Dict[int, WPPost], postmeta: Dict[int
     total_stock = 0
     min_price: Optional[Decimal] = None
     min_reg: Optional[Decimal] = None
+    status_map = {
+        "instock": "in_stock",
+        "onbackorder": "preorder",
+        "outofstock": "unavailable",
+    }
 
     for vid, vpost in posts.items():
         if vpost.post_type != "product_variation" or vpost.post_parent != parent_id:
             continue
         meta = postmeta.get(vid, {})
         sku = _first(meta, "_sku") or f"{vpost.post_name or vpost.id}"
+        ean = (
+            _first(meta, "_ean")
+            or _first(meta, "_barcode")
+            or _first(meta, "_alg_ean")
+        )
         price = _decimal(_first(meta, "_price"))
         reg = _decimal(_first(meta, "_regular_price"))
         sale = _decimal(_first(meta, "_sale_price"))
+        # Woo's _price is already the "current" price (sale if present), but we still prefer sale explicitly
         use_price = sale if sale not in (None, Decimal("0")) else price or reg
-        compare = reg if sale and reg and sale < reg else None
+        # discountPrice in our app = original/regular price (compare_at)
+        compare = reg if reg and use_price and reg > use_price else None
         stock = int(float(_first(meta, "_stock") or 0))
+        stock_status = status_map.get((_first(meta, "_stock_status") or "").lower())
+        allow_backorder = (_first(meta, "_backorders") or "").lower() in {"yes", "notify"}
         total_stock += stock
 
         attr_pairs = {}
@@ -415,10 +429,13 @@ def _build_variants(parent_id: int, posts: Dict[int, WPPost], postmeta: Dict[int
         variants.append(
             {
                 "sku": sku,
+                "ean": ean,
                 "price": float(use_price or 0),
-                "discountPrice": float(sale) if sale not in (None, Decimal("0")) else None,
+                "discountPrice": float(compare) if compare else None,
                 "compare_at": float(compare) if compare else None,
                 "stock": stock,
+                "allowBackorder": allow_backorder,
+                "status": stock_status,
                 "attributes": attr_pairs,
                 "images": images,
             }
@@ -560,6 +577,24 @@ def import_dump(dump_path: Path):
         if variants:
             stock = variants_stock if variants_stock else stock
 
+        stock_status_map = {
+            "instock": "in_stock",
+            "onbackorder": "preorder",
+            "outofstock": "unavailable",
+        }
+        base_stock_status = stock_status_map.get((_first(meta, "_stock_status") or "").lower())
+
+        if variants:
+            has_in_stock = any((v.get("stock") or 0) > 0 or v.get("status") == "in_stock" for v in variants)
+            has_preorder = any(v.get("status") == "preorder" for v in variants)
+            catalog_status = (
+                "in_stock" if has_in_stock else
+                "preorder" if has_preorder else
+                "unavailable"
+            )
+        else:
+            catalog_status = base_stock_status or "in_stock"
+
         status = "published" if post.post_status == "publish" else "draft"
         visible = status == "published"
 
@@ -591,6 +626,8 @@ def import_dump(dump_path: Path):
             attrs["audience"] = audience_hint
         if variants:
             attrs["variants"] = variants
+        if catalog_status:
+            attrs["catalog_status"] = catalog_status
 
         sku = _first(meta, "_sku") or (post.post_name or f"SKU-{pid}")
         slug = post.post_name or f"product-{pid}"

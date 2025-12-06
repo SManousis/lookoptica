@@ -27,14 +27,14 @@ export default function ProductCard({ p }) {
 
   return (
     <Link to={productUrl} className="block group">
-      <img
-        src={firstImage}
-        alt={title}
-        className="w-full aspect-square object-cover rounded-xl bg-gray-100"
-        onError={(e) => {
-          e.currentTarget.src = "/placeholder.png";
-        }}
-      />
+        <div className="w-full rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+          <img
+            src={firstImage}
+            alt={title}
+            className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-200 hover:scale-[1.01]"
+            onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
+          />
+        </div>
 
       {/* Brand + category */}
       <div className="mt-2 text-xs text-slate-500 flex items-center gap-2">

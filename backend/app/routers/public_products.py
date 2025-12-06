@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from app.db import SessionLocal
@@ -10,12 +10,30 @@ from app.models.product import Product
 router = APIRouter(prefix="/api/products", tags=["products"])
 
 # Pydantic shapes
+class Variant(BaseModel):
+    sku: str | None = None
+    ean: str | None = None
+    color: str | None = None
+    price: float | None = None
+    discountPrice: float | None = None
+    stock: int | None = None
+    reorderLevel: int | None = None
+    images: list[str] = Field(default_factory=list)
+    attributes: dict = Field(default_factory=dict)
+    status: str | None = None
+    isDefault: bool = False
+
+    class Config:
+        extra = "ignore"
+
+
 class ProductListItem(BaseModel):
     sku: str
     slug: str | None
     title: dict
     price: float
     discountPrice: float | None = None
+    stock: int | None = None
     brand: Optional[str] = None        
     category: Optional[str] = None     
     audience: Optional[str] = None
@@ -27,7 +45,9 @@ class ProductDetail(ProductListItem):
     attributes: dict
     stock: int
     description: str | None = None
-    # variants omitted in public detail
+    variants: List[Variant] = Field(default_factory=list)
+    reorderLevel: int | None = None
+    status: str | None = None
 
 # DB session dependency (correct pattern)
 def get_db():
@@ -86,6 +106,7 @@ def list_products(
                     discountPrice=float(r.compare_at_price)
                     if r.compare_at_price is not None
                     else None,
+                    stock=int(r.stock or 0),
                     brand=brand,
                     category=category,
                     audience=audience,
@@ -108,10 +129,12 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Not found")
 
     attrs: Dict[str, Any] = r.attributes or {}
-
     brand = None
     category = None
     audience = None
+    variants_raw: List[Dict[str, Any]] = []
+    reorder_level = None
+    status = None
 
     if isinstance(attrs, dict):
         brand = attrs.get("brand_label") or attrs.get("brand")
@@ -123,6 +146,31 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         audience = attrs.get("audience")
         if not category and attrs.get("product_type") == "contact_lens":
             category = "contact_lenses"
+        variants_raw = attrs.get("variants", []) or []
+        reorder_level = attrs.get("reorderLevel")
+        status = attrs.get("catalog_status")
+
+    variants: List[Variant] = []
+    for v in variants_raw:
+        if not isinstance(v, dict):
+            continue
+        attrs_dict = v.get("attributes") if isinstance(v.get("attributes"), dict) else {}
+        color = v.get("color") or v.get("colour")
+        if not color and attrs_dict:
+            color = (
+                attrs_dict.get("pa_color")
+                or attrs_dict.get("color")
+                or attrs_dict.get("colour")
+            )
+
+        payload = dict(v)
+        if color:
+            payload["color"] = color
+        if attrs_dict:
+            payload["attributes"] = attrs_dict
+
+        variants.append(Variant(**payload))
+    status = status or r.status
 
     return ProductDetail(
         sku=r.sku,
@@ -140,4 +188,7 @@ def get_product(slug: str, db: Session = Depends(get_db)):
         category=category,
         audience=audience,
         description=r.description,
+        variants=variants,
+        reorderLevel=reorder_level,
+        status=status,
     )

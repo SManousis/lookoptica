@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import { useCart } from "../context/CartContext";
@@ -123,7 +123,7 @@ export default function ContactLensPDP() {
     product?.title?.el || product?.title?.en || attrs.title || "Contact lens";
 
   const price = product?.price ?? attrs.price;
-  const discountPrice = product?.discountPrice ?? attrs.discountPrice;
+  const discountPrice = product?.discountPrice ?? attrs.discountPrice; // regular/compare price
 
   const sku = product?.sku;
   const ean = product?.ean;
@@ -363,7 +363,7 @@ export default function ContactLensPDP() {
       return;
     }
 
-    const salePrice = discountPrice ?? price;
+    const salePrice = price ?? discountPrice;
     const unitPrice = Number(salePrice ?? 0) || 0;
 
     let variantLabel = `Sph ${formatDiopter(selectedVariant.sphere)}`;
@@ -477,20 +477,23 @@ export default function ContactLensPDP() {
             <h1 className="text-2xl font-semibold">{title}</h1>
 
             {/* Price */}
-            {discountPrice ? (
+            {discountPrice && price != null && discountPrice > price ? (
               <div className="flex items-baseline gap-2">
-                <div className="text-xl font-bold text-amber-700">
-                  €{Number(discountPrice).toFixed(2)}
-                </div>
-                <div className="text-sm text-slate-400 line-through">
-                  €{Number(price).toFixed(2)}
-                </div>
+                <div className="text-xl font-bold text-amber-700">€{Number(price).toFixed(2)}</div>
+                <div className="text-sm text-slate-400 line-through">€{Number(discountPrice).toFixed(2)}</div>
               </div>
             ) : (
-              <div className="text-xl font-bold text-amber-700">
-                {price != null ? `€${Number(price).toFixed(2)}` : "—"}
-              </div>
+              <div className="text-xl font-bold text-amber-700">€{Number(price ?? 0).toFixed(2)}</div>
             )}
+
+            {/* Stock info */}
+            <div className="text-xs text-slate-500">
+              {selectedVariant?.stock != null
+                ? `Διαθεσιμότητα: ${selectedVariant.stock} τεμ.`
+                : product?.stock != null
+                  ? `Συνολικό απόθεμα: ${product.stock} τεμ.`
+                  : "Διαθεσιμότητα κατόπιν συνεννόησης"}
+            </div>
 
             {/* SKU / EAN */}
             <div className="text-sm text-slate-600">

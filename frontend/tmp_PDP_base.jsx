@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import metrics from "/metrics.png";
@@ -10,53 +10,53 @@ const API = import.meta.env.VITE_API_BASE || "";
 function ShippingInfo() {
   return (
     <div className="space-y-1 text-sm text-slate-700">
-      <p><strong>Μεταφορικά:</strong> <strong>Δωρεάν μεταφορικά</strong> σε όλη την Ελλάδα με Box Now για αγορές άνω τον 40€ και με Ελτά courier για αγορές άνω των 80€.</p>
-      <p><strong>Αντικαταβολή:</strong> <strong>Δωρεάν αντικαταβολή</strong> για αγορες ανω το 60€.</p>
-      <p><strong>Αποστολή:</strong> 1–3 εργάσιμες μέρες για προϊόντα που είναι σε διαθεσιμα στο κατάστημα.</p>
-      <p><strong>Παραλαβή:</strong> <strong>Δωρεάν </strong>παραλαβή από το κατάστημα Look Optica (Χαλάνδρι).</p>
-      <p><strong>Επιστροφες:</strong> 14 εργάσιμες μέρες για αλλαγές/επιστροφές, υπό την προϋπόθεση ότι το προϊόν δεν είναι χρησιμοποιημένο και στην αρχική του συσκευασία. Τα έξοδα επιστροφής επιβαρυνούν τον καταναλωτή.</p>
-      <p><strong>Προϊόντα </strong> Ολα τα προϊόντα είναι αυθεντικά από την επίσημη αντιπροσωπεία.</p>
-      <p><strong>Πληροφοριες:</strong> Για πληροφορίες τηλεφωνήστε στο <strong>+30 210 6898658</strong> ή στο <strong>+30 6944 223853</strong>.</p>
+      <p><strong>╬ε╬╡╧Ε╬▒╧Η╬┐╧Β╬╣╬║╬υ:</strong> <strong>╬Φ╧Κ╧Β╬╡╬υ╬╜ ╬╝╬╡╧Ε╬▒╧Η╬┐╧Β╬╣╬║╬υ</strong> ╧Δ╬╡ ╧Ν╬╗╬╖ ╧Ε╬╖╬╜ ╬Χ╬╗╬╗╬υ╬┤╬▒ ╬╝╬╡ Box Now ╬│╬╣╬▒ ╬▒╬│╬┐╧Β╬φ╧Γ ╬υ╬╜╧Κ ╧Ε╬┐╬╜ 40έΓυ ╬║╬▒╬╣ ╬╝╬╡ ╬Χ╬╗╧Ε╬υ courier ╬│╬╣╬▒ ╬▒╬│╬┐╧Β╬φ╧Γ ╬υ╬╜╧Κ ╧Ε╧Κ╬╜ 80έΓυ.</p>
+      <p><strong>╬Σ╬╜╧Ε╬╣╬║╬▒╧Ε╬▒╬▓╬┐╬╗╬χ:</strong> <strong>╬Φ╧Κ╧Β╬╡╬υ╬╜ ╬▒╬╜╧Ε╬╣╬║╬▒╧Ε╬▒╬▓╬┐╬╗╬χ</strong> ╬│╬╣╬▒ ╬▒╬│╬┐╧Β╬╡╧Γ ╬▒╬╜╧Κ ╧Ε╬┐ 60έΓυ.</p>
+      <p><strong>╬Σ╧Α╬┐╧Δ╧Ε╬┐╬╗╬χ:</strong> 1έΑΥ3 ╬╡╧Β╬│╬υ╧Δ╬╣╬╝╬╡╧Γ ╬╝╬φ╧Β╬╡╧Γ ╬│╬╣╬▒ ╧Α╧Β╬┐╧Λ╧Ν╬╜╧Ε╬▒ ╧Α╬┐╧Ζ ╬╡╬ψ╬╜╬▒╬╣ ╧Δ╬╡ ╬┤╬╣╬▒╬╕╬╡╧Δ╬╣╬╝╬▒ ╧Δ╧Ε╬┐ ╬║╬▒╧Ε╬υ╧Δ╧Ε╬╖╬╝╬▒.</p>
+      <p><strong>╬ι╬▒╧Β╬▒╬╗╬▒╬▓╬χ:</strong> <strong>╬Φ╧Κ╧Β╬╡╬υ╬╜ </strong>╧Α╬▒╧Β╬▒╬╗╬▒╬▓╬χ ╬▒╧Α╧Ν ╧Ε╬┐ ╬║╬▒╧Ε╬υ╧Δ╧Ε╬╖╬╝╬▒ Look Optica (╬π╬▒╬╗╬υ╬╜╬┤╧Β╬╣).</p>
+      <p><strong>╬Χ╧Α╬╣╧Δ╧Ε╧Β╬┐╧Η╬╡╧Γ:</strong> 14 ╬╡╧Β╬│╬υ╧Δ╬╣╬╝╬╡╧Γ ╬╝╬φ╧Β╬╡╧Γ ╬│╬╣╬▒ ╬▒╬╗╬╗╬▒╬│╬φ╧Γ/╬╡╧Α╬╣╧Δ╧Ε╧Β╬┐╧Η╬φ╧Γ, ╧Ζ╧Α╧Ν ╧Ε╬╖╬╜ ╧Α╧Β╬┐╧Μ╧Α╧Ν╬╕╬╡╧Δ╬╖ ╧Ν╧Ε╬╣ ╧Ε╬┐ ╧Α╧Β╬┐╧Λ╧Ν╬╜ ╬┤╬╡╬╜ ╬╡╬ψ╬╜╬▒╬╣ ╧Θ╧Β╬╖╧Δ╬╣╬╝╬┐╧Α╬┐╬╣╬╖╬╝╬φ╬╜╬┐ ╬║╬▒╬╣ ╧Δ╧Ε╬╖╬╜ ╬▒╧Β╧Θ╬╣╬║╬χ ╧Ε╬┐╧Ζ ╧Δ╧Ζ╧Δ╬║╬╡╧Ζ╬▒╧Δ╬ψ╬▒. ╬ν╬▒ ╬φ╬╛╬┐╬┤╬▒ ╬╡╧Α╬╣╧Δ╧Ε╧Β╬┐╧Η╬χ╧Γ ╬╡╧Α╬╣╬▓╬▒╧Β╧Ζ╬╜╬┐╧Ξ╬╜ ╧Ε╬┐╬╜ ╬║╬▒╧Ε╬▒╬╜╬▒╬╗╧Κ╧Ε╬χ.</p>
+      <p><strong>╬ι╧Β╬┐╧Λ╧Ν╬╜╧Ε╬▒ </strong> ╬θ╬╗╬▒ ╧Ε╬▒ ╧Α╧Β╬┐╧Λ╧Ν╬╜╧Ε╬▒ ╬╡╬ψ╬╜╬▒╬╣ ╬▒╧Ζ╬╕╬╡╬╜╧Ε╬╣╬║╬υ ╬▒╧Α╧Ν ╧Ε╬╖╬╜ ╬╡╧Α╬ψ╧Δ╬╖╬╝╬╖ ╬▒╬╜╧Ε╬╣╧Α╧Β╬┐╧Δ╧Κ╧Α╬╡╬ψ╬▒.</p>
+      <p><strong>╬ι╬╗╬╖╧Β╬┐╧Η╬┐╧Β╬╣╬╡╧Γ:</strong> ╬Υ╬╣╬▒ ╧Α╬╗╬╖╧Β╬┐╧Η╬┐╧Β╬ψ╬╡╧Γ ╧Ε╬╖╬╗╬╡╧Η╧Κ╬╜╬χ╧Δ╧Ε╬╡ ╧Δ╧Ε╬┐ <strong>+30 210 6898658</strong> ╬χ ╧Δ╧Ε╬┐ <strong>+30 6944 223853</strong>.</p>
     </div>
   );
 }
 
 function FrameSizeSection({ p }) {
   const attrs = p?.attributes || {};
-  // Προσαρμόζεις τα κλειδιά όταν ξέρουμε ακριβώς τα ονόματα
+  // ╬ι╧Β╬┐╧Δ╬▒╧Β╬╝╧Ν╬╢╬╡╬╣╧Γ ╧Ε╬▒ ╬║╬╗╬╡╬╣╬┤╬╣╬υ ╧Ν╧Ε╬▒╬╜ ╬╛╬φ╧Β╬┐╧Ζ╬╝╬╡ ╬▒╬║╧Β╬╣╬▓╧Ο╧Γ ╧Ε╬▒ ╬┐╬╜╧Ν╬╝╬▒╧Ε╬▒
   const eyeSize = attrs.eyeSize || attrs.lensWidth || attrs.eye || "53";
   const bridgeSize = attrs.bridgeSize || attrs.bridge || "17";
   const templeLength = attrs.templeLength || attrs.temple || "145";
 
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-sm">Μέγεθος σκελετού</h3>
+      <h3 className="font-semibold text-sm">╬ε╬φ╬│╬╡╬╕╬┐╧Γ ╧Δ╬║╬╡╬╗╬╡╧Ε╬┐╧Ξ</h3>
 
-      {/* Αριθμοί */}
+      {/* ╬Σ╧Β╬╣╬╕╬╝╬┐╬ψ */}
       <div className="flex gap-4 text-sm">
         <div>
           <div className="font-semibold">{eyeSize} mm</div>
-          <div className="text-xs text-slate-500">Μέγεθος φακού</div>
+          <div className="text-xs text-slate-500">╬ε╬φ╬│╬╡╬╕╬┐╧Γ ╧Η╬▒╬║╬┐╧Ξ</div>
         </div>
         <div>
           <div className="font-semibold">{bridgeSize} mm</div>
-          <div className="text-xs text-slate-500">Γέφυρα</div>
+          <div className="text-xs text-slate-500">╬Υ╬φ╧Η╧Ζ╧Β╬▒</div>
         </div>
         <div>
           <div className="font-semibold">{templeLength} mm</div>
-          <div className="text-xs text-slate-500">Μήκος βραχίονα</div>
+          <div className="text-xs text-slate-500">╬ε╬χ╬║╬┐╧Γ ╬▓╧Β╬▒╧Θ╬ψ╬┐╬╜╬▒</div>
         </div>
       </div>
 
-      {/* Η δική σου εικόνα με το σχεδιάγραμμα */}
+      {/* ╬Ω ╬┤╬╣╬║╬χ ╧Δ╬┐╧Ζ ╬╡╬╣╬║╧Ν╬╜╬▒ ╬╝╬╡ ╧Ε╬┐ ╧Δ╧Θ╬╡╬┤╬╣╬υ╬│╧Β╬▒╬╝╬╝╬▒ */}
       <div className="mt-2 rounded-lg border bg-slate-50 p-3 flex flex-col items-center">
         <img
           src={metrics}
-          alt="Οδηγός μετρήσεων σκελετού"
+          alt="╬θ╬┤╬╖╬│╧Ν╧Γ ╬╝╬╡╧Ε╧Β╬χ╧Δ╬╡╧Κ╬╜ ╧Δ╬║╬╡╬╗╬╡╧Ε╬┐╧Ξ"
           className="w-full max-w-sm h-auto"
         />
         <p className="mt-2 text-[10px] text-slate-500 text-center">
-          Παράδειγμα: 53 ☐ 17 – 145 → μέγεθος φακού 53mm, γέφυρα 17mm, μήκος βραχίονα 145mm.
+          ╬ι╬▒╧Β╬υ╬┤╬╡╬╣╬│╬╝╬▒: 53 έαΡ 17 έΑΥ 145 έΗΤ ╬╝╬φ╬│╬╡╬╕╬┐╧Γ ╧Η╬▒╬║╬┐╧Ξ 53mm, ╬│╬φ╧Η╧Ζ╧Β╬▒ 17mm, ╬╝╬χ╬║╬┐╧Γ ╬▓╧Β╬▒╧Θ╬ψ╬┐╬╜╬▒ 145mm.
         </p>
       </div>
     </div>
@@ -77,7 +77,7 @@ function ProductDescription({ product }) {
     .map((l) => l.trim())
     .filter(Boolean);
 
-  const bulletLines = lines.filter((l) => l.startsWith("-") || l.startsWith("•"));
+  const bulletLines = lines.filter((l) => l.startsWith("-") || l.startsWith("έΑλ"));
   const hasBullets = bulletLines.length >= 2;
 
   return (
@@ -86,7 +86,7 @@ function ProductDescription({ product }) {
       {hasBullets ? (
         <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
           {lines.map((l, idx) => (
-            <li key={idx}>{l.replace(/^[-•]\s*/, "")}</li>
+            <li key={idx}>{l.replace(/^[-έΑλ]\s*/, "")}</li>
           ))}
         </ul>
       ) : (
@@ -122,7 +122,6 @@ export default function PDP() {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [added, setAdded] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -135,7 +134,7 @@ export default function PDP() {
 
         const variants = data.variants || [];
         const defaultIndex = variants.findIndex((v) => v.isDefault);
-        setVariantIndex(defaultIndex >= 0 ? defaultIndex : 0);  // 👈 use default colour
+        setVariantIndex(defaultIndex >= 0 ? defaultIndex : 0);  // ΏθΣΙ use default colour
         setImageIndex(0);
       })
       .catch(() => setState("error"));
@@ -188,7 +187,7 @@ export default function PDP() {
         className="text-xl"
         aria-label="star"
       >
-        {filled ? "★" : "☆"}
+        {filled ? "έαΖ" : "έαΗ"}
       </button>
     );
   }
@@ -200,15 +199,15 @@ export default function PDP() {
 
     switch (status) {
       case "in_stock":
-        label = "Διαθέσιμο";
+        label = "╬Φ╬╣╬▒╬╕╬φ╧Δ╬╣╬╝╬┐";
         classes += "bg-emerald-50 text-emerald-700 border border-emerald-200";
         break;
       case "preorder":
-        label = "Κατόπιν παραγγελίας";
+        label = "╬γ╬▒╧Ε╧Ν╧Α╬╣╬╜ ╧Α╬▒╧Β╬▒╬│╬│╬╡╬╗╬ψ╬▒╧Γ";
         classes += "bg-amber-50 text-amber-700 border border-amber-200";
         break;
       case "unavailable":
-        label = "Μη διαθέσιμο";
+        label = "╬ε╬╖ ╬┤╬╣╬▒╬╕╬φ╧Δ╬╣╬╝╬┐";
         classes += "bg-slate-100 text-slate-500 border border-slate-200";
         break;
       default:
@@ -264,7 +263,7 @@ export default function PDP() {
   const seoDescription =
     p?.metaDescription ||
     p?.description ||
-    "Γυαλιά οράσεως και ηλίου από το Look Optica στο Χαλάνδρι.";
+    "╬Υ╧Ζ╬▒╬╗╬╣╬υ ╬┐╧Β╬υ╧Δ╬╡╧Κ╧Γ ╬║╬▒╬╣ ╬╖╬╗╬ψ╬┐╧Ζ ╬▒╧Α╧Ν ╧Ε╬┐ Look Optica ╧Δ╧Ε╬┐ ╬π╬▒╬╗╬υ╬╜╬┤╧Β╬╣.";
   const canonicalUrl = `${baseUrl}/product/${slug}`;
 
   const mainImageUrl =
@@ -281,12 +280,11 @@ export default function PDP() {
 
   useEffect(() => {
     setAdded(false);
-    setLightboxOpen(false);
   }, [variantIndex, slug]);
 
   const handleAddToCart = () => {
     if (!p) return;
-    const salePrice = price ?? discountPrice;
+    const salePrice = discountPrice ?? price;
     const unitPrice = Number(salePrice ?? 0) || 0;
     addItem(
       {
@@ -308,12 +306,12 @@ export default function PDP() {
     <div className="max-w-5xl mx-auto">
       {/* breadcrumbs */}
       <nav className="text-sm text-slate-500 mb-4">
-        <Link to="/" className="hover:underline">Home</Link> <span>›</span>{" "}
-        <Link to="/shop" className="hover:underline">Shop</Link> <span>›</span>{" "}
+        <Link to="/" className="hover:underline">Home</Link> <span>έΑ║</span>{" "}
+        <Link to="/shop" className="hover:underline">Shop</Link> <span>έΑ║</span>{" "}
         <span className="text-slate-700">{slug}</span>
       </nav>
 
-      {state === "loading" && <div>Loading…</div>}
+      {state === "loading" && <div>LoadingέΑο</div>}
       {state === "error" && (
         <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
           Could not load product.
@@ -324,14 +322,13 @@ export default function PDP() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* images */}
           <div>
-            {/* κύρια εικόνα */}
-            <div className="w-full rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+            {/* ╬║╧Ξ╧Β╬╣╬▒ ╬╡╬╣╬║╧Ν╬╜╬▒ */}
+            <div className="w-full aspect-square rounded-xl bg-gray-100 overflow-hidden">
               <img
                 src={mainImage}
                 alt={title}
-                className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-200 hover:scale-[1.01]"
+                className="w-full h-full object-cover"
                 onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
-                onClick={() => setLightboxOpen(true)}
               />
             </div>
 
@@ -348,11 +345,11 @@ export default function PDP() {
                         ? "border-amber-600 ring-1 ring-amber-600"
                         : "border-slate-200"
                     }`}
-                    aria-label={`Εικόνα ${idx + 1}`}
+                    aria-label={`╬Χ╬╣╬║╧Ν╬╜╬▒ ${idx + 1}`}
                   >
                     <img
                       src={img}
-                      alt={`Εικόνα ${idx + 1}`}
+                      alt={`╬Χ╬╣╬║╧Ν╬╜╬▒ ${idx + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
                     />
@@ -361,7 +358,7 @@ export default function PDP() {
               </div>
             )}
             <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <h3 className="font-semibold text-sm mb-2">Πληροφορίες</h3>
+              <h3 className="font-semibold text-sm mb-2">╬ι╬╗╬╖╧Β╬┐╧Η╬┐╧Β╬ψ╬╡╧Γ</h3>
               <ShippingInfo />
             </div>
           </div>
@@ -396,14 +393,18 @@ export default function PDP() {
             </h1>
 
             {/* Price */}
-            {discountPrice != null && price != null && discountPrice > price ? (
+            {discountPrice ? (
               <div className="flex items-baseline gap-2">
-                <div className="text-xl font-bold text-amber-700">{`€${price}`}</div>
-                <div className="text-sm text-slate-400 line-through">{`€${discountPrice}`}</div>
+                <div className="text-xl font-bold text-amber-700">
+                  {discountPrice != null ? `έΓυ${discountPrice}` : "έΑΦ"}
+                </div>
+                <div className="text-sm text-slate-400 line-through">
+                  {price != null ? `έΓυ${price}` : "έΑΦ"}
+                </div>
               </div>
             ) : (
               <div className="text-xl font-bold text-amber-700">
-                {price != null ? `€${price}` : discountPrice != null ? `€${discountPrice}` : "€"}
+                {price != null ? `έΓυ${price}` : "έΑΦ"}
               </div>
             )}
 
@@ -417,18 +418,18 @@ export default function PDP() {
             <div className="text-xs text-slate-500">
               {active?.stock != null ? (
                 <span>
-                  Διαθεσιμότητα: {active.stock} τεμ.
+                  ╬Φ╬╣╬▒╬╕╬╡╧Δ╬╣╬╝╧Ν╧Ε╬╖╧Ε╬▒: {active.stock} ╧Ε╬╡╬╝.
                   {active.reorderLevel != null &&
                     active.stock <= active.reorderLevel && (
                       <span className="text-amber-600 ml-1">
-                        (Χαμηλό απόθεμα – προτείνεται επαναπαραγγελία)
+                        (╬π╬▒╬╝╬╖╬╗╧Ν ╬▒╧Α╧Ν╬╕╬╡╬╝╬▒ έΑΥ ╧Α╧Β╬┐╧Ε╬╡╬ψ╬╜╬╡╧Ε╬▒╬╣ ╬╡╧Α╬▒╬╜╬▒╧Α╬▒╧Β╬▒╬│╬│╬╡╬╗╬ψ╬▒)
                       </span>
                     )}
                 </span>
               ) : p?.stock != null ? (
-                <span>Συνολικό απόθεμα: {p.stock} τεμ.</span>
+                <span>╬μ╧Ζ╬╜╬┐╬╗╬╣╬║╧Ν ╬▒╧Α╧Ν╬╕╬╡╬╝╬▒: {p.stock} ╧Ε╬╡╬╝.</span>
               ) : (
-                <span>Διαθεσιμότητα κατόπιν συνεννόησης</span>
+                <span>╬Φ╬╣╬▒╬╕╬╡╧Δ╬╣╬╝╧Ν╧Ε╬╖╧Ε╬▒ ╬║╬▒╧Ε╧Ν╧Α╬╣╬╜ ╧Δ╧Ζ╬╜╬╡╬╜╬╜╧Ν╬╖╧Δ╬╖╧Γ</span>
               )}
             </div>
 
@@ -437,7 +438,7 @@ export default function PDP() {
             {hasVariants && (
               <div className="space-y-1">
                 <div className="text-xs text-slate-500">
-                  Διαθέσιμα χρώματα
+                  ╬Φ╬╣╬▒╬╕╬φ╧Δ╬╣╬╝╬▒ ╧Θ╧Β╧Ο╬╝╬▒╧Ε╬▒
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {variants.map((v, idx) => (
@@ -454,7 +455,7 @@ export default function PDP() {
                           : "border-slate-300 text-slate-700"
                       }`}
                     >
-                      {v.color || v.colour || v.name || `Χρώμα ${idx + 1}`}
+                      {v.color || v.colour || v.name || `╬π╧Β╧Ο╬╝╬▒ ${idx + 1}`}
                     </button>
                   ))}
                 </div>
@@ -489,54 +490,24 @@ export default function PDP() {
 
             <div className="pt-4">
               <Link to="/shop" className="text-amber-700 hover:underline">
-                ← Back to shop
+                έΗΡ Back to shop
               </Link>
             </div>
           </div>
           {/* end info column */}
         </div>
 
-          {lightboxOpen && (
-            <div
-              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-              onClick={() => setLightboxOpen(false)}
-            >
-              <div
-                className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-[1000px]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="bg-black">
-                  <img
-                    src={mainImage}
-                    alt={title}
-                    className="w-full h-[500px] max-h-[75vh] object-contain"
-                    onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
-                  />
-                </div>
-                <div className="flex justify-end p-3">
-                  <button
-                    type="button"
-                    onClick={() => setLightboxOpen(false)}
-                    className="px-3 py-1 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Related products full width */}
           {related.length > 0 && (
             <div className="pt-6 border-t border-slate-200 mt-10">
               <h3 className="text-sm font-semibold mb-3">
-                Παρόμοια προϊόντα
+                ╬ι╬▒╧Β╧Ν╬╝╬┐╬╣╬▒ ╧Α╧Β╬┐╧Λ╧Ν╬╜╧Ε╬▒
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {related.map((rp) => {
                   const rpTitle =
                     rp?.title?.el || rp?.title?.en || "Product";
-                  const rpPrice = rp?.price ?? rp?.discountPrice;
+                  const rpPrice = rp?.discountPrice ?? rp?.price;
                   const rpImage =
                     Array.isArray(rp.images) && rp.images.length > 0
                       ? rp.images[0]
@@ -563,7 +534,7 @@ export default function PDP() {
                       </div>
                       {rpPrice != null && (
                         <div className="text-xs text-amber-700 font-semibold">
-                          €{rpPrice}
+                          έΓυ{rpPrice}
                         </div>
                       )}
                     </Link>
@@ -575,7 +546,7 @@ export default function PDP() {
 
           {/* Reviews full width */}
           <div className="pt-6 border-t border-slate-200 mt-6">
-            <h3 className="text-sm font-semibold mb-2">Αξιολογήσεις</h3>
+            <h3 className="text-sm font-semibold mb-2">╬Σ╬╛╬╣╬┐╬╗╬┐╬│╬χ╧Δ╬╡╬╣╧Γ</h3>
 
             <div className="mb-2 flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -596,7 +567,7 @@ export default function PDP() {
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               rows={3}
-              placeholder="Γράψε την εμπειρία σου με το προϊόν..."
+              placeholder="╬Υ╧Β╬υ╧Ι╬╡ ╧Ε╬╖╬╜ ╬╡╬╝╧Α╬╡╬╣╧Β╬ψ╬▒ ╧Δ╬┐╧Ζ ╬╝╬╡ ╧Ε╬┐ ╧Α╧Β╬┐╧Λ╧Ν╬╜..."
               className="w-full border rounded-lg px-3 py-2 text-xs mb-2"
             />
 
@@ -607,10 +578,10 @@ export default function PDP() {
                 // later will POST to backend
                 setReviewText("");
                 setRating(0);
-                alert("Για την ώρα η αξιολόγηση δεν αποθηκεύεται – UI test 🙂");
+                alert("╬Υ╬╣╬▒ ╧Ε╬╖╬╜ ╧Ο╧Β╬▒ ╬╖ ╬▒╬╛╬╣╬┐╬╗╧Ν╬│╬╖╧Δ╬╖ ╬┤╬╡╬╜ ╬▒╧Α╬┐╬╕╬╖╬║╬╡╧Ξ╬╡╧Ε╬▒╬╣ έΑΥ UI test ΏθβΓ");
               }}
             >
-              Υποβολή αξιολόγησης
+              ╬ξ╧Α╬┐╬▓╬┐╬╗╬χ ╬▒╬╛╬╣╬┐╬╗╧Ν╬│╬╖╧Δ╬╖╧Γ
             </button>
           </div>
         </>

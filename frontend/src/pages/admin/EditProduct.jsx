@@ -1,15 +1,62 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
 const CATEGORY_OPTIONS = [
-  { value: "sunglasses", label: "Sunglasses" },
-  { value: "ophthalmic_frames", label: "Ophthalmic Frames" },
-  { value: "contact_lenses", label: "Contact Lenses" },
-  { value: "solutions", label: "Solutions" },
-  { value: "other_products", label: "Other Products" },
+  {
+    value: "Γυαλιά ηλίου",
+    label: "Γυαλιά ηλίου",
+    aliases: ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου"],
+  },
+  {
+    value: "Σκελετοί οράσεως",
+    label: "Σκελετοί οράσεως",
+    aliases: [
+      "ophthalmic_frames",
+      "frames",
+      "σκελετοι ορασεως",
+      "σκελετοί οράσεως",
+      "γυαλια ορασεως",
+      "γυαλιά οράσεως",
+    ],
+  },
+  {
+    value: "contact_lenses",
+    label: "Φακοί επαφής",
+    aliases: ["contact_lenses", "contact-lenses", "φακοι επαφης", "φακοί επαφής"],
+  },
+  {
+    value: "solutions",
+    label: "Υγρά / Λύσεις",
+    aliases: ["solutions", "υγρα", "λυσεις", "διαλύματα"],
+  },
+  {
+    value: "other_products",
+    label: "Λοιπά προϊόντα",
+    aliases: ["other_products", "other-products", "αλλα", "άλλα", "accessories"],
+  },
 ];
+
+function normalizeCategoryString(str) {
+  return str
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9α-ω]/g, "");
+}
+
+function resolveCategoryValue(raw) {
+  if (!raw) return "";
+  const norm = normalizeCategoryString(raw);
+  const match = CATEGORY_OPTIONS.find(
+    (opt) =>
+      normalizeCategoryString(opt.value) === norm ||
+      (opt.aliases || []).some((a) => normalizeCategoryString(a) === norm)
+  );
+  return match?.value || "";
+}
 
 const audienceOptions = [
   { value: "male", label: "Male" },
@@ -72,6 +119,7 @@ export default function EditProduct() {
   const [form, setForm] = useState(initialForm);
   const [variants, setVariants] = useState([]);
   const [brandOptions, setBrandOptions] = useState([]);
+  const [initialBrand, setInitialBrand] = useState("");
   const [localImages, setLocalImages] = useState([]);
   const [slugTouched, setSlugTouched] = useState(true); // editing: do not auto-change slug
   const [state, setState] = useState("loading"); // loading | idle | saving | error | success
@@ -95,6 +143,15 @@ export default function EditProduct() {
         const eyeSize = attrs.eyeSize || "";
         const bridgeSize = attrs.bridgeSize || "";
         const templeLength = attrs.templeLength || "";
+        const categoryValue =
+          [
+            attrs.category_value,
+            attrs.category,
+            attrs.category_label,
+            data.category,
+          ]
+            .map((c) => resolveCategoryValue(c))
+            .find(Boolean) || "";
 
         const variantList = Array.isArray(data.variants) ? data.variants : [];
         const defaultVariant =
@@ -105,10 +162,11 @@ export default function EditProduct() {
           titleEn: data.title?.en || "",
           slug: data.slug || "",
           brand: data.brand || "",
-          category: data.category || "",
+          category: categoryValue,
           audience: data.audience || "",
-          price: data.price ?? "",
-          discountPrice: data.discountPrice ?? "",
+          // Regular/original price comes from discountPrice (compare_at); offer/current from price
+          price: data.discountPrice ?? "",
+          discountPrice: data.price ?? "",
           sku: data.sku || "",
           ean: data.ean || "",
           description: data.description || "",
@@ -125,10 +183,14 @@ export default function EditProduct() {
           color: defaultVariant?.color || "",
         });
 
+        setInitialBrand(data.brand || "");
+
         setVariants(
           variantList.map((v) => ({
             ...initialVariant,
             ...v,
+            price: v.discountPrice ?? v.price ?? "",
+            discountPrice: v.price ?? v.discountPrice ?? "",
             imageUrl: Array.isArray(v.images) && v.images.length > 0
               ? v.images[0]
               : "",
@@ -241,8 +303,9 @@ export default function EditProduct() {
       color: v.color,
       sku: v.sku || null,
       ean: v.ean || null,
-      price: v.price ? Number(v.price) : null,
-      discountPrice: v.discountPrice ? Number(v.discountPrice) : null,
+      // offer/current price goes to price, regular to discountPrice for API consistency
+      price: v.discountPrice ? Number(v.discountPrice) : null,
+      discountPrice: v.price ? Number(v.price) : null,
       stock: v.stock ? Number(v.stock) : null,
       reorderLevel: v.reorderLevel ? Number(v.reorderLevel) : null,
       allowBackorder: !!v.allowBackorder,
@@ -257,9 +320,9 @@ export default function EditProduct() {
           color: form.color,
           sku: form.sku || null,
           ean: form.ean || null,
-          price: form.price ? Number(form.price) : null,
-          discountPrice: form.discountPrice
-            ? Number(form.discountPrice)
+          price: form.discountPrice ? Number(form.discountPrice) : null,
+          discountPrice: form.price
+            ? Number(form.price)
             : null,
           stock: form.stock ? Number(form.stock) : null,
           reorderLevel: form.reorderLevel
@@ -275,11 +338,11 @@ export default function EditProduct() {
 
     const payload = {
       slug: form.slug,
-      brand: form.brand || null,
+      brand: form.brand || initialBrand || null,
       category: form.category || null,
-      price: form.price ? Number(form.price) : null,
-      discountPrice: form.discountPrice
-        ? Number(form.discountPrice)
+      price: form.discountPrice ? Number(form.discountPrice) : null,
+      discountPrice: form.price
+        ? Number(form.price)
         : null,
       sku: form.sku || null,
       ean: form.ean || null,
@@ -314,7 +377,7 @@ export default function EditProduct() {
       }
 
       setState("success");
-      navigate(`/product/${form.slug}`);
+      navigate("/admin/products");
     } catch (err) {
       setState("error");
       setErrorMsg(err.message || "Error updating product");
@@ -324,14 +387,23 @@ export default function EditProduct() {
   useEffect(() => {
     async function loadBrands() {
       try {
-        const res = await fetch(`${API}/api/products`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : [];
+        const limit = 200;
+        let offset = 0;
+        const all = [];
+        while (true) {
+          const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+          if (!res.ok) break;
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : [];
+          all.push(...list);
+          if (list.length < limit) break;
+          offset += limit;
+          if (offset > 5000) break; // safety
+        }
 
         const unique = Array.from(
           new Set(
-            list
+            all
               .map((p) => p.brand)
               .filter((b) => typeof b === "string" && b.trim().length > 0)
           )
@@ -549,6 +621,31 @@ export default function EditProduct() {
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
+            <label className="block text-sm font-medium mb-1">Stock (qty)</label>
+            <input
+              type="number"
+              name="stock"
+              step="1"
+              value={form.stock}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Reorder level</label>
+            <input
+              type="number"
+              name="reorderLevel"
+              step="1"
+              value={form.reorderLevel}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
             <label className="block text-sm font-medium mb-1">
               Χρώμα (π.χ. Havana / Brown)
             </label>
@@ -667,14 +764,14 @@ export default function EditProduct() {
                       checked={v.isDefault}
                       onChange={() => setDefaultVariant(idx)}
                     />
-                    ???????????????????????? ?????????
+                    Ορισμός ως προεπιλεγμένο χρώμα
                   </label>
                   <button
                     type="button"
                     onClick={() => removeVariant(idx)}
                     className="text-xs text-red-600 hover:underline"
                   >
-                    ???????????????
+                    Διαγραφή
                   </button>
                 </div>
                 </div>
@@ -721,52 +818,58 @@ export default function EditProduct() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1">
-                      Τιμή (€)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={v.price}
-                      onChange={(e) =>
-                        updateVariant(idx, "price", e.target.value)
-                      }
-                      className="w-full border rounded-lg px-3 py-2 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">
-                      Τιμή προσφοράς (€)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={v.discountPrice}
-                      onChange={(e) =>
-                        updateVariant(idx, "discountPrice", e.target.value)
-                      }
-                      className="w-full border rounded-lg px-3 py-2 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">
-                      Κατάσταση
-                    </label>
-                    <select
-                      value={v.status}
-                      onChange={(e) =>
-                        updateVariant(idx, "status", e.target.value)
-                      }
-                      className="w-full border rounded-lg px-3 py-2 text-xs"
-                    >
-                      <option value="in_stock">Διαθέσιμο</option>
-                      <option value="preorder">Κατόπιν παραγγελίας</option>
-                      <option value="unavailable">Μη διαθέσιμο</option>
-                    </select>
-                  </div>
-                </div>
+                 <div className="grid md:grid-cols-4 gap-3">
+                   <div>
+                     <label className="block text-xs font-medium mb-1">Τιμή (€)</label>
+                     <input
+                       type="number"
+                       step="0.01"
+                       value={v.price}
+                       onChange={(e) =>
+                         updateVariant(idx, "price", e.target.value)
+                       }
+                       className="w-full border rounded-lg px-3 py-2 text-xs"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-xs font-medium mb-1">Τιμή προσφοράς (€)</label>
+                     <input
+                       type="number"
+                       step="0.01"
+                       value={v.discountPrice}
+                       onChange={(e) =>
+                         updateVariant(idx, "discountPrice", e.target.value)
+                       }
+                       className="w-full border rounded-lg px-3 py-2 text-xs"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-xs font-medium mb-1">Stock</label>
+                     <input
+                       type="number"
+                       step="1"
+                       value={v.stock}
+                       onChange={(e) =>
+                         updateVariant(idx, "stock", e.target.value)
+                       }
+                       className="w-full border rounded-lg px-3 py-2 text-xs"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-xs font-medium mb-1">Διαθεσιμότητα</label>
+                     <select
+                       value={v.status}
+                       onChange={(e) =>
+                         updateVariant(idx, "status", e.target.value)
+                       }
+                       className="w-full border rounded-lg px-3 py-2 text-xs"
+                     >
+                       <option value="in_stock">Διαθέσιμο</option>
+                       <option value="preorder">Κατόπιν παραγγελίας</option>
+                       <option value="unavailable">Μη διαθέσιμο</option>
+                     </select>
+                   </div>
+                 </div>
 
                 <div className="grid md:grid-cols-3 gap-3">
                   <div>
