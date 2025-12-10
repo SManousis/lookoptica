@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useSearchParams } from "react-router-dom";
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
 import { NAV_CATEGORIES } from "./components/NavConfig";
@@ -39,25 +39,58 @@ import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
 import CheckoutPaymentPage from "./pages/CheckoutPaymentPage";
 import BankTransferIrisPage from "./pages/BankTransferIrisPage";
+import { isStockCategory } from "./utils/categoryHelpers";
 
-const API = import.meta.env.VITE_API_BASE || "";
+const API = import.meta.env.VITE_API_BASE;
 
 function ShopPLP() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [state, setState] = useState("loading");
 
+  const view = searchParams.get("view") === "stock" ? "stock" : "all";
+  const isStockView = view === "stock";
+
   useEffect(() => {
-    fetch(`${API}/api/products`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Fetch failed");
-        return r.json();
-      })
+    setState("loading");
+    async function loadAllProducts() {
+      const limit = 200;
+      let offset = 0;
+      const all = [];
+      while (true) {
+        const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+        if (!res.ok) throw new Error(`Fetch failed (offset ${offset})`);
+        const batch = await res.json();
+        const list = Array.isArray(batch) ? batch : [];
+        all.push(...list);
+        if (list.length < limit) break;
+        offset += limit;
+        if (offset > 5000) break; // safety
+      }
+      return all;
+    }
+
+    loadAllProducts()
       .then((data) => {
         setItems(Array.isArray(data) ? data : []);
         setState("ok");
       })
       .catch(() => setState("error"));
-  }, []);
+  }, [isStockView]);
+
+  const updateView = (nextView) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextView === "stock") {
+      nextParams.set("view", "stock");
+    } else {
+      nextParams.delete("view");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const displayItems = items.filter(
+    (p) => !isStockView || isStockCategory(p.category)
+  );
 
   if (state === "loading") return <div>Loading...</div>;
   if (state === "error") {
@@ -68,13 +101,49 @@ function ShopPLP() {
     );
   }
 
-  return items.length === 0 ? (
-    <div className="text-slate-600">No products found.</div>
-  ) : (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-      {items.map((p) => (
-        <ProductCard key={p.slug} p={p} />
-      ))}
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-amber-700">
+          {isStockView ? "Προϊόντα Stock" : "Όλα τα προϊόντα"}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => updateView("all")}
+            className={`rounded-md border px-3 py-1 text-sm transition ${
+              !isStockView
+                ? "bg-amber-700 text-white border-amber-700"
+                : "bg-white text-slate-700 hover:border-amber-400"
+            }`}
+          >
+            Όλα
+          </button>
+          <button
+            type="button"
+            onClick={() => updateView("stock")}
+            className={`rounded-md border px-3 py-1 text-sm transition ${
+              isStockView
+                ? "bg-amber-700 text-white border-amber-700"
+                : "bg-white text-slate-700 hover:border-amber-400"
+            }`}
+          >
+            Stock
+          </button>
+        </div>
+      </div>
+
+      {displayItems.length === 0 ? (
+        <div className="text-slate-600">
+          {isStockView ? "Δεν βρέθηκαν προϊόντα stock." : "No products found."}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {displayItems.map((p) => (
+            <ProductCard key={p.slug} p={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -97,46 +166,77 @@ function AppShell() {
 
           {/* Main navigation */}
           <nav className="flex gap-4 text-sm text-amber-700 md:text-md">
-            {NAV_CATEGORIES.map((cat) => (
-              <div
-                key={cat.slug}
-                className="relative"
-                onMouseEnter={() => setOpenCategory(cat.slug)}
-                onMouseLeave={() => setOpenCategory(null)}
-              >
-                {/* Main link */}
-                <Link
-                  to={`/shop/${cat.slug}`}
-                  className="hover:text-amber-600"
-                  onClick={() => setOpenCategory(null)}
-                >
-                  {cat.label}
-                </Link>
+            {NAV_CATEGORIES.map((cat) => {
+              const hasChildren = Array.isArray(cat.children) && cat.children.length > 0;
+              const hasAudiences = Array.isArray(cat.audiences) && cat.audiences.length > 0;
+              const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
 
-                {/* Dropdown */}
+              return (
                 <div
-                  className={`absolute left-1/2 w-full top-full ${
-                    openCategory === cat.slug ? "flex" : "hidden"
-                  } -translate-x-1/2 flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
+                  key={cat.slug || cat.label}
+                  className="relative"
+                  onMouseEnter={() => setOpenCategory(cat.slug || cat.label)}
+                  onMouseLeave={() => setOpenCategory(null)}
                 >
-                  {cat.audiences.map((aud) => (
-                    <Link
-                      key={aud.slug}
-                      to={`/shop/${cat.slug}/${aud.slug}`}
-                      className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
-                      onClick={() => setOpenCategory(null)}
+                  {/* Main link */}
+                  <Link
+                    to={mainHref}
+                    className="hover:text-amber-600"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    {cat.label}
+                  </Link>
+
+                  {/* Dropdown */}
+                  {(hasChildren || hasAudiences || cat.extras?.length) && (
+                    <div
+                      className={`absolute left-0 top-full min-w-[12rem] w-max ${
+                        openCategory === (cat.slug || cat.label) ? "flex" : "hidden"
+                      } flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
                     >
-                      {aud.label}
-                    </Link>
-                  ))}
+                      {hasChildren &&
+                        cat.children.map((item) => (
+                          <Link
+                            key={item.to || item.label}
+                            to={item.to || "/shop"}
+                            className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                            onClick={() => setOpenCategory(null)}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      {hasAudiences &&
+                        cat.audiences.map((aud) => (
+                          <Link
+                            key={aud.slug}
+                            to={`/shop/${cat.slug}/${aud.slug}`}
+                            className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                            onClick={() => setOpenCategory(null)}
+                          >
+                            {aud.label}
+                          </Link>
+                        ))}
+                      {cat.extras?.map((extra) => (
+                        <Link
+                          key={`${cat.slug || cat.label}-${extra.view || extra.label}`}
+                          to={
+                            extra.view
+                              ? `${mainHref}${mainHref.includes("?") ? "&" : "?"}view=${extra.view}`
+                              : mainHref
+                          }
+                          className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                          onClick={() => setOpenCategory(null)}
+                        >
+                          {extra.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
-            <Link to="/shop/contact-lenses" className="hover:text-red-800">
-              Φακοί Επαφής
-            </Link>
-            <Link to="/shop" className="hover:text-red-800">
-              Όλα τα προϊόντα
+              );
+            })}
+            <Link to="/shop?view=stock" className="hover:text-red-800">
+              Stock
             </Link>
             <Link to="/contact" className="hover:text-red-800">
               Επικοινωνία

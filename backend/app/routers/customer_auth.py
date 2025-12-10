@@ -20,7 +20,7 @@ import anyio
 logger = logging.getLogger("customer_auth")
 
 router = APIRouter(
-    prefix="/api/auth",
+    prefix="/auth",
     tags=["customer-auth"],
 )
 

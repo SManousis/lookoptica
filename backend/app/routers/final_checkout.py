@@ -12,7 +12,7 @@ from app.deps.admin_auth import get_db
 from app.models.product import Product as ProductModel
 
 router = APIRouter(
-    prefix="/api/checkout",
+    prefix="/checkout",
     tags=["checkout"],
 )
 

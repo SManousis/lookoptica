@@ -11,7 +11,7 @@ from app.models.user import User
 from app.services.audit import log_admin_action 
 
 router = APIRouter(
-    prefix="/api/admin/products",
+    prefix="/admin/products",
     tags=["admin-products"],
 )
 

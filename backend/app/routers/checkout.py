@@ -12,7 +12,7 @@ from app.models.order import Order
 from app.models.customer_address import CustomerAddress
 
 router = APIRouter(
-    prefix="/api/checkout",
+    prefix="/checkout",
     tags=["checkout"],
 )
 

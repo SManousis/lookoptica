@@ -7,7 +7,7 @@ from app.db import SessionLocal
 from app.models.user import User
 # from app.models.orders import Order, OrderItem  # when you have them
 
-router = APIRouter(prefix="/api/admin/users", tags=["admin-users"])
+router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
 def get_db():
     db = SessionLocal()

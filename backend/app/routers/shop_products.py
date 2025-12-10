@@ -9,7 +9,7 @@ from app.db import SessionLocal
 from app.models.product import Product as ProductModel
 
 router = APIRouter(
-    prefix="/api/products",
+    prefix="/products",
     tags=["shop-products"],
 )
 

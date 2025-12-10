@@ -28,7 +28,7 @@ logger = logging.getLogger("admin_auth")
 
 
 router = APIRouter(
-    prefix="/api/admin/auth",
+    prefix="/admin/auth",
     tags=["admin-auth"],
 )
 

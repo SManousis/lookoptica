@@ -517,6 +517,13 @@ def import_dump(dump_path: Path):
         Prefer the first product_cat term: use its name/slug directly.
         Fallback to tag keywords if no category present.
         """
+        # If any category explicitly mentions stock, prefer that so we can surface stock PLP buckets
+        for c in product_cats:
+            name = (c.get("name") or "").lower()
+            slug = (c.get("slug") or "").lower()
+            if "stock" in name or "stock" in slug or "στοκ" in name or "στοκ" in slug:
+                return c.get("name") or "Stock", c.get("slug") or "stock"
+
         if product_cats:
             primary = product_cats[0]
             return primary.get("name"), primary.get("slug")
@@ -526,6 +533,8 @@ def import_dump(dump_path: Path):
             return "Γυαλιά Ηλίου", "gialia-iliou"
         if any(s in t for t in lower_tags for s in ["γυαλιά οράσεως", "γυαλια ορασεως", "οράσεως"]):
             return "Γυαλιά Οράσεως", "gialia-oraseos"
+        if any("stock" in t or "στοκ" in t for t in lower_tags):
+            return "Stock", "stock"
         return None, None
 
     def infer_audience(product_cats: List[Dict[str, str]], lower_tags: List[str]) -> Optional[str]:

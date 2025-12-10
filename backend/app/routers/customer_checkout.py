@@ -13,7 +13,7 @@ from app.models.customer_session import CustomerSession
 from app.schemas.checkout import CheckoutDetailsPayload, CheckoutDetailsResponse
 
 router = APIRouter(
-    prefix="/api/customer",
+    prefix="/customer",
     tags=["customer-checkout"],
 )
 

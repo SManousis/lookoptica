@@ -12,7 +12,7 @@ from app.models.user import User
 from app.services.audit import log_admin_action
 
 router = APIRouter(
-    prefix="/api/admin/contact-lenses",
+    prefix="/admin/contact-lenses",
     tags=["admin-contact-lenses"],
 )
 

@@ -12,7 +12,7 @@ from app.config import settings
 
 # 👇 THIS is what FastAPI expects in main.py (contact.router)
 router = APIRouter(
-    prefix="/api/contact",
+    prefix="/contact",
     tags=["contact"],
 )
 

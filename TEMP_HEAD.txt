@@ -1,0 +1,140 @@
+"""
+Import WooCommerce data from a phpMyAdmin SQL dump (gzipped or plain) directly
+into the local Postgres used by this FastAPI app. No MySQL restore required.
+
+What it does:
+- Parses INSERT statements for wp_posts, wp_postmeta, wp_terms, wp_term_taxonomy,
+  and wp_term_relationships from the dump.
+- Reconstructs products, variations, categories/brands/tags, prices, stock, images.
+- Writes Product records into Postgres (via SQLAlchemy SessionLocal).
+- Stores variations inside the Product.attributes["variants"] list so the
+  frontend can render them; aggregates stock/price from variations when needed.
+
+Usage:
+    python backend/scripts/import_wp_dump.py path/to/u554181877_qSob8.sql.gz
+
+Notes:
+- Expects the app's DATABASE_URL to point to your target Postgres.
+- Keeps image URLs as-is (points to old host). If you re-host images elsewhere,
+  adjust the URLs after importing.
+"""
+
+from __future__ import annotations
+
+import argparse
+import gzip
+import os
+import re
+from collections import defaultdict
+from dataclasses import dataclass, field
+from decimal import Decimal
+from pathlib import Path
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
+
+import sys
+from html import unescape
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = SCRIPT_DIR.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from app.db import SessionLocal
+from app.models.product import Product as ProductModel
+from app.models.brand import Brand
+from app.models.category import Category
+
+
+# --------- Low-level SQL INSERT parser (MySQL-style) ---------
+
+
+def _stream_insert_statements(path: Path, tables: set[str]) -> Iterator[Tuple[str, List[str], str]]:
+    """
+    Yield (table_name, columns, values_sql) for INSERT statements targeting
+    one of the requested tables. Streams the dump to avoid loading everything
+    in memory.
+    """
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8", errors="replace") as f:
+        buf: List[str] = []
+        active = False
+        target = None
+        for line in f:
+            if line.startswith("INSERT INTO `"):
+                target = None
+                for tbl in tables:
+                    if line.startswith(f"INSERT INTO `{tbl}`"):
+                        target = tbl
+                        break
+                if not target:
+                    continue
+                buf = [line]
+                active = True
+                if line.strip().endswith(");"):
+                    stmt = "".join(buf)
+                    columns, values_sql = _split_insert(stmt)
+                    yield target, columns, values_sql
+                    buf = []
+                    active = False
+            elif active:
+                buf.append(line)
+                if line.strip().endswith(");"):
+                    stmt = "".join(buf)
+                    columns, values_sql = _split_insert(stmt)
+                    yield target, columns, values_sql
+                    buf = []
+                    active = False
+
+
+def _split_insert(stmt: str) -> Tuple[List[str], str]:
+    """
+    Split an INSERT statement into (columns, values_sql_string).
+    More lenient than a strict regex to tolerate newlines/spacing and dumps
+    that don’t end the statement on the same line.
+    """
+    # Remove trailing semicolon if present
+    stmt = stmt.strip()
+    if stmt.endswith(";"):
+        stmt = stmt[:-1]
+
+    # Find the VALUES keyword (allow newline/whitespace between)
+    m_vals = re.search(r"\bVALUES\b", stmt, re.IGNORECASE)
+    if not m_vals:
+        raise ValueError(f"Cannot find VALUES in INSERT: {stmt[:200]}")
+
+    idx = m_vals.start()
+    header = stmt[:idx]
+    values_sql = stmt[m_vals.end() :].lstrip()
+
+    # Extract column list from header
+    m = re.search(r"INSERT INTO `[^`]+` \(([^)]+)\)", header, re.S)
+    if not m:
+        raise ValueError(f"Cannot parse column list in INSERT: {stmt[:200]}")
+    cols_raw = m.group(1)
+    cols = [c.strip(" `") for c in cols_raw.split(",")]
+    return cols, values_sql
+
+
+def _parse_values(values_sql: str) -> List[List[Any]]:
+    """
+    Parse the VALUES portion of an INSERT INTO ... VALUES (...),(...);
+    Returns a list of rows; each row is a list of raw string/None.
+    Handles MySQL single-quoted strings with backslash escapes.
+    """
+    rows: List[List[Any]] = []
+    i = 0
+    n = len(values_sql)
+    # Expect sequence of rows wrapped in parentheses, separated by commas.
+    while i < n:
+        # skip leading whitespace / commas
+        while i < n and values_sql[i] in " \n\t,":
+            i += 1
+        if i >= n:
+            break
+        if values_sql[i] != "(":
+            raise ValueError(f"Expected '(' at position {i}: {values_sql[i:i+20]}")
+        i += 1
+        row: List[Any] = []
+        field_chars: List[str] = []
+        in_string = False
+        escape = False

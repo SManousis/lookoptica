@@ -1,17 +1,13 @@
-﻿import { useEffect, useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import {
+  isStockCategory,
+  matchesCategoryAlias,
+} from "../utils/categoryHelpers";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
-function normalizeCategoryString(str = "") {
-  return str
-    .toString()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9α-ω]/g, "");
-}
 
 // Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
@@ -19,7 +15,17 @@ const CATEGORY_CONFIG = {
     labelEl: "Γυαλιά Ηλίου",
     subtitle:
       "Στυλάτα και προστατευτικά γυαλιά ηλίου για πόλη, θάλασσα και οδήγηση.",
-    aliases: ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου", "γυαλια_ηλιου"],
+    aliases: [
+      "sunglasses",
+      "sun-glasses",
+      "γυαλια ηλιου",
+      "γυαλιά ηλίου",
+      "γυαλια_ηλιου",
+      "sunglasses-stock",
+      "stock-sunglasses",
+      "stock γυαλια ηλιου",
+    ],
+    includeStock: true,
   },
   frames: {
     labelEl: "Σκελετοί Οράσεως",
@@ -32,19 +38,54 @@ const CATEGORY_CONFIG = {
       "σκελετοί οράσεως",
       "γυαλια ορασεως",
       "ophthalmic-frames",
+      "frames-stock",
+      "stock-frames",
+      "stock γυαλια ορασεως",
     ],
+    includeStock: true,
+  },
+  stock: {
+    labelEl: "Stock",
+    subtitle:
+      "Προσφορές stock για γυαλιά ηλίου και οράσεως σε περιορισμένα τεμάχια.",
+    aliases: [
+      "stock",
+      "stok",
+      "στοκ",
+      "stock-sunglasses",
+      "sunglasses-stock",
+      "stock-frames",
+      "frames-stock",
+      "stock γυαλια",
+    ],
+    includeStock: true,
   },
   "contact-lenses": {
     labelEl: "Φακοί Επαφής",
     subtitle:
       "Ημερήσιοι, μηνιαίοι και ειδικές λύσεις ανάλογα με τις ανάγκες της όρασής σου.",
-    aliases: ["contact_lenses", "contact-lenses", "φακοι επαφης", "φακοί επαφής"],
+    aliases: [
+      "contact_lenses",
+      "contact-lenses",
+      "φακοι επαφης",
+      "φακοί επαφής",
+      "υγρά φακών επαφής",
+    ],
   },
   "other-products": {
     labelEl: "Άλλα προϊόντα",
     subtitle:
       "Αξεσουάρ, θήκες, καθαριστικά και άλλα προϊόντα φροντίδας για τα γυαλιά σου.",
-    aliases: ["other_products", "other-products", "αλλα προιοντα", "αλλα"],
+    aliases: [
+      "other_products",
+      "other-products",
+      "αλλα προιοντα",
+      "αλλα",
+      "accessor-eyes",
+      "υγρά φακών επαφής",
+      "bulget",
+      "4square",
+    ],
   },
 };
 
@@ -79,9 +120,12 @@ const AUDIENCE_CONFIG = {
 export default function CategoryPLP() {
   // 👉 Expect two params from the route: /shop/:categorySlug/:audienceSlug?
   const { categorySlug, audienceSlug } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const config = CATEGORY_CONFIG[categorySlug];
   const audienceConfig = audienceSlug ? AUDIENCE_CONFIG[audienceSlug] : null;
+  const view = searchParams.get("view") === "stock" ? "stock" : "all";
+  const isStockView = view === "stock";
 
   const [items, setItems] = useState([]);
   //const [all, setAll] = useState([]); // for debug / inspection
@@ -89,6 +133,16 @@ export default function CategoryPLP() {
   const [searchTerm, setSearchTerm] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // newest | oldest | price | brand
+
+  const updateViewParam = (nextView) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextView === "stock") {
+      nextParams.set("view", "stock");
+    } else {
+      nextParams.delete("view");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   console.log(
     "CategoryPLP render",
@@ -127,13 +181,42 @@ export default function CategoryPLP() {
 
         console.log("ALL PRODUCTS FOR CATEGORY PAGE:", list);
 
-        const filtered = list.filter((p) => {
-          const rawCategory = normalizeCategoryString(p.category || "");
-          const categoryMatch = config.aliases.some(
-            (m) => rawCategory === normalizeCategoryString(m)
-          );
+        const matchesCategoryConfig = (product) => {
+          const aliases = config.aliases || [];
+          // Check multiple sources because some stock items only carry the base category inside tags/labels
+          const candidates = [
+            product?.category,
+            product?.attributes?.category,
+            product?.attributes?.category_label,
+            product?.attributes?.category_value,
+            ...(Array.isArray(product?.attributes?.tags) ? product.attributes.tags : []),
+          ];
+          return candidates.some((value) => matchesCategoryAlias(value, aliases));
+        };
 
-          if (!categoryMatch) return false;
+        const filtered = list.filter((p) => {
+          const stockMatch = isStockCategory(p.category);
+          const baseMatch = matchesCategoryConfig(p);
+          const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
+            (tag) => matchesCategoryAlias(tag, config.aliases || [])
+          );
+          // For stock toggle under a specific category, keep items that belong to that category
+          const matchesCategory = (() => {
+            if (categorySlug === "stock") {
+              return stockMatch || baseMatch || tagMatch;
+            }
+            if (isStockView) {
+              // When viewing stock inside a specific category, require stock + some signal of the base category (aliases/tags)
+              return stockMatch && (baseMatch || tagMatch);
+            }
+            return baseMatch;
+          })();
+
+          if (!matchesCategory) return false;
+
+          // Global stock page or explicit stock toggle should only show stock-tagged items
+          const requireStockOnly = categorySlug === "stock" || isStockView;
+          if (requireStockOnly && !stockMatch) return false;
 
           // If no audience filter in URL, show all audiences for this category
           if (!audienceConfig) return true;
@@ -161,14 +244,23 @@ export default function CategoryPLP() {
           }))
         );
 
-        setItems(filtered);
+        // Deduplicate by slug to avoid React key collisions if backend returns duplicates
+        const seen = new Set();
+        const deduped = [];
+        for (const item of filtered) {
+          if (seen.has(item.slug)) continue;
+          seen.add(item.slug);
+          deduped.push(item);
+        }
+
+        setItems(deduped);
         setState("ok");
       })
       .catch((err) => {
         console.error("Error loading products for category page:", err);
         setState("error");
       });
-  }, [categorySlug, audienceSlug, config, audienceConfig]);
+  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView]);
 
   const availableBrands = useMemo(() => {
     const set = new Set();
@@ -182,6 +274,7 @@ export default function CategoryPLP() {
     const q = searchTerm.trim().toLowerCase();
     const filtered = items.filter((p) => {
       if (brandFilter && p.brand !== brandFilter) return false;
+      if (isStockView && !isStockCategory(p.category)) return false;
       if (!q) return true;
       const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
       const brand = (p?.brand || "").toLowerCase();
@@ -265,7 +358,7 @@ export default function CategoryPLP() {
     }
 
     return sorted;
-  }, [items, brandFilter, searchTerm, sortBy]);
+  }, [items, brandFilter, searchTerm, sortBy, isStockView]);
 
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
@@ -348,6 +441,33 @@ export default function CategoryPLP() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Προβολή</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => updateViewParam("all")}
+                className={`rounded-md border px-3 py-1 text-sm transition ${
+                  !isStockView
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-slate-700 hover:border-amber-400"
+                }`}
+              >
+                Όλα
+              </button>
+              <button
+                type="button"
+                onClick={() => updateViewParam("stock")}
+                className={`rounded-md border px-3 py-1 text-sm transition ${
+                  isStockView
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-slate-700 hover:border-amber-400"
+                }`}
+              >
+                Stock
+              </button>
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-medium text-slate-700 text-xs">Sort by</label>

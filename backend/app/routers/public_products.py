@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from app.db import SessionLocal
 from app.models.product import Product
 
-router = APIRouter(prefix="/api/products", tags=["products"])
+router = APIRouter(prefix="/shop-products", tags=["shop-products"])
 
 # Pydantic shapes
 class Variant(BaseModel):
