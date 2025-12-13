@@ -201,8 +201,8 @@ export default function CheckoutDetailsPage() {
       }
       const query = params.toString();
       const url = query
-        ? `${API}/api/customer/checkout-details?${query}`
-        : `${API}/api/customer/checkout-details`;
+        ? `${API}/customer/checkout-details?${query}`
+        : `${API}/customer/checkout-details`;
 
       try {
         const res = await fetch(url, {
@@ -376,7 +376,7 @@ export default function CheckoutDetailsPage() {
 
     setState("saving");
     try {
-      const res = await fetch(`${API}/api/customer/checkout-details`, {
+      const res = await fetch(`${API}/customer/checkout-details`, {
         method: "PUT",
         credentials: "include",
         headers: {

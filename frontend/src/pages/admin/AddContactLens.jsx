@@ -165,7 +165,7 @@ export default function AdminAddContactLensPage() {
     setSaving(true);
     try {
       const res = await adminApiFetch(
-        `${API}/api/admin/contact-lenses`,
+        `${API}/admin/contact-lenses`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -206,7 +206,7 @@ export default function AdminAddContactLensPage() {
     async function loadBrands() {
       try {
         const res = await adminApiFetch(
-          `${API}/api/admin/contact-lenses`,
+          `${API}/admin/contact-lenses`,
           {},
           csrfToken
         );

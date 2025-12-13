@@ -95,7 +95,7 @@ export default function AdminProductsPage() {
       const all = [];
       try {
         while (true) {
-          const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+          const res = await fetch(`${API}/products?limit=${limit}&offset=${offset}`);
           if (!res.ok) throw new Error("Fetch failed");
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];
@@ -138,7 +138,7 @@ export default function AdminProductsPage() {
       const all = [];
       try {
         while (true) {
-          const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+          const res = await fetch(`${API}/products?limit=${limit}&offset=${offset}`);
           if (!res.ok) break;
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];
@@ -230,7 +230,7 @@ export default function AdminProductsPage() {
       };
 
       const res = await adminApiFetch(
-        `${API}/api/admin/products/sync`,
+        `${API}/admin/products/sync`,
         {
           method: "POST",
           body: JSON.stringify(payload),
@@ -313,7 +313,7 @@ export default function AdminProductsPage() {
 
     try {
       const res = await adminApiFetch(
-        `${API}/api/admin/products/${product.sku}/unpublish`,
+        `${API}/admin/products/${product.sku}/unpublish`,
         {
           method: "POST",
         },

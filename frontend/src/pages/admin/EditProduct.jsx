@@ -135,7 +135,7 @@ export default function EditProduct() {
     if (!originalSlug) return;
 
     setState("loading");
-    fetch(`${API}/api/products/${originalSlug}`)
+    fetch(`${API}/products/${originalSlug}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         // map API shape -> form state
@@ -363,7 +363,7 @@ export default function EditProduct() {
     };
 
     try {
-      const res = await fetch(`${API}/api/products/${originalSlug}`, {
+      const res = await fetch(`${API}/products/${originalSlug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -389,7 +389,7 @@ export default function EditProduct() {
         let offset = 0;
         const all = [];
         while (true) {
-          const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+          const res = await fetch(`${API}/products?limit=${limit}&offset=${offset}`);
           if (!res.ok) break;
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];

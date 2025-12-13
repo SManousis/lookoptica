@@ -37,7 +37,7 @@ export default function CategoryPLP() {
       return;
     }
     setState("loading");
-    fetch(`${API}/api/products`)
+    fetch(`${API}/products`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         const list = Array.isArray(data) ? data : [];

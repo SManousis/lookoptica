@@ -127,7 +127,7 @@ export default function PDP() {
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`${API}/api/products/${slug}`)
+    fetch(`${API}/products/${slug}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         setP(data);
@@ -144,7 +144,7 @@ export default function PDP() {
     // after product is loaded, fetch all to compute related
     if (state !== "ok" || !p) return;
 
-    fetch(`${API}/api/products`)
+    fetch(`${API}/products`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((all) => {
         const list = Array.isArray(all) ? all : [];

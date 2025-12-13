@@ -37,7 +37,7 @@ export default function AdminLogin() {
         ...(hasTurnstile ? { turnstileToken } : {}),
       };
 
-      const res = await fetch(`${API}/api/admin/auth/login`, {
+      const res = await fetch(`${API}/admin/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

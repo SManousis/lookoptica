@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 
@@ -17,9 +17,10 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [brandsIndex, setBrandsIndex] = useState(0);
   const [isBrandJumping, setIsBrandJumping] = useState(false);
+  const swipeStart = useRef(null);
 
   useEffect(() => {
-    fetch(`${API}/api/products`)
+    fetch(`${API}/products`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
@@ -66,10 +67,39 @@ export default function HomePage() {
     transition: isBrandJumping ? "none" : `transform ${BRAND_TRANSITION_MS}ms ease`,
   };
 
+  const handleSwipeStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    swipeStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleSwipeEnd = (e) => {
+    const touch = e.changedTouches?.[0];
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!touch || !start || HERO_IMAGES.length <= 1) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const threshold = 40;
+
+    if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) < threshold) return;
+
+    if (dx < 0) {
+      setSlideIndex((i) => (i + 1) % HERO_IMAGES.length);
+    } else {
+      setSlideIndex((i) => (i - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
+    }
+  };
+
   return (
-    <div className="p-6 space-y-10">
+    <div className="space-y-10 px-4 py-6 sm:px-6">
       {/* BIG HERO SLIDER */}
-      <section className="relative left-1/2 w-screen -translate-x-1/2 h-[75vh] md:h-[90vh] rounded-3xl overflow-hidden">
+      <section
+        className="relative -mx-4 h-[70vh] overflow-hidden rounded-2xl sm:-mx-6 sm:h-[80vh] sm:rounded-3xl md:h-[90vh]"
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+      >
         {/* Hero image */}
         <img
           src={currentHero}
@@ -132,8 +162,8 @@ export default function HomePage() {
 
       {/* BRANDS MARQUEE */}
       {BRANDS_IMAGES.length > 0 && (
-        <section className="relative left-1/2 w-screen -translate-x-1/2 rounded-3xl bg-amber-50/60 border border-amber-100 p-6 shadow-sm">
-          <div className="relative mt-6 overflow-hidden">
+        <section className="relative -mx-4 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm sm:-mx-6 sm:rounded-3xl sm:p-6">
+          <div className="relative mt-2 overflow-hidden sm:mt-6">
             <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white to-transparent" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white to-transparent" />
             <div className="flex" style={brandTrackStyle}>
@@ -289,20 +319,20 @@ export default function HomePage() {
             </Link>
         </div>
      </section >
-       {/* VARIOUS INFOS */}     
-       <section className="py-12 space-y-4">
-        <div className="flex items-center justify-between">
-          <img src=" /Shipping.png" alt="Shipping" className="w-24 h-18" />
-          <div className="flex items-center w-[25%]">
-            <p>Δωρεάν αποστολή για αγορές άνω των 40€ με Box Now και 80€ με Ελτα courier</p>
+      {/* VARIOUS INFOS */}
+      <section className="py-12 space-y-4">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
+            <img src=" /Shipping.png" alt="Shipping" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
+            <p className="text-sm leading-relaxed text-amber-800">Δωρεάν αποστολή για αγορές άνω των 40€ με Box Now και 80€ με Ελτα courier</p>
           </div>
-          <img src=" /Star.png" alt="Star" className="w-12 h-18" />
-          <div className="flex items-center w-[25%]">
-            <p>Ολα τα προϊόντα είναι από την επίσημη αντιπροσωπεία</p>
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
+            <img src=" /Star.png" alt="Star" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
+            <p className="text-sm leading-relaxed text-amber-800">Ολα τα προϊόντα είναι από την επίσημη αντιπροσωπεία</p>
           </div>
-          <img src=" /Safety.png" alt="Safety" className="w-16 h-18" />
-          <div className="flex items-center w-[25%]">
-            <p>Ασφαλείς συναλλαγές μέσω VivaWallet, PayPal και τραπεζικής κατάθεσης</p>
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
+            <img src=" /Safety.png" alt="Safety" className="w-12 h-12 md:w-14 md:h-14 object-contain" />
+            <p className="text-sm leading-relaxed text-amber-800">Ασφαλείς συναλλαγές μέσω VivaWallet, PayPal και τραπεζικής κατάθεσης</p>
           </div>
         </div>
         
@@ -339,9 +369,9 @@ export default function HomePage() {
         )}
       </section>
       {/* NEWSLETTER SECTION */}
-      <section className="relative left-1/2 w-screen -translate-x-1/2 bg-amber-50/60 rounded-2xl py-10 mb-10 border border-amber-100 shadow-sm">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-zen text-3xl md:text-4xl text-amber-800 mb-3">
+      <section className="relative -mx-4 mb-10 rounded-2xl border border-amber-100 bg-amber-50/60 py-10 shadow-sm sm:-mx-6 sm:rounded-3xl">
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+          <h2 className="font-zen text-3xl text-amber-800 mb-3 md:text-4xl">
             Εγγραφή στο Newsletter
           </h2>
           <p className="text-amber-700 mb-6 text-sm md:text-base">
@@ -353,7 +383,7 @@ export default function HomePage() {
               e.preventDefault();
               alert("Ευχαριστούμε! Θα ενημερώνεστε για όλα τα νέα μας.");
             }}
-            className="flex flex-col md:flex-row items-center gap-3 justify-center"
+            className="flex flex-col items-center justify-center gap-3 md:flex-row"
           >
             <input
               type="email"

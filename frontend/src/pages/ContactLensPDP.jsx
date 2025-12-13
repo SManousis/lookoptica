@@ -78,7 +78,7 @@ export default function ContactLensPDP() {
     setState("loading");
     setErrorMsg("");
 
-    fetch(`${API}/api/products/${slug}`)
+    fetch(`${API}/products/${slug}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
         setProduct(data);

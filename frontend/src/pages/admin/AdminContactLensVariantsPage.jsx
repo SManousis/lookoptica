@@ -43,7 +43,7 @@ export default function AdminContactLensVariantsPage() {
     setSuccessMsg("");
 
     adminApiFetch(
-      `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
+      `${API}/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
       {},
       csrfToken
     )
@@ -128,7 +128,7 @@ export default function AdminContactLensVariantsPage() {
 
     try {
       const res = await adminApiFetch(
-        `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
+        `${API}/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -169,7 +169,7 @@ export default function AdminContactLensVariantsPage() {
     setState("saving");
     try {
       const res = await adminApiFetch(
-        `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
+        `${API}/admin/contact-lenses/${encodeURIComponent(sku)}/variants`,
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },

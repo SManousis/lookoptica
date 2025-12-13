@@ -235,7 +235,7 @@ export default function AddProduct() {
     const slugForNavigation = form.slug;
 
     try {
-      const res = await fetch(`${API}/api/products`, {
+      const res = await fetch(`${API}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -284,7 +284,7 @@ export default function AddProduct() {
         let offset = 0;
         const all = [];
         while (true) {
-          const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
+          const res = await fetch(`${API}/products?limit=${limit}&offset=${offset}`);
           if (!res.ok) break;
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];

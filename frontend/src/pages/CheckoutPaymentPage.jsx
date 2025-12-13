@@ -69,7 +69,7 @@ export default function CheckoutPaymentPage() {
     setQuoteState("loading");
     setQuoteError("");
 
-    fetch(`${API}/api/checkout/quote`, {
+    fetch(`${API}/checkout/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
