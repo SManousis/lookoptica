@@ -18,7 +18,7 @@ export function AdminAuthProvider({ children }) {
   const refreshAdmin = useCallback(async () => {
     setAuthLoading(true);
     try {
-      const res = await fetch(`${API}/api/admin/auth/me`, {
+      const res = await fetch(`${API}/admin/auth/me`, {
         credentials: "include",
       });
       if (!res.ok) {
@@ -52,7 +52,7 @@ export function AdminAuthProvider({ children }) {
       if (csrfToken) {
         options.headers = { "X-CSRF-Token": csrfToken };
       }
-      await fetch(`${API}/api/admin/auth/logout`, options);
+      await fetch(`${API}/admin/auth/logout`, options);
     } catch {
       // ignore
     } finally {

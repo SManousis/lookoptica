@@ -8,6 +8,17 @@ import {
 
 const API = import.meta.env.VITE_API_BASE || "";
 
+const isStockItem = (product) => {
+  if (product?.isStock === true || product?.stock === true) return true;
+  const candidates = [
+    product?.category,
+    product?.attributes?.category,
+    product?.attributes?.category_label,
+    product?.attributes?.category_value,
+  ];
+  return candidates.some((value) => isStockCategory(value));
+};
+
 
 // Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
@@ -133,6 +144,11 @@ export default function CategoryPLP() {
   const [searchTerm, setSearchTerm] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest"); // newest | oldest | price | brand
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(12);
+  const PAGE_SIZE = 12;
 
   const updateViewParam = (nextView) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -149,6 +165,115 @@ export default function CategoryPLP() {
     { categorySlug, audienceSlug, config, audienceConfig }
   );
 
+  const loadPage = async (nextOffset = 0, replace = false) => {
+    if (!config) {
+      setState("error");
+      return;
+    }
+
+    if (replace) {
+      setState("loading");
+      setHasMore(true);
+      setOffset(0);
+      setVisibleCount(PAGE_SIZE);
+      setItems([]);
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", PAGE_SIZE);
+      params.set("offset", nextOffset);
+      if (config?.aliases?.[0]) params.set("category", config.aliases[0]);
+      if (audienceConfig?.allowed?.[0]) params.set("audience", audienceConfig.allowed[0]);
+      const res = await fetch(`${API}/shop-products?${params.toString()}`);
+      if (!res.ok) throw new Error(`Fetch failed (offset ${nextOffset})`);
+      const batch = await res.json();
+      const list = Array.isArray(batch) ? batch : [];
+
+      const matchesCategoryConfig = (product) => {
+        const aliases = config.aliases || [];
+        const candidates = [
+          product?.category,
+          product?.attributes?.category,
+          product?.attributes?.category_label,
+          product?.attributes?.category_value,
+          ...(Array.isArray(product?.attributes?.tags) ? product.attributes.tags : []),
+        ];
+        return candidates.some((value) => matchesCategoryAlias(value, aliases));
+      };
+
+      const filtered = list.filter((p) => {
+        const stockMatch = isStockItem(p);
+        const baseMatch = matchesCategoryConfig(p);
+        const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
+          (tag) => matchesCategoryAlias(tag, config.aliases || [])
+        );
+        const matchesCategory = (() => {
+          if (categorySlug === "stock") {
+            return stockMatch || baseMatch || tagMatch;
+          }
+          if (isStockView) {
+            return stockMatch && (baseMatch || tagMatch);
+          }
+          return baseMatch;
+        })();
+
+        if (!matchesCategory) return false;
+
+        const requireStockOnly = categorySlug === "stock" || isStockView;
+        if (requireStockOnly && !stockMatch) return false;
+
+        if (audienceConfig) {
+          const allowed = audienceConfig.allowed || [];
+          const matchesAudience =
+            allowed.includes(p.audience) ||
+            allowed.includes(p.attributes?.audience) ||
+            allowed.some((aud) => (p.attributes?.audiences || []).includes(aud));
+          if (!matchesAudience) return false;
+        }
+
+        if (categorySlug === "stock" && !stockMatch) return false;
+
+        return true;
+      });
+
+      const projected = filtered.map((p) => ({
+        ...p,
+        title: p.title,
+        slug: p.slug,
+        category: p.category,
+        audience: p.audience,
+      }));
+
+      let nextLength = 0;
+      setItems((prev) => {
+        const base = replace ? [] : prev;
+        const seen = new Set(base.map((p) => p.slug));
+        const deduped = [...base];
+        for (const item of projected) {
+          if (seen.has(item.slug)) continue;
+          seen.add(item.slug);
+          deduped.push(item);
+        }
+        nextLength = deduped.length;
+        return deduped;
+      });
+
+      setOffset(nextOffset + list.length);
+      setHasMore(list.length === PAGE_SIZE);
+      setVisibleCount((c) => Math.min(Math.max(c, PAGE_SIZE), nextLength));
+      setState("ok");
+    } catch (err) {
+      console.error("Error loading products for category page:", err);
+      if (replace) setState("error");
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (!config) {
       console.warn("No CATEGORY_CONFIG for slug:", categorySlug);
@@ -156,110 +281,8 @@ export default function CategoryPLP() {
       return;
     }
 
-    setState("loading");
-
-    async function loadAllProducts() {
-      const limit = 200; // batch size
-      let offset = 0;
-      const all = [];
-      while (true) {
-        const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
-        if (!res.ok) throw new Error(`Fetch failed (offset ${offset})`);
-        const batch = await res.json();
-        const list = Array.isArray(batch) ? batch : [];
-        all.push(...list);
-        if (list.length < limit) break;
-        offset += limit;
-        if (offset > 5000) break; // safety guard
-      }
-      return all;
-    }
-
-    loadAllProducts()
-      .then((list) => {
-        //setAll(list);
-
-        console.log("ALL PRODUCTS FOR CATEGORY PAGE:", list);
-
-        const matchesCategoryConfig = (product) => {
-          const aliases = config.aliases || [];
-          // Check multiple sources because some stock items only carry the base category inside tags/labels
-          const candidates = [
-            product?.category,
-            product?.attributes?.category,
-            product?.attributes?.category_label,
-            product?.attributes?.category_value,
-            ...(Array.isArray(product?.attributes?.tags) ? product.attributes.tags : []),
-          ];
-          return candidates.some((value) => matchesCategoryAlias(value, aliases));
-        };
-
-        const filtered = list.filter((p) => {
-          const stockMatch = isStockCategory(p.category);
-          const baseMatch = matchesCategoryConfig(p);
-          const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
-            (tag) => matchesCategoryAlias(tag, config.aliases || [])
-          );
-          // For stock toggle under a specific category, keep items that belong to that category
-          const matchesCategory = (() => {
-            if (categorySlug === "stock") {
-              return stockMatch || baseMatch || tagMatch;
-            }
-            if (isStockView) {
-              // When viewing stock inside a specific category, require stock + some signal of the base category (aliases/tags)
-              return stockMatch && (baseMatch || tagMatch);
-            }
-            return baseMatch;
-          })();
-
-          if (!matchesCategory) return false;
-
-          // Global stock page or explicit stock toggle should only show stock-tagged items
-          const requireStockOnly = categorySlug === "stock" || isStockView;
-          if (requireStockOnly && !stockMatch) return false;
-
-          // If no audience filter in URL, show all audiences for this category
-          if (!audienceConfig) return true;
-
-          const rawAudience = (p.audience || "")
-            .toString()
-            .toLowerCase()
-            .trim();
-
-          const allowed = audienceConfig.allowed || [];
-          if (allowed.length === 0) return true; // safety
-
-          return allowed.includes(rawAudience);
-        });
-
-        console.log(
-          "FILTERED PRODUCTS FOR",
-          categorySlug,
-          audienceSlug,
-          "=>",
-          filtered.map((p) => ({
-            slug: p.slug,
-            category: p.category,
-            audience: p.audience,
-          }))
-        );
-
-        // Deduplicate by slug to avoid React key collisions if backend returns duplicates
-        const seen = new Set();
-        const deduped = [];
-        for (const item of filtered) {
-          if (seen.has(item.slug)) continue;
-          seen.add(item.slug);
-          deduped.push(item);
-        }
-
-        setItems(deduped);
-        setState("ok");
-      })
-      .catch((err) => {
-        console.error("Error loading products for category page:", err);
-        setState("error");
-      });
+    loadPage(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, audienceSlug, config, audienceConfig, isStockView]);
 
   const availableBrands = useMemo(() => {
@@ -359,6 +382,30 @@ export default function CategoryPLP() {
 
     return sorted;
   }, [items, brandFilter, searchTerm, sortBy, isStockView]);
+
+  const visibleItems = useMemo(
+    () => displayItems.slice(0, visibleCount),
+    [displayItems, visibleCount]
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchTerm, brandFilter, sortBy, isStockView]);
+
+  const handleLoadMore = async () => {
+    if (visibleCount < displayItems.length) {
+      setVisibleCount((c) => c + PAGE_SIZE);
+      return;
+    }
+    if (hasMore) {
+      await loadPage(offset, false);
+      setVisibleCount((c) => c + PAGE_SIZE);
+    }
+  };
+
+  const handleShowLess = () => {
+    setVisibleCount(PAGE_SIZE);
+  };
 
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
@@ -499,37 +546,52 @@ export default function CategoryPLP() {
       )}
 
       {state === "ok" && displayItems.length === 0 && (
-        <div className="space-y-4">
-          <div className="text-slate-600">
-            Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία αυτή τη στιγμή.
-          </div>
-
-          {/* Debug panel
-          <details className="text-xs text-slate-500 bg-slate-50 border rounded-lg p-3">
-            <summary className="cursor-pointer">
-              Debug: Προϊόντα που επιστρέφει το /api/products
-            </summary>
-            <div className="mt-2 space-y-1">
-              {all.map((p) => (
-                <div key={p.slug}>
-                  slug: <code>{p.slug}</code> — category:{" "}
-                  <code>{String(p.category)}</code> — audience:{" "}
-                  <code>{String(p.audience)}</code>
-                </div>
-              ))}
-            </div>
-          </details> */}
+        <div className="space-y-4 text-center text-slate-600">
+          <div>No products matched yet.</div>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingMore ? "Loading..." : "Load more results"}
+            </button>
+          )}
         </div>
       )}
 
       {state === "ok" && displayItems.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {displayItems.map((p) => (
-            <ProductCard key={p.slug} p={p} />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {visibleItems.map((p) => (
+              <ProductCard key={p.slug} p={p} />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {(hasMore || visibleCount < displayItems.length) && (
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoadingMore ? "Loading..." : "Load more"}
+              </button>
+            )}
+            {visibleCount > PAGE_SIZE && (
+              <button
+                type="button"
+                onClick={handleShowLess}
+                disabled={state === "loading"}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Show less
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
-

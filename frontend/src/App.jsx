@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Link, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useSearchParams, useNavigate } from "react-router-dom";
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
 import { NAV_CATEGORIES } from "./components/NavConfig";
@@ -47,36 +47,83 @@ function ShopPLP() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [state, setState] = useState("loading");
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(12);
 
   const view = searchParams.get("view") === "stock" ? "stock" : "all";
   const isStockView = view === "stock";
+  const PAGE_SIZE = 12;
 
-  useEffect(() => {
-    setState("loading");
-    async function loadAllProducts() {
-      const limit = 200;
-      let offset = 0;
-      const all = [];
-      while (true) {
-        const res = await fetch(`${API}/api/products?limit=${limit}&offset=${offset}`);
-        if (!res.ok) throw new Error(`Fetch failed (offset ${offset})`);
-        const batch = await res.json();
-        const list = Array.isArray(batch) ? batch : [];
-        all.push(...list);
-        if (list.length < limit) break;
-        offset += limit;
-        if (offset > 5000) break; // safety
-      }
-      return all;
+  const isStockItem = (product) => {
+    if (product?.isStock === true || product?.stock === true) return true;
+    const candidates = [
+      product?.category,
+      product?.attributes?.category,
+      product?.attributes?.category_label,
+      product?.attributes?.category_value,
+    ];
+    return candidates.some((value) => isStockCategory(value));
+  };
+
+  const loadProducts = async (replace = false) => {
+    const nextOffset = replace ? 0 : offset;
+    if (!replace && !hasMore) return;
+
+    if (replace) {
+      setState("loading");
+      setHasMore(true);
+      setOffset(0);
+      setItems([]);
+      setVisibleCount(PAGE_SIZE);
+    } else {
+      setIsLoadingMore(true);
     }
 
-    loadAllProducts()
-      .then((data) => {
-        setItems(Array.isArray(data) ? data : []);
-        setState("ok");
-      })
-      .catch(() => setState("error"));
+    try {
+      const res = await fetch(`${API}/shop-products?limit=${PAGE_SIZE}&offset=${nextOffset}`);
+      if (!res.ok) throw new Error(`Fetch failed (offset ${nextOffset})`);
+      const batch = await res.json();
+      const list = Array.isArray(batch) ? batch : [];
+
+      setItems((prev) => (replace ? list : [...prev, ...list]));
+      setOffset(nextOffset + list.length);
+      setHasMore(list.length === PAGE_SIZE);
+      setState("ok");
+      if (replace) {
+        setVisibleCount(Math.min(PAGE_SIZE, list.length));
+      }
+    } catch (err) {
+      if (replace) {
+        console.error("Failed to load products (replace)", err);
+        setState("error");
+      }
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStockView]);
+
+  const handleLoadMore = async () => {
+    if (visibleCount < displayItems.length) {
+      setVisibleCount((c) => c + PAGE_SIZE);
+      return;
+    }
+    if (hasMore) {
+      await loadProducts(false);
+      setVisibleCount((c) => c + PAGE_SIZE);
+    }
+  };
+
+  const handleShowLess = () => {
+    setVisibleCount(PAGE_SIZE);
+  };
 
   const updateView = (nextView) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -88,9 +135,8 @@ function ShopPLP() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const displayItems = items.filter(
-    (p) => !isStockView || isStockCategory(p.category)
-  );
+  const displayItems = items.filter((p) => !isStockView || isStockItem(p));
+  const visibleItems = displayItems.slice(0, visibleCount);
 
   if (state === "loading") return <div>Loading...</div>;
   if (state === "error") {
@@ -134,14 +180,48 @@ function ShopPLP() {
       </div>
 
       {displayItems.length === 0 ? (
-        <div className="text-slate-600">
-          {isStockView ? "Δεν βρέθηκαν προϊόντα stock." : "No products found."}
+        <div className="space-y-3 text-center text-slate-600">
+          <div>{isStockView ? "Δεν βρέθηκαν προϊόντα stock." : "No products found."}</div>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingMore ? "Loading..." : "Load more"}
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {displayItems.map((p) => (
-            <ProductCard key={p.slug} p={p} />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {visibleItems.map((p) => (
+              <ProductCard key={p.slug} p={p} />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {(hasMore || visibleCount < displayItems.length) && (
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoadingMore ? "Loading..." : "Load more"}
+              </button>
+            )}
+            {visibleCount > PAGE_SIZE && (
+              <button
+                type="button"
+                onClick={handleShowLess}
+                disabled={state === "loading"}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Show less
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -151,21 +231,116 @@ function ShopPLP() {
 // Inner shell that can use hooks like useCart / useCustomerAuth
 function AppShell() {
   const [openCategory, setOpenCategory] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { totals } = useCart();
   const { isLoggedIn } = useCustomerAuth();
+  const navigate = useNavigate();
 
   const itemCount = totals?.itemCount ?? 0;
+
+  const mobileOptions = [
+    { label: "Home", to: "/" },
+    ...NAV_CATEGORIES.map((cat) => {
+      const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
+      return { label: cat.label, to: mainHref };
+    }),
+    { label: "Stock", to: "/shop?view=stock" },
+    { label: "Contact", to: "/contact" },
+    { label: "Low Vision", to: "/low-vision" },
+    { label: "Look at Home", to: "/look-at-home" },
+    { label: "About us", to: "/about-us" },
+  ];
+
+  const handleMobileNav = (e) => {
+    const next = e.target.value;
+    if (next) {
+      navigate(next);
+      setOpenCategory(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
-        <div className="flex h-24 w-full items-center justify-between px-6">
-          <Link to="/" className="font-semibold">
-            <img src="/logo.png" alt="Look Optica" className="h-24 w-24" />
-          </Link>
+        <div className="flex w-full flex-col gap-3 px-3 py-2 md:h-24 md:flex-row md:items-center md:justify-between md:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <Link to="/" className="font-semibold">
+              <img src="/logo.png" alt="Look Optica" className="h-12 w-12 md:h-24 md:w-24" />
+            </Link>
+            {/* Mobile icons row */}
+            <div className="flex items-center gap-3 text-xl text-slate-500 md:hidden">
+              <Link
+                to={isLoggedIn ? "/account" : "/account/login"}
+                className="relative text-slate-600 hover:text-amber-700"
+                aria-label="Λογαριασμός"
+              >
+                <PersonOutlineIcon fontSize="inherit" />
+              </Link>
+              <Link
+                to="/cart"
+                className="relative text-slate-600 hover:text-amber-700"
+                aria-label="Καλάθι"
+              >
+                <ShoppingCartOutlinedIcon fontSize="inherit" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-2 rounded-full bg-amber-700 px-1.5 text-[10px] font-semibold text-white">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                to="https://www.facebook.com/lookoptikahalandri"
+                target="_blank"
+              >
+                <FacebookIcon className="text-blue-700" />
+              </Link>
+              <Link
+                to="https://www.instagram.com/lookopticahalandri"
+                target="_blank"
+              >
+                <InstagramIcon className="text-red-700" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Mobile hamburger menu */}
+          <div className="relative md:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:border-amber-400"
+              aria-label="Toggle navigation"
+            >
+              <span className="flex h-4 w-4 flex-col justify-between">
+                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+              </span>
+              <span>Menu</span>
+            </button>
+            <div
+              className={`${
+                mobileMenuOpen ? "flex" : "hidden"
+              } absolute left-0 right-0 top-full mt-2 flex-col gap-1 rounded-2xl border border-amber-100 bg-white p-3 text-sm text-amber-800 shadow-lg`}
+            >
+              {mobileOptions.map((opt) => (
+                <button
+                  key={opt.to}
+                  type="button"
+                  onClick={() => {
+                    handleMobileNav({ target: { value: opt.to } });
+                    setMobileMenuOpen(false);
+                  }}
+                  className="rounded-lg px-3 py-2 text-left hover:bg-amber-50"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Main navigation */}
-          <nav className="flex gap-4 text-sm text-amber-700 md:text-md">
+          <nav className="hidden items-center gap-4 text-sm text-amber-700 md:flex md:text-md">
             {NAV_CATEGORIES.map((cat) => {
               const hasChildren = Array.isArray(cat.children) && cat.children.length > 0;
               const hasAudiences = Array.isArray(cat.audiences) && cat.audiences.length > 0;
@@ -254,7 +429,7 @@ function AppShell() {
           </nav>
 
           {/* Right side: account + cart + socials */}
-          <div className="flex items-center gap-4 text-2xl text-slate-500">
+          <div className="hidden items-center gap-4 text-2xl text-slate-500 md:flex">
             {/* Account icon */}
             <Link
               to={isLoggedIn ? "/account" : "/account/login"}

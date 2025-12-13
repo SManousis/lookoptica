@@ -50,7 +50,7 @@ export function CustomerAuthProvider({ children }) {
     const controller = new AbortController();
     const loadSession = async () => {
       try {
-        const res = await fetch(`${API}/api/auth/me`, {
+        const res = await fetch(`${API}/auth/me`, {
           method: "GET",
           credentials: "include",
           signal: controller.signal,
@@ -83,7 +83,7 @@ export function CustomerAuthProvider({ children }) {
   }, [customer, guestEmail]);
 
   async function login({ email, password, turnstileToken }) {
-    const res = await fetch(`${API}/api/auth/login`, {
+    const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -107,7 +107,7 @@ export function CustomerAuthProvider({ children }) {
   }
 
   async function register(data) {
-    const res = await fetch(`${API}/api/auth/register`, {
+    const res = await fetch(`${API}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -134,7 +134,7 @@ export function CustomerAuthProvider({ children }) {
 
   async function logout() {
     try {
-      await fetch(`${API}/api/auth/logout`, {
+      await fetch(`${API}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -163,4 +163,3 @@ export function CustomerAuthProvider({ children }) {
     </CustomerAuthContext.Provider>
   );
 }
-

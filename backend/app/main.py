@@ -84,16 +84,16 @@ app.add_middleware(
 )
 
 # ------------------ Routers ------------------
-app.include_router(admin_products.router)
-app.include_router(admin_contact_lenses.router)
-app.include_router(admin_auth.router)
-app.include_router(public_products.router)
-app.include_router(shop_products.router)
-app.include_router(contact.router)
-app.include_router(checkout.router)
-app.include_router(final_checkout.router)
-app.include_router(customer_checkout.router)
-app.include_router(customer_auth.router)
+app.include_router(admin_products.router, prefix="/api")
+app.include_router(admin_contact_lenses.router, prefix="/api")
+app.include_router(admin_auth.router, prefix="/api")
+app.include_router(public_products.router, prefix="/api")
+app.include_router(shop_products.router, prefix="/api")
+app.include_router(contact.router, prefix="/api")
+app.include_router(checkout.router, prefix="/api")
+app.include_router(final_checkout.router, prefix="/api")
+app.include_router(customer_checkout.router, prefix="/api")
+app.include_router(customer_auth.router, prefix="/api")
 
 @app.get("/healthz")
 async def healthz():

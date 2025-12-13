@@ -162,7 +162,7 @@ export default function EditContactLens() {
 
         const res = await adminApiFetch(
 
-          `${API}/api/admin/contact-lenses`,
+          `${API}/admin/contact-lenses`,
 
           {},
 
@@ -229,13 +229,9 @@ export default function EditContactLens() {
       try {
 
         const res = await adminApiFetch(
-
-          `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}`,
-
+          `${API}/admin/contact-lenses/${encodeURIComponent(sku)}`,
           {},
-
           csrfToken
-
         );
 
         if (!res.ok) {
@@ -508,7 +504,7 @@ export default function EditContactLens() {
 
       const res = await adminApiFetch(
 
-        `${API}/api/admin/contact-lenses/${encodeURIComponent(sku)}`,
+        `${API}/admin/contact-lenses/${encodeURIComponent(sku)}`,
 
         {
 
