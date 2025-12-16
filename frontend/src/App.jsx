@@ -39,7 +39,7 @@ import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
 import CheckoutPaymentPage from "./pages/CheckoutPaymentPage";
 import BankTransferIrisPage from "./pages/BankTransferIrisPage";
-import { isStockCategory } from "./utils/categoryHelpers";
+import { isStockProduct } from "./utils/categoryHelpers";
 
 const API = import.meta.env.VITE_API_BASE;
 
@@ -56,15 +56,14 @@ function ShopPLP() {
   const isStockView = view === "stock";
   const PAGE_SIZE = 12;
 
-  const isStockItem = (product) => {
-    if (product?.isStock === true || product?.stock === true) return true;
-    const candidates = [
-      product?.category,
-      product?.attributes?.category,
-      product?.attributes?.category_label,
-      product?.attributes?.category_value,
-    ];
-    return candidates.some((value) => isStockCategory(value));
+  const buildQueryParams = (nextOffset) => {
+    const params = new URLSearchParams();
+    params.set("limit", PAGE_SIZE);
+    params.set("offset", nextOffset);
+    if (isStockView) {
+      ["stock", "stok"].forEach((alias) => params.append("category", alias));
+    }
+    return params;
   };
 
   const loadProducts = async (replace = false) => {
@@ -82,17 +81,19 @@ function ShopPLP() {
     }
 
     try {
-      const res = await fetch(`${API}/shop-products?limit=${PAGE_SIZE}&offset=${nextOffset}`);
+      const params = buildQueryParams(nextOffset);
+      const res = await fetch(`${API}/shop-products?${params.toString()}`);
       if (!res.ok) throw new Error(`Fetch failed (offset ${nextOffset})`);
       const batch = await res.json();
       const list = Array.isArray(batch) ? batch : [];
+      const filteredList = isStockView ? list.filter((p) => isStockProduct(p)) : list;
 
-      setItems((prev) => (replace ? list : [...prev, ...list]));
+      setItems((prev) => (replace ? filteredList : [...prev, ...filteredList]));
       setOffset(nextOffset + list.length);
       setHasMore(list.length === PAGE_SIZE);
       setState("ok");
       if (replace) {
-        setVisibleCount(Math.min(PAGE_SIZE, list.length));
+        setVisibleCount(Math.min(PAGE_SIZE, filteredList.length));
       }
     } catch (err) {
       if (replace) {
@@ -135,7 +136,7 @@ function ShopPLP() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const displayItems = items.filter((p) => !isStockView || isStockItem(p));
+  const displayItems = items.filter((p) => !isStockView || isStockProduct(p));
   const visibleItems = displayItems.slice(0, visibleCount);
 
   if (state === "loading") return <div>Loading...</div>;

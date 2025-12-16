@@ -36,3 +36,30 @@ export function isStockCategory(value) {
   );
 }
 
+export function isStockProduct(product = {}) {
+  if (!product) return false;
+
+  if (product.isStock === true || product.stock === true) return true;
+
+  const attributes = product.attributes || {};
+  if (
+    attributes.is_stock === true ||
+    attributes.isStock === true ||
+    attributes.stock === true
+  ) {
+    return true;
+  }
+
+  const candidates = [
+    product.category,
+    product.stock_category,
+    attributes.category,
+    attributes.category_label,
+    attributes.category_value,
+    attributes.stock_category,
+  ];
+
+  const tags = Array.isArray(attributes.tags) ? attributes.tags : [];
+
+  return [...candidates, ...tags].some((val) => isStockCategory(val));
+}

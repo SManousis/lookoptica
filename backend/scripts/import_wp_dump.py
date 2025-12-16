@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import sys
+import unicodedata
 from html import unescape
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -341,6 +342,24 @@ def _html_to_text(value: str) -> str:
     return "\n".join(lines)
 
 
+def _normalize_token(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    text = unicodedata.normalize("NFD", value)
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    return re.sub(r"[^\w]+", "", text, flags=re.UNICODE).lower()
+
+
+def _is_stockish(value: Optional[str]) -> bool:
+    if not value:
+        return False
+    norm = _normalize_token(value)
+    if not norm:
+        return False
+    stock_tokens = {"stock", "stok", "στοκ", "στοκσ"}
+    return any(tok in norm for tok in stock_tokens)
+
+
 def _build_product_image_urls(meta: Dict[str, List[str]], attachments: Dict[int, WPPost]) -> List[str]:
     urls: List[str] = []
     thumb_id = _first(meta, "_thumbnail_id")
@@ -521,7 +540,7 @@ def import_dump(dump_path: Path):
         for c in product_cats:
             name = (c.get("name") or "").lower()
             slug = (c.get("slug") or "").lower()
-            if "stock" in name or "stock" in slug or "στοκ" in name or "στοκ" in slug:
+            if _is_stockish(name) or _is_stockish(slug):
                 return c.get("name") or "Stock", c.get("slug") or "stock"
 
         if product_cats:
@@ -533,7 +552,7 @@ def import_dump(dump_path: Path):
             return "Γυαλιά Ηλίου", "gialia-iliou"
         if any(s in t for t in lower_tags for s in ["γυαλιά οράσεως", "γυαλια ορασεως", "οράσεως"]):
             return "Γυαλιά Οράσεως", "gialia-oraseos"
-        if any("stock" in t or "στοκ" in t for t in lower_tags):
+        if any(_is_stockish(t) for t in lower_tags):
             return "Stock", "stock"
         return None, None
 
@@ -637,6 +656,9 @@ def import_dump(dump_path: Path):
             attrs["variants"] = variants
         if catalog_status:
             attrs["catalog_status"] = catalog_status
+        if _is_stockish(category_label) or _is_stockish(category_slug) or any(_is_stockish(t) for t in tags):
+            attrs["is_stock"] = True
+            attrs["stock_category"] = "stock"
 
         sku = _first(meta, "_sku") or (post.post_name or f"SKU-{pid}")
         slug = post.post_name or f"product-{pid}"

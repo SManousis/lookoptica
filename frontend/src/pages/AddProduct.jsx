@@ -38,6 +38,7 @@ const initialForm = {
   templeLength: "",
   stock: "",
   reorderLevel: "",
+  isStock: false,
   isDefault: false,
   status: "in_stock",
   color: "",
@@ -98,9 +99,9 @@ export default function AddProduct() {
   const [newBrandName, setNewBrandName] = useState("");
 
   function handleChange(e) {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setForm((f) => {
-      const next = { ...f, [name]: value };
+      const next = { ...f, [name]: type === "checkbox" ? checked : value };
 
       if (name === "slug") {
         setSlugTouched(true);
@@ -226,6 +227,8 @@ export default function AddProduct() {
         eyeSize: form.eyeSize || undefined,
         bridgeSize: form.bridgeSize || undefined,
         templeLength: form.templeLength || undefined,
+        is_stock: form.isStock || undefined,
+        stock_category: form.isStock ? "stock" : undefined,
       },
       stock: form.stock ? Number(form.stock) : null,
       reorderLevel: form.reorderLevel ? Number(form.reorderLevel) : null,
@@ -504,6 +507,15 @@ export default function AddProduct() {
               onChange={handleChange}
               className="w-full border rounded-lg px-3 py-2 text-sm"
             />
+            <label className="mt-2 inline-flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="isStock"
+                checked={form.isStock}
+                onChange={handleChange}
+              />
+              Mark as Stock item (show in Stock listing)
+            </label>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Reorder level</label>

@@ -8,3 +8,6 @@ scp -i C:/Users/fover/.ssh/id_ed25519 -r H:/sitebackup/uploads/* \
 sudo chown -R www-data:www-data /var/www/eshop_frontend
 sudo find /var/www/eshop_frontend -type d -exec chmod 755 {} \;
 sudo find /var/www/eshop_frontend -type f -exec chmod 644 {} \;
+
+Login to site ssh -i ~/.ssh/id_ed25519 root@159.69.146.172
+Restart nginx sudo systemctl restart lookoptica

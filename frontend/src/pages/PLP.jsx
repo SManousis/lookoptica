@@ -1,24 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import {
-  isStockCategory,
-  matchesCategoryAlias,
-} from "../utils/categoryHelpers";
+import { isStockProduct, matchesCategoryAlias } from "../utils/categoryHelpers";
 
 const API = import.meta.env.VITE_API_BASE || "";
-
-const isStockItem = (product) => {
-  if (product?.isStock === true || product?.stock === true) return true;
-  const candidates = [
-    product?.category,
-    product?.attributes?.category,
-    product?.attributes?.category_label,
-    product?.attributes?.category_value,
-  ];
-  return candidates.some((value) => isStockCategory(value));
-};
-
 
 // Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
@@ -182,16 +167,6 @@ export default function CategoryPLP() {
     }
 
     try {
-      const params = new URLSearchParams();
-      params.set("limit", PAGE_SIZE);
-      params.set("offset", nextOffset);
-      if (config?.aliases?.[0]) params.set("category", config.aliases[0]);
-      if (audienceConfig?.allowed?.[0]) params.set("audience", audienceConfig.allowed[0]);
-      const res = await fetch(`${API}/shop-products?${params.toString()}`);
-      if (!res.ok) throw new Error(`Fetch failed (offset ${nextOffset})`);
-      const batch = await res.json();
-      const list = Array.isArray(batch) ? batch : [];
-
       const matchesCategoryConfig = (product) => {
         const aliases = config.aliases || [];
         const candidates = [
@@ -204,55 +179,83 @@ export default function CategoryPLP() {
         return candidates.some((value) => matchesCategoryAlias(value, aliases));
       };
 
-      const filtered = list.filter((p) => {
-        const stockMatch = isStockItem(p);
-        const baseMatch = matchesCategoryConfig(p);
-        const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
-          (tag) => matchesCategoryAlias(tag, config.aliases || [])
-        );
-        const matchesCategory = (() => {
-          if (categorySlug === "stock") {
-            return stockMatch || baseMatch || tagMatch;
+      const filterAndProject = (list) => {
+        const filtered = list.filter((p) => {
+          const stockMatch = isStockProduct(p);
+          const baseMatch = matchesCategoryConfig(p);
+          const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
+            (tag) => matchesCategoryAlias(tag, config.aliases || [])
+          );
+          const matchesCategory = (() => {
+            if (categorySlug === "stock") {
+              return stockMatch || baseMatch || tagMatch;
+            }
+            if (isStockView) {
+              return stockMatch && (baseMatch || tagMatch);
+            }
+            return baseMatch;
+          })();
+
+          if (!matchesCategory) return false;
+
+          const requireStockOnly = categorySlug === "stock" || isStockView;
+          if (requireStockOnly && !stockMatch) return false;
+
+          if (audienceConfig) {
+            const allowed = audienceConfig.allowed || [];
+            const matchesAudience =
+              allowed.includes(p.audience) ||
+              allowed.includes(p.attributes?.audience) ||
+              allowed.some((aud) => (p.attributes?.audiences || []).includes(aud));
+            if (!matchesAudience) return false;
           }
-          if (isStockView) {
-            return stockMatch && (baseMatch || tagMatch);
-          }
-          return baseMatch;
-        })();
 
-        if (!matchesCategory) return false;
+          if (categorySlug === "stock" && !stockMatch) return false;
 
-        const requireStockOnly = categorySlug === "stock" || isStockView;
-        if (requireStockOnly && !stockMatch) return false;
+          return true;
+        });
 
-        if (audienceConfig) {
-          const allowed = audienceConfig.allowed || [];
-          const matchesAudience =
-            allowed.includes(p.audience) ||
-            allowed.includes(p.attributes?.audience) ||
-            allowed.some((aud) => (p.attributes?.audiences || []).includes(aud));
-          if (!matchesAudience) return false;
-        }
+        return filtered.map((p) => ({
+          ...p,
+          title: p.title,
+          slug: p.slug,
+          category: p.category,
+          audience: p.audience,
+        }));
+      };
 
-        if (categorySlug === "stock" && !stockMatch) return false;
+      // Keep fetching until we have PAGE_SIZE filtered items or no more data
+      const aggregatedProjected = [];
+      let batchOffset = nextOffset;
+      let lastBatchLength = 0;
+      let iterations = 0;
+      const MAX_FETCHES = 6; // safety guard
 
-        return true;
-      });
+      while (aggregatedProjected.length < PAGE_SIZE && iterations < MAX_FETCHES) {
+        iterations += 1;
+        const params = new URLSearchParams();
+        params.set("limit", PAGE_SIZE);
+        params.set("offset", batchOffset);
+        (config?.aliases || []).forEach((alias) => params.append("category", alias));
+        (audienceConfig?.allowed || []).forEach((aud) => params.append("audience", aud));
+        const res = await fetch(`${API}/shop-products?${params.toString()}`);
+        if (!res.ok) throw new Error(`Fetch failed (offset ${batchOffset})`);
+        const batch = await res.json();
+        const list = Array.isArray(batch) ? batch : [];
+        lastBatchLength = list.length;
 
-      const projected = filtered.map((p) => ({
-        ...p,
-        title: p.title,
-        slug: p.slug,
-        category: p.category,
-        audience: p.audience,
-      }));
+        aggregatedProjected.push(...filterAndProject(list));
+        batchOffset += list.length;
+
+        if (list.length < PAGE_SIZE) break; // no more data server-side
+      }
 
       let nextLength = 0;
       setItems((prev) => {
         const base = replace ? [] : prev;
         const seen = new Set(base.map((p) => p.slug));
         const deduped = [...base];
-        for (const item of projected) {
+        for (const item of aggregatedProjected) {
           if (seen.has(item.slug)) continue;
           seen.add(item.slug);
           deduped.push(item);
@@ -261,8 +264,8 @@ export default function CategoryPLP() {
         return deduped;
       });
 
-      setOffset(nextOffset + list.length);
-      setHasMore(list.length === PAGE_SIZE);
+      setOffset(batchOffset);
+      setHasMore(lastBatchLength === PAGE_SIZE);
       setVisibleCount((c) => Math.min(Math.max(c, PAGE_SIZE), nextLength));
       setState("ok");
     } catch (err) {
@@ -297,7 +300,7 @@ export default function CategoryPLP() {
     const q = searchTerm.trim().toLowerCase();
     const filtered = items.filter((p) => {
       if (brandFilter && p.brand !== brandFilter) return false;
-      if (isStockView && !isStockCategory(p.category)) return false;
+      if (isStockView && !isStockProduct(p)) return false;
       if (!q) return true;
       const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
       const brand = (p?.brand || "").toLowerCase();
