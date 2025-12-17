@@ -24,6 +24,12 @@ export default function AdminDashboard() {
         >
           Available contact lenses
         </Link>
+        <Link
+          to="/admin/orders"
+          className="text-amber-700 underline text-sm"
+        >
+          Orders
+        </Link>
 
         <button
           onClick={logout}

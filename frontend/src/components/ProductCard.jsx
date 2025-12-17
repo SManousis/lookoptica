@@ -31,13 +31,13 @@ export default function ProductCard({ p }) {
           <img
             src={firstImage}
             alt={title}
-            className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-200 hover:scale-[1.01]"
+            className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-105"
             onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
           />
         </div>
 
       {/* Brand + category */}
-      <div className="mt-2 text-xs text-slate-500 flex items-center gap-2">
+      <div className="mt-2 text-xs text-amber-500 flex items-center gap-2">
         {p?.brand && (
           <span className="font-medium uppercase tracking-wide">
             {p.brand}
@@ -56,7 +56,10 @@ export default function ProductCard({ p }) {
       </div>
 
       {/* Price */}
-      <div className="text-sm">€{p?.price}</div>
+      <div className="flex items-baseline gap-2">
+        <div className="text-xl font-bold text-amber-700">€{p?.price}</div>
+        <div className="text-sm text-slate-400 line-through">€{p?.discountPrice}</div> 
+      </div>
     </Link>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useCustomerAuth } from "../context/customerAuthShared";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -22,6 +23,7 @@ const PAYMENT_OPTIONS = [
 export default function CheckoutPaymentPage() {
   const { items } = useCart();
   const navigate = useNavigate();
+  const { isLoggedIn, customer, guestEmail } = useCustomerAuth();
 
   const [shippingMethod, setShippingMethod] = useState("courier_home");
   const [paymentMethod, setPaymentMethod] = useState("card");
@@ -30,6 +32,15 @@ export default function CheckoutPaymentPage() {
   const [quote, setQuote] = useState(null);
   const [quoteState, setQuoteState] = useState("idle"); // idle | loading | ok | error
   const [quoteError, setQuoteError] = useState("");
+  const [placeState, setPlaceState] = useState("idle"); // idle | loading | ok | error
+  const [placeError, setPlaceError] = useState("");
+  const [contactState, setContactState] = useState("idle"); // idle | loading | ok | error
+  const [contactError, setContactError] = useState("");
+  const [contactDetails, setContactDetails] = useState(null);
+
+  const effectiveEmail = isLoggedIn
+    ? customer?.email || ""
+    : guestEmail || "";
 
   // If cart is empty, go back to cart
   useEffect(() => {
@@ -37,6 +48,67 @@ export default function CheckoutPaymentPage() {
       navigate("/cart");
     }
   }, [items, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchContactDetails = async () => {
+      if (!isLoggedIn && !effectiveEmail) {
+        setContactDetails(null);
+        setContactState("idle");
+        setContactError("");
+        return;
+      }
+
+      setContactState("loading");
+      setContactError("");
+
+      const params = new URLSearchParams();
+      if (!isLoggedIn && effectiveEmail) {
+        params.set("guest_email", effectiveEmail);
+      }
+      const query = params.toString();
+      const url = query
+        ? `${API}/customer/checkout-details?${query}`
+        : `${API}/customer/checkout-details`;
+
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (res.status === 404) {
+          if (!cancelled) {
+            setContactDetails(null);
+            setContactState("ok");
+          }
+          return;
+        }
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to load contact details");
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+        setContactDetails(data || null);
+        setContactState("ok");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Failed to load contact details", err);
+        setContactError(err.message || "Failed to load contact details");
+        setContactState("error");
+      }
+    };
+
+    fetchContactDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, effectiveEmail]);
 
   const subtotal = useMemo(() => {
     if (!items) return 0;
@@ -60,6 +132,30 @@ export default function CheckoutPaymentPage() {
         ? selectedLockerId.trim()
         : null,
   });
+
+  const collectProductCodes = () => {
+    if (!items) return [];
+    return (items || [])
+      .map((it) => it?.sku || it?.id || it?.slug || "")
+      .map((code) => String(code || "").trim())
+      .filter(Boolean);
+  };
+
+  const buildContactPayload = () => {
+    const shippingInfo = contactDetails?.shipping || {};
+    return {
+      contact_name: shippingInfo.full_name || "",
+      contact_email: shippingInfo.email || effectiveEmail || "",
+      contact_phone: shippingInfo.phone || "",
+      shipping_address_line1: shippingInfo.address_line1 || "",
+      shipping_address_line2: shippingInfo.address_line2 || "",
+      shipping_city: shippingInfo.city || "",
+      shipping_postcode: shippingInfo.postcode || "",
+      shipping_region: shippingInfo.region || "",
+      shipping_country: shippingInfo.country || "",
+      shipping_notes: shippingInfo.notes || "",
+    };
+  };
 
   // Call backend whenever shipping / payment / items change
   useEffect(() => {
@@ -93,29 +189,64 @@ export default function CheckoutPaymentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shippingMethod, paymentMethod, selectedLockerId, subtotal]);
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!quote) {
       setQuoteError("Υπολογίστε πρώτα το συνολικό ποσό πριν προχωρήσετε.");
       setQuoteState("error");
       return;
     }
 
+    const productCodes = collectProductCodes();
+    if (productCodes.length === 0) {
+      setPlaceError("Λείπουν κωδικοί προϊόντων από το καλάθι.");
+      setPlaceState("error");
+      return;
+    }
+
+    setPlaceState("loading");
+    setPlaceError("");
+
+    const contactPayload = buildContactPayload();
+
+    let createdOrderId = null;
+    try {
+      const res = await fetch(`${API}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_codes: productCodes,
+          payment_method: paymentMethod,
+          ...contactPayload,
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to submit order");
+      }
+      const data = await res.json();
+      createdOrderId = data?.id ?? null;
+      setPlaceState("ok");
+    } catch (err) {
+      console.error("Failed to submit order", err);
+      setPlaceError(err.message || "Failed to submit order");
+      setPlaceState("error");
+      return;
+    }
+
     if (paymentMethod === "bank_transfer" || paymentMethod === "iris") {
       navigate("/checkout/bank-transfer", {
         state: {
+          orderId: createdOrderId,
           total: quote.total,
           currency: quote.currency || "EUR",
           paymentMethod,
-          paymentReference: `QUOTE-${Date.now()}`,
+          paymentReference: createdOrderId ? `ORDER-${createdOrderId}` : `QUOTE-${Date.now()}`,
         },
       });
       return;
     }
 
-    // Later:
-    // - Validate quote
-    // - Redirect to Viva / PayPal / bank details / confirmation page
-    alert("Next step: create order + integrate Viva/PayPal. Για την ώρα είναι demo.");
+    alert("Ευχαριστούμε! Καταγράψαμε την παραγγελία σας.");
   };
 
     const formattedSubtotal = subtotal.toFixed(2);
@@ -321,15 +452,31 @@ export default function CheckoutPaymentPage() {
               {quoteError}
             </p>
           )}
+          {contactState === "error" && (
+            <p className="mt-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg p-2">
+              {contactError}
+            </p>
+          )}
 
           <button
             type="button"
             onClick={handlePlaceOrder}
-            disabled={quoteState === "loading" || !quote}
+            disabled={
+              quoteState === "loading" ||
+              placeState === "loading" ||
+              contactState === "loading" ||
+              !quote
+            }
             className="mt-3 w-full rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             Συνέχεια στην ολοκλήρωση
           </button>
+
+          {placeError && (
+            <p className="mt-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg p-2">
+              {placeError}
+            </p>
+          )}
 
           <p className="mt-2 text-[11px] text-slate-500">
             Στο επόμενο βήμα θα επιβεβαιώσετε τα στοιχεία και θα μεταφερθείτε

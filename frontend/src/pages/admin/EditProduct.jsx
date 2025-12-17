@@ -1,5 +1,7 @@
 ﻿import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useAdminAuth } from "../../context/useAdminAuth";
+import { adminApiFetch } from "../../utils/adminApiFetch";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -116,6 +118,8 @@ function makeSlug(str) {
 export default function EditProduct() {
   const { slug: originalSlug } = useParams();
   const navigate = useNavigate();
+  const { csrfToken } = useAdminAuth();
+  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState(initialForm);
   const [variants, setVariants] = useState([]);
@@ -125,11 +129,15 @@ export default function EditProduct() {
   const [slugTouched, setSlugTouched] = useState(true); // editing: do not auto-change slug
   const [state, setState] = useState("loading"); // loading | idle | saving | error | success
   const [errorMsg, setErrorMsg] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
 
   const fileInputRef = useRef(null);
+
+  const listSearch = searchParams.toString();
+  const listUrl = listSearch ? `/admin/products?${listSearch}` : "/admin/products";
 
   // ---------- Load existing product ----------
   useEffect(() => {
@@ -293,6 +301,38 @@ export default function EditProduct() {
     setShowBrandModal(false);
   }
 
+  async function handleDeleteProduct() {
+    if (!form?.sku) {
+      setErrorMsg("SKU is missing for this product.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete product ${form.sku}?`);
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setErrorMsg("");
+
+    try {
+      const res = await adminApiFetch(
+        `${API}/admin/products/${encodeURIComponent(form.sku)}/unpublish`,
+        { method: "POST" },
+        csrfToken
+      );
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to delete product");
+      }
+
+      navigate(listUrl);
+    } catch (err) {
+      console.error("Failed to delete product:", err);
+      setErrorMsg(err.message || "Failed to delete product");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   // ---------- Submit (PUT) ----------
   async function handleSubmit(e) {
     e.preventDefault();
@@ -383,7 +423,7 @@ export default function EditProduct() {
       }
 
       setState("success");
-      navigate("/admin/products");
+      navigate(listUrl);
     } catch (err) {
       setState("error");
       setErrorMsg(err.message || "Error updating product");
@@ -996,13 +1036,23 @@ export default function EditProduct() {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={state === "saving"}
-          className="px-4 py-2 rounded-xl bg-teal-600 text-white text-sm disabled:opacity-60"
-        >
-          {state === "saving" ? "Saving…" : "Save changes"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={state === "saving"}
+            className="px-4 py-2 rounded-xl bg-teal-600 text-white text-sm disabled:opacity-60"
+          >
+            {state === "saving" ? "Saving…" : "Save changes"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteProduct}
+            disabled={state === "saving" || isDeleting}
+            className="px-4 py-2 rounded-xl border border-red-200 text-red-700 text-sm disabled:opacity-60"
+          >
+            {isDeleting ? "Deleting…" : "Delete product"}
+          </button>
+        </div>
       </form>
 
       {/* Add Brand Modal */}

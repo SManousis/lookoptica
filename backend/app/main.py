@@ -8,6 +8,7 @@ from app.routers import admin_contact_lenses
 from app.routers import checkout
 from app.routers import final_checkout
 from app.routers import customer_checkout
+from app.routers import orders
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
 
@@ -94,6 +95,7 @@ app.include_router(checkout.router, prefix="/api")
 app.include_router(final_checkout.router, prefix="/api")
 app.include_router(customer_checkout.router, prefix="/api")
 app.include_router(customer_auth.router, prefix="/api")
+app.include_router(orders.router, prefix="/api")
 
 @app.get("/healthz")
 async def healthz():

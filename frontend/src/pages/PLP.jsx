@@ -150,6 +150,20 @@ export default function CategoryPLP() {
     { categorySlug, audienceSlug, config, audienceConfig }
   );
 
+  const getProductKey = (product) => {
+    return (
+      product?.slug ||
+      product?.id ||
+      product?._id ||
+      product?.attributes?.slug ||
+      product?.attributes?.sku ||
+      product?.attributes?.barcode ||
+      product?.sku ||
+      product?.barcode ||
+      `${product?.title?.el || product?.title?.en || product?.title || ""}-${product?.variantLabel || ""}`
+    );
+  };
+
   const loadPage = async (nextOffset = 0, replace = false) => {
     if (!config) {
       setState("error");
@@ -225,13 +239,19 @@ export default function CategoryPLP() {
       };
 
       // Keep fetching until we have PAGE_SIZE filtered items or no more data
-      const aggregatedProjected = [];
+      const baseItems = replace ? [] : items;
+      const seenKeys = new Set(
+        baseItems
+          .map((p) => getProductKey(p))
+          .filter(Boolean)
+      );
+      const aggregatedUnique = [];
       let batchOffset = nextOffset;
       let lastBatchLength = 0;
       let iterations = 0;
       const MAX_FETCHES = 6; // safety guard
 
-      while (aggregatedProjected.length < PAGE_SIZE && iterations < MAX_FETCHES) {
+      while (aggregatedUnique.length < PAGE_SIZE && iterations < MAX_FETCHES) {
         iterations += 1;
         const params = new URLSearchParams();
         params.set("limit", PAGE_SIZE);
@@ -244,7 +264,14 @@ export default function CategoryPLP() {
         const list = Array.isArray(batch) ? batch : [];
         lastBatchLength = list.length;
 
-        aggregatedProjected.push(...filterAndProject(list));
+        const projected = filterAndProject(list);
+        for (const product of projected) {
+          const key = getProductKey(product);
+          if (!key || seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          aggregatedUnique.push(product);
+          if (aggregatedUnique.length >= PAGE_SIZE) break;
+        }
         batchOffset += list.length;
 
         if (list.length < PAGE_SIZE) break; // no more data server-side
@@ -253,15 +280,9 @@ export default function CategoryPLP() {
       let nextLength = 0;
       setItems((prev) => {
         const base = replace ? [] : prev;
-        const seen = new Set(base.map((p) => p.slug));
-        const deduped = [...base];
-        for (const item of aggregatedProjected) {
-          if (seen.has(item.slug)) continue;
-          seen.add(item.slug);
-          deduped.push(item);
-        }
-        nextLength = deduped.length;
-        return deduped;
+        const next = [...base, ...aggregatedUnique];
+        nextLength = next.length;
+        return next;
       });
 
       setOffset(batchOffset);

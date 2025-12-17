@@ -27,6 +27,7 @@ import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
+import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import ContactLensPDP from "./pages/ContactLensPDP";
 import CheckoutIdentifyPage from "./pages/CheckoutIdentifyPage";
 import AccountRegisterPage from "./pages/AccountRegisterPage";
@@ -37,6 +38,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
+import { useAdminAuth } from "./context/useAdminAuth";
 import CheckoutPaymentPage from "./pages/CheckoutPaymentPage";
 import BankTransferIrisPage from "./pages/BankTransferIrisPage";
 import { isStockProduct } from "./utils/categoryHelpers";
@@ -235,11 +237,12 @@ function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { totals } = useCart();
   const { isLoggedIn } = useCustomerAuth();
+  const { admin, logout: logoutAdmin } = useAdminAuth();
   const navigate = useNavigate();
 
   const itemCount = totals?.itemCount ?? 0;
 
-  const mobileOptions = [
+  const baseMobileOptions = [
     { label: "Home", to: "/" },
     ...NAV_CATEGORIES.map((cat) => {
       const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
@@ -252,8 +255,17 @@ function AppShell() {
     { label: "About us", to: "/about-us" },
   ];
 
-  const handleMobileNav = (e) => {
-    const next = e.target.value;
+  const mobileOptions = admin
+    ? [
+        ...baseMobileOptions,
+        { label: "Admin · Orders", to: "/admin/orders" },
+        { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
+        { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
+        { label: "Admin · Logout", action: "logout" },
+      ]
+    : baseMobileOptions;
+
+  const handleMobileNav = (next) => {
     if (next) {
       navigate(next);
       setOpenCategory(null);
@@ -326,10 +338,15 @@ function AppShell() {
             >
               {mobileOptions.map((opt) => (
                 <button
-                  key={opt.to}
+                  key={opt.to || opt.label}
                   type="button"
                   onClick={() => {
-                    handleMobileNav({ target: { value: opt.to } });
+                    if (opt.action === "logout") {
+                      logoutAdmin();
+                      navigate("/admin/login");
+                    } else if (opt.to) {
+                      handleMobileNav(opt.to);
+                    }
                     setMobileMenuOpen(false);
                   }}
                   className="rounded-lg px-3 py-2 text-left hover:bg-amber-50"
@@ -426,6 +443,63 @@ function AppShell() {
             <Link to="/about-us" className="hover:text-red-800">
               Σχετικά με εμάς
             </Link>
+            {admin && (
+              <div
+                className="relative"
+                onMouseEnter={() => setOpenCategory("admin-menu")}
+                onMouseLeave={() => setOpenCategory(null)}
+              >
+                <button
+                  type="button"
+                  className="hover:text-amber-600"
+                  onClick={() =>
+                    setOpenCategory((prev) =>
+                      prev === "admin-menu" ? null : "admin-menu"
+                    )
+                  }
+                >
+                  Admin
+                </button>
+                <div
+                  className={`absolute right-0 top-full min-w-[12rem] w-max ${
+                    openCategory === "admin-menu" ? "flex" : "hidden"
+                  } flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
+                >
+                  <Link
+                    to="/admin/orders"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Orders
+                  </Link>
+                  <Link
+                    to="/admin/products"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Sunglasses & Frames
+                  </Link>
+                  <Link
+                    to="/admin/contact-lenses"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Contact Lenses
+                  </Link>
+                  <button
+                    type="button"
+                    className="block px-4 py-2 text-left text-sm hover:bg-slate-100 whitespace-nowrap text-red-600"
+                    onClick={() => {
+                      setOpenCategory(null);
+                      logoutAdmin();
+                      navigate("/admin/login");
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
             {/* (Cart text link removed because we now have icon on the right) */}
           </nav>
 
@@ -504,6 +578,14 @@ function AppShell() {
             element={
               <ProtectAdminRoute>
                 <AdminProductsPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectAdminRoute>
+                <AdminOrdersPage />
               </ProtectAdminRoute>
             }
           />
