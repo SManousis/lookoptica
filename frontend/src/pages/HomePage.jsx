@@ -5,8 +5,16 @@ import ProductCard from "../components/ProductCard";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
-const HERO_IMAGES = ["/hero1.jpg", "/hero2.jpg", "/hero3.jpg", "/hero4.jpg"]; // 👈 change to your actual files
-const BRANDS_IMAGES = ["/Converse.png", "/Dkny.png", "/Guess.png", "/Hickmann.png", "/PaulFrank.png", "/PepeJeans.png", "/TedBaker.png"]; 
+const HERO_IMAGES = ["/hero1.jpg", "/hero2.jpg", "/hero3.jpg", "/hero4.jpg"]; // TODO: change to your actual files
+const BRAND_ITEMS = [
+  { src: "/Converse.png", alt: "Converse", brand: "Converse" },
+  { src: "/Dkny.png", alt: "DKNY", brand: "DKNY" },
+  { src: "/Guess.png", alt: "Guess", brand: "Guess" },
+  { src: "/Hickmann.png", alt: "Hickmann", brand: "Hickmann" },
+  { src: "/PaulFrank.png", alt: "Paul Frank", brand: "Paul Frank" },
+  { src: "/PepeJeans.png", alt: "Pepe Jeans", brand: "Pepe Jeans" },
+  { src: "/TedBaker.png", alt: "Ted Baker", brand: "Ted Baker" },
+];
 const BRAND_SLIDE_WIDTH = 180;
 const BRAND_SLIDE_INTERVAL = 3000;
 const BRAND_TRANSITION_MS = 600;
@@ -41,7 +49,7 @@ export default function HomePage() {
 
   // Brands carousel infinite slider
   useEffect(() => {
-    if (BRANDS_IMAGES.length <= 1) return;
+    if (BRAND_ITEMS.length <= 1) return;
     const id = setInterval(() => {
       setBrandsIndex((i) => i + 1);
     }, BRAND_SLIDE_INTERVAL);
@@ -49,7 +57,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (BRANDS_IMAGES.length <= 1 || brandsIndex !== BRANDS_IMAGES.length) return;
+    if (BRAND_ITEMS.length <= 1 || brandsIndex !== BRAND_ITEMS.length) return;
     const timeout = setTimeout(() => {
       setIsBrandJumping(true);
       setBrandsIndex(0);
@@ -61,10 +69,20 @@ export default function HomePage() {
   // Hero image
   const currentHero = HERO_IMAGES[slideIndex] || "/placeholder.png";
   const brandSlides =
-    BRANDS_IMAGES.length > 1 ? [...BRANDS_IMAGES, ...BRANDS_IMAGES] : BRANDS_IMAGES;
+    BRAND_ITEMS.length > 1 ? [...BRAND_ITEMS, ...BRAND_ITEMS] : BRAND_ITEMS;
   const brandTrackStyle = {
     transform: `translateX(-${brandsIndex * BRAND_SLIDE_WIDTH}px)`,
     transition: isBrandJumping ? "none" : `transform ${BRAND_TRANSITION_MS}ms ease`,
+  };
+
+  const getBrandHref = (item) => {
+    if (item.href) return item.href;
+    const basePath = item.categorySlug ? `/shop/${item.categorySlug}` : "/shop";
+    const params = new URLSearchParams();
+    if (item.brand) params.set("brand", item.brand);
+    if (item.view) params.set("view", item.view);
+    const query = params.toString();
+    return query ? `${basePath}?${query}` : basePath;
   };
 
   const handleSwipeStart = (e) => {
@@ -161,27 +179,32 @@ export default function HomePage() {
       </section>
 
       {/* BRANDS MARQUEE */}
-      {BRANDS_IMAGES.length > 0 && (
+      {BRAND_ITEMS.length > 0 && (
         <section className="relative -mx-4 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm sm:-mx-6 sm:rounded-3xl sm:p-6">
           <div className="relative mt-2 overflow-hidden sm:mt-6">
             <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white to-transparent" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white to-transparent" />
             <div className="flex" style={brandTrackStyle}>
-              {brandSlides.map((src, idx) => (
+              {brandSlides.map((item, idx) => (
                 <div
-                  key={`${src}-${idx}`}
+                  key={`${item.brand || item.alt || item.src}-${idx}`}
                   className="flex shrink-0 items-center justify-center px-4 py-2"
                   style={{ width: `${BRAND_SLIDE_WIDTH}px` }}
                 >
-                  <img
-                    src={src}
-                    alt="Brand logo"
-                    className="h-20 w-100 object-contain opacity-80 transition hover:opacity-100"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.png";
-                    }}
-                  />
-                  
+                  <Link
+                    to={getBrandHref(item)}
+                    className="block rounded-xl px-2 py-1 transition hover:bg-white/70"
+                    aria-label={`Browse ${item.alt || item.brand || "brand"} products`}
+                  >
+                    <img
+                      src={item.src}
+                      alt={item.alt || "Brand logo"}
+                      className="h-20 w-100 object-contain opacity-80 transition hover:opacity-100"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.png";
+                      }}
+                    />
+                  </Link>
                 </div>
               ))}
             </div>

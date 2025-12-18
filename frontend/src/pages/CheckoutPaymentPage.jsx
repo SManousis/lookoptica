@@ -21,7 +21,7 @@ const PAYMENT_OPTIONS = [
 ];
 
 export default function CheckoutPaymentPage() {
-  const { items } = useCart();
+  const { items, clearCart } = useCart();
   const navigate = useNavigate();
   const { isLoggedIn, customer, guestEmail } = useCustomerAuth();
 
@@ -232,6 +232,8 @@ export default function CheckoutPaymentPage() {
       setPlaceState("error");
       return;
     }
+
+    clearCart();
 
     if (paymentMethod === "bank_transfer" || paymentMethod === "iris") {
       navigate("/checkout/bank-transfer", {

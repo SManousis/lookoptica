@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { BrowserRouter, Routes, Route, Link, useSearchParams, useNavigate } from "react-router-dom";
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
@@ -28,6 +28,7 @@ import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
+import AdminImportProductsPage from "./pages/admin/AdminImportProductsPage";
 import ContactLensPDP from "./pages/ContactLensPDP";
 import CheckoutIdentifyPage from "./pages/CheckoutIdentifyPage";
 import AccountRegisterPage from "./pages/AccountRegisterPage";
@@ -47,86 +48,31 @@ const API = import.meta.env.VITE_API_BASE;
 
 function ShopPLP() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("view") === "stock" ? "stock" : "all";
+  const isStockView = view === "stock";
+  const brandParam = searchParams.get("brand") || "";
+  const normalizeBrand = (value) => (value || "").trim().toLowerCase();
+  const resolveProductBrand = (product) =>
+    product?.brand ||
+    product?.attributes?.brand ||
+    product?.attributes?.brand_label ||
+    product?.attributes?.brand_name ||
+    product?.attributes?.brand_value ||
+    "";
+  const normalizedBrandParam = normalizeBrand(brandParam);
+
   const [items, setItems] = useState([]);
   const [state, setState] = useState("loading");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
-
-  const view = searchParams.get("view") === "stock" ? "stock" : "all";
-  const isStockView = view === "stock";
+  const [searchTerm, setSearchTerm] = useState("");
+  const [brandFilter, setBrandFilter] = useState(brandParam);
+  const [brandOptions, setBrandOptions] = useState([]);
+  const [sortBy, setSortBy] = useState("newest");
+  const normalizedBrandFilter = normalizeBrand(brandFilter);
   const PAGE_SIZE = 12;
-
-  const buildQueryParams = (nextOffset) => {
-    const params = new URLSearchParams();
-    params.set("limit", PAGE_SIZE);
-    params.set("offset", nextOffset);
-    if (isStockView) {
-      ["stock", "stok"].forEach((alias) => params.append("category", alias));
-    }
-    return params;
-  };
-
-  const loadProducts = async (replace = false) => {
-    const nextOffset = replace ? 0 : offset;
-    if (!replace && !hasMore) return;
-
-    if (replace) {
-      setState("loading");
-      setHasMore(true);
-      setOffset(0);
-      setItems([]);
-      setVisibleCount(PAGE_SIZE);
-    } else {
-      setIsLoadingMore(true);
-    }
-
-    try {
-      const params = buildQueryParams(nextOffset);
-      const res = await fetch(`${API}/shop-products?${params.toString()}`);
-      if (!res.ok) throw new Error(`Fetch failed (offset ${nextOffset})`);
-      const batch = await res.json();
-      const list = Array.isArray(batch) ? batch : [];
-      const filteredList = isStockView ? list.filter((p) => isStockProduct(p)) : list;
-
-      setItems((prev) => (replace ? filteredList : [...prev, ...filteredList]));
-      setOffset(nextOffset + list.length);
-      setHasMore(list.length === PAGE_SIZE);
-      setState("ok");
-      if (replace) {
-        setVisibleCount(Math.min(PAGE_SIZE, filteredList.length));
-      }
-    } catch (err) {
-      if (replace) {
-        console.error("Failed to load products (replace)", err);
-        setState("error");
-      }
-      setHasMore(false);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStockView]);
-
-  const handleLoadMore = async () => {
-    if (visibleCount < displayItems.length) {
-      setVisibleCount((c) => c + PAGE_SIZE);
-      return;
-    }
-    if (hasMore) {
-      await loadProducts(false);
-      setVisibleCount((c) => c + PAGE_SIZE);
-    }
-  };
-
-  const handleShowLess = () => {
-    setVisibleCount(PAGE_SIZE);
-  };
 
   const updateView = (nextView) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -138,8 +84,293 @@ function ShopPLP() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const displayItems = items.filter((p) => !isStockView || isStockProduct(p));
-  const visibleItems = displayItems.slice(0, visibleCount);
+  const updateBrandParam = (value) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set("brand", value);
+    } else {
+      nextParams.delete("brand");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const getProductKey = (product) =>
+    product?.slug ||
+    product?.id ||
+    product?._id ||
+    product?.attributes?.slug ||
+    product?.attributes?.sku ||
+    product?.attributes?.barcode ||
+    product?.sku ||
+    product?.barcode ||
+    `${product?.title?.el || product?.title?.en || product?.title || ""}-${product?.variantLabel || ""}`;
+
+  const loadProducts = async (nextOffset = 0, replace = false) => {
+    if (replace) {
+      setState("loading");
+      setHasMore(true);
+      setOffset(0);
+      setItems([]);
+      setVisibleCount(PAGE_SIZE);
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const baseItems = replace ? [] : items;
+      const seenKeys = new Set(
+        baseItems
+          .map((p) => getProductKey(p))
+          .filter(Boolean)
+      );
+      const aggregatedUnique = [];
+      let batchOffset = nextOffset;
+      let lastBatchLength = 0;
+      let iterations = 0;
+      const requestLimit = normalizedBrandFilter ? PAGE_SIZE * 5 : PAGE_SIZE;
+      const MAX_FETCHES = normalizedBrandFilter ? 120 : 6;
+
+      while (aggregatedUnique.length < PAGE_SIZE && iterations < MAX_FETCHES) {
+        iterations += 1;
+        const params = new URLSearchParams();
+        params.set("limit", requestLimit);
+        params.set("offset", batchOffset);
+        if (isStockView) {
+          ["stock", "stok"].forEach((alias) => params.append("category", alias));
+        }
+        const res = await fetch(`${API}/shop-products?${params.toString()}`);
+        if (!res.ok) throw new Error(`Fetch failed (offset ${batchOffset})`);
+        const batch = await res.json();
+        const list = Array.isArray(batch) ? batch : [];
+        lastBatchLength = list.length;
+
+        const filtered = list
+          .map((p) => ({ ...p, brand: resolveProductBrand(p) }))
+          .filter((p) => {
+            if (isStockView && !isStockProduct(p)) return false;
+            if (normalizedBrandFilter && normalizeBrand(p.brand) !== normalizedBrandFilter) return false;
+            return true;
+          });
+
+        for (const product of filtered) {
+          const key = getProductKey(product);
+          if (!key || seenKeys.has(key)) continue;
+          seenKeys.add(key);
+          aggregatedUnique.push(product);
+          if (aggregatedUnique.length >= PAGE_SIZE) break;
+        }
+
+        batchOffset += list.length;
+
+        if (list.length < requestLimit) break;
+      }
+
+      setItems((prev) => (replace ? aggregatedUnique : [...prev, ...aggregatedUnique]));
+      setOffset(batchOffset);
+      setHasMore(lastBatchLength === requestLimit);
+      if (replace) {
+        setVisibleCount(Math.min(PAGE_SIZE, aggregatedUnique.length));
+      }
+      setState("ok");
+    } catch (err) {
+      if (replace) {
+        console.error("Failed to load products", err);
+        setState("error");
+      }
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStockView, normalizedBrandFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBrandOptions = async () => {
+      try {
+        const brandSet = new Set();
+        let offsetCursor = 0;
+        const LIMIT = 200;
+        const MAX_FETCHES = 8;
+        for (let i = 0; i < MAX_FETCHES; i += 1) {
+          const params = new URLSearchParams();
+          params.set("limit", LIMIT);
+          params.set("offset", offsetCursor);
+          const res = await fetch(`${API}/shop-products?${params.toString()}`);
+          if (!res.ok) break;
+          const batch = await res.json();
+          const list = Array.isArray(batch) ? batch : [];
+          list.forEach((p) => {
+            if (isStockView && !isStockProduct(p)) return;
+            const brandValue = resolveProductBrand(p);
+            if (brandValue) brandSet.add(brandValue);
+          });
+          if (list.length < LIMIT) break;
+          offsetCursor += list.length;
+        }
+        if (!cancelled) {
+          setBrandOptions(Array.from(brandSet).sort((a, b) => a.localeCompare(b)));
+        }
+      } catch (err) {
+        console.error("Failed to load brand options for shop", err);
+        if (!cancelled) setBrandOptions([]);
+      }
+    };
+    loadBrandOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isStockView]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set();
+    items.forEach((p) => {
+      const brandValue = resolveProductBrand(p);
+      if (brandValue) set.add(brandValue);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const selectableBrands = useMemo(() => {
+    const set = new Set(brandOptions);
+    availableBrands.forEach((brand) => set.add(brand));
+    if (brandFilter) set.add(brandFilter);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [brandOptions, availableBrands, brandFilter]);
+
+  useEffect(() => {
+    if (!normalizedBrandParam) {
+      if (normalizedBrandFilter === "") return;
+      setBrandFilter("");
+      return;
+    }
+    setBrandFilter((prev) => {
+      const prevNormalized = normalizeBrand(prev);
+      if (prevNormalized === normalizedBrandParam) return prev;
+      const match =
+        selectableBrands.find(
+          (brand) => normalizeBrand(brand) === normalizedBrandParam
+        ) || brandParam;
+      return match;
+    });
+  }, [normalizedBrandParam, brandParam, selectableBrands, normalizedBrandFilter]);
+
+  const displayItems = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = items.filter((p) => {
+      const resolvedBrand = resolveProductBrand(p);
+      if (normalizedBrandFilter && normalizeBrand(resolvedBrand) !== normalizedBrandFilter) return false;
+      if (isStockView && !isStockProduct(p)) return false;
+      if (!q) return true;
+      const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
+      const brand = resolvedBrand.toLowerCase();
+      const color =
+        (p?.attributes?.color ||
+          p?.attributes?.colour ||
+          p?.variantLabel ||
+          "").toLowerCase();
+      return (
+        title.includes(q) ||
+        brand.includes(q) ||
+        color.includes(q)
+      );
+    });
+    const sorted = [...filtered];
+
+    const parseDate = (value) => {
+      const raw = value ?? "";
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) return numeric;
+      const parsed = Date.parse(raw);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    const normalizePrice = (raw) => {
+      if (raw == null) return Number.POSITIVE_INFINITY;
+      const cleaned = String(raw)
+        .replace(/[^0-9,.-]/g, "")
+        .replace(",", ".");
+      if (cleaned.trim() === "") return Number.POSITIVE_INFINITY;
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : Number.POSITIVE_INFINITY;
+    };
+
+    const getEffectivePrice = (p) => {
+      const discount = normalizePrice(p?.discountPrice);
+      const price = normalizePrice(p?.price);
+      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
+        return discount;
+      }
+      if (Number.isFinite(price) && price > 0 && price !== Number.POSITIVE_INFINITY) {
+        return price;
+      }
+      return Number.POSITIVE_INFINITY;
+    };
+
+    switch (sortBy) {
+      case "price":
+        sorted.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+        break;
+      case "price-desc":
+        sorted.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+        break;
+      case "brand":
+        sorted.sort((a, b) =>
+          (a?.brand || "").localeCompare(b?.brand || "", undefined, { sensitivity: "base" })
+        );
+        break;
+      case "brand-desc":
+        sorted.sort((a, b) =>
+          (b?.brand || "").localeCompare(a?.brand || "", undefined, { sensitivity: "base" })
+        );
+        break;
+      case "oldest":
+        sorted.sort(
+          (a, b) =>
+            parseDate(a?.createdAt || a?.created_at) -
+            parseDate(b?.createdAt || b?.created_at)
+        );
+        break;
+      case "newest":
+      default:
+        sorted.sort(
+          (a, b) =>
+            parseDate(b?.createdAt || b?.created_at) -
+            parseDate(a?.createdAt || a?.created_at)
+        );
+        break;
+    }
+
+    return sorted;
+  }, [items, normalizedBrandFilter, searchTerm, sortBy, isStockView]);
+
+  const visibleItems = useMemo(
+    () => displayItems.slice(0, visibleCount),
+    [displayItems, visibleCount]
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchTerm, brandFilter, sortBy, isStockView]);
+
+  const handleLoadMore = async () => {
+    if (visibleCount < displayItems.length) {
+      setVisibleCount((c) => c + PAGE_SIZE);
+      return;
+    }
+    if (hasMore) {
+      await loadProducts(offset, false);
+      setVisibleCount((c) => c + PAGE_SIZE);
+    }
+  };
+
+  const handleShowLess = () => {
+    setVisibleCount(PAGE_SIZE);
+  };
 
   if (state === "loading") return <div>Loading...</div>;
   if (state === "error") {
@@ -152,39 +383,95 @@ function ShopPLP() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-amber-700">
-          {isStockView ? "Προϊόντα Stock" : "Όλα τα προϊόντα"}
-        </h2>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => updateView("all")}
-            className={`rounded-md border px-3 py-1 text-sm transition ${
-              !isStockView
-                ? "bg-amber-700 text-white border-amber-700"
-                : "bg-white text-slate-700 hover:border-amber-400"
-            }`}
-          >
-            Όλα
-          </button>
-          <button
-            type="button"
-            onClick={() => updateView("stock")}
-            className={`rounded-md border px-3 py-1 text-sm transition ${
-              isStockView
-                ? "bg-amber-700 text-white border-amber-700"
-                : "bg-white text-slate-700 hover:border-amber-400"
-            }`}
-          >
-            Stock
-          </button>
+      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
+            {isStockView ? "Προϊόντα Stock" : "Όλα τα προϊόντα"}
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 max-w-2xl">
+            Περιηγηθείτε σε όλες τις συλλογές Look Optica και φιλτράρετε όπως στις σελίδες κατηγορίας.
+          </p>
         </div>
-      </div>
+        <div className="flex flex-col md:flex-row gap-2 md:items-end text-sm">
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">
+              Αναζήτηση (brand / τίτλος / χρώμα)
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="π.χ. Guess ή Havana"
+              className="border rounded-md px-3 py-1 text-sm md:w-64"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Brand</label>
+            <select
+              value={brandFilter}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setBrandFilter(nextValue);
+                updateBrandParam(nextValue);
+              }}
+              className="border rounded-md px-3 py-1 text-sm md:w-48"
+            >
+              <option value="">Όλα τα brands</option>
+              {selectableBrands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Προβολή</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => updateView("all")}
+                className={`rounded-md border px-3 py-1 text-sm transition ${
+                  !isStockView
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-slate-700 hover:border-amber-400"
+                }`}
+              >
+                Κανονικά
+              </button>
+              <button
+                type="button"
+                onClick={() => updateView("stock")}
+                className={`rounded-md border px-3 py-1 text-sm transition ${
+                  isStockView
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-slate-700 hover:border-amber-400"
+                }`}
+              >
+                Stock
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="font-medium text-slate-700 text-xs">Ταξινόμηση</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="border rounded-md px-3 py-1 text-sm md:w-52"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="price">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="brand">Brand: A to Z</option>
+              <option value="brand-desc">Brand: Z to A</option>
+            </select>
+          </div>
+        </div>
+      </header>
 
-      {displayItems.length === 0 ? (
+      {state === "ok" && displayItems.length === 0 ? (
         <div className="space-y-3 text-center text-slate-600">
-          <div>{isStockView ? "Δεν βρέθηκαν προϊόντα stock." : "No products found."}</div>
+          <div>Δεν βρέθηκαν προϊόντα με τα συγκεκριμένα φίλτρα.</div>
           {hasMore && (
             <button
               type="button"
@@ -261,6 +548,7 @@ function AppShell() {
         { label: "Admin · Orders", to: "/admin/orders" },
         { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
         { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
+        { label: "Admin · ERP Import", to: "/admin/import" },
         { label: "Admin · Logout", action: "logout" },
       ]
     : baseMobileOptions;
@@ -486,6 +774,13 @@ function AppShell() {
                   >
                     Contact Lenses
                   </Link>
+                  <Link
+                    to="/admin/import"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    ERP Import
+                  </Link>
                   <button
                     type="button"
                     className="block px-4 py-2 text-left text-sm hover:bg-slate-100 whitespace-nowrap text-red-600"
@@ -629,6 +924,14 @@ function AppShell() {
             element={
               <ProtectAdminRoute>
                 <AdminContactLensVariantsPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/import"
+            element={
+              <ProtectAdminRoute>
+                <AdminImportProductsPage />
               </ProtectAdminRoute>
             }
           />

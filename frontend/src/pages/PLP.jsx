@@ -1,9 +1,17 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { isStockProduct, matchesCategoryAlias } from "../utils/categoryHelpers";
 
 const API = import.meta.env.VITE_API_BASE || "";
+const normalizeBrand = (value) => (value || "").trim().toLowerCase();
+const resolveBrand = (product) =>
+  product?.brand ||
+  product?.attributes?.brand ||
+  product?.attributes?.brand_label ||
+  product?.attributes?.brand_name ||
+  product?.attributes?.brand_value ||
+  "";
 
 // Map URL slug -> config + possible category values from backend
 const CATEGORY_CONFIG = {
@@ -122,12 +130,16 @@ export default function CategoryPLP() {
   const audienceConfig = audienceSlug ? AUDIENCE_CONFIG[audienceSlug] : null;
   const view = searchParams.get("view") === "stock" ? "stock" : "all";
   const isStockView = view === "stock";
+  const brandParam = searchParams.get("brand") || "";
+  const normalizedBrandParam = normalizeBrand(brandParam);
 
   const [items, setItems] = useState([]);
   //const [all, setAll] = useState([]); // for debug / inspection
   const [state, setState] = useState("loading"); // loading | ok | error
   const [searchTerm, setSearchTerm] = useState("");
-  const [brandFilter, setBrandFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState(brandParam);
+  const [brandOptions, setBrandOptions] = useState([]);
+  const normalizedBrandFilter = normalizeBrand(brandFilter);
   const [sortBy, setSortBy] = useState("newest"); // newest | oldest | price | brand
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -144,6 +156,81 @@ export default function CategoryPLP() {
     }
     setSearchParams(nextParams, { replace: true });
   };
+
+  const updateBrandParam = (value) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set("brand", value);
+    } else {
+      nextParams.delete("brand");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const filterAndProject = useCallback(
+    (list, brandNormalized = "") => {
+      if (!config) return [];
+      const filtered = list.filter((p) => {
+        const stockMatch = isStockProduct(p);
+        const baseMatch = (() => {
+          const aliases = config.aliases || [];
+          const candidates = [
+            p?.category,
+            p?.attributes?.category,
+            p?.attributes?.category_label,
+            p?.attributes?.category_value,
+            ...(Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []),
+          ];
+          return candidates.some((value) => matchesCategoryAlias(value, aliases));
+        })();
+        const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
+          (tag) => matchesCategoryAlias(tag, config.aliases || [])
+        );
+        const matchesCategory = (() => {
+          if (categorySlug === "stock") {
+            return stockMatch || baseMatch || tagMatch;
+          }
+          if (isStockView) {
+            return stockMatch && (baseMatch || tagMatch);
+          }
+          return baseMatch;
+        })();
+
+        if (!matchesCategory) return false;
+
+        const requireStockOnly = categorySlug === "stock" || isStockView;
+        if (requireStockOnly && !stockMatch) return false;
+
+        if (audienceConfig) {
+          const allowed = audienceConfig.allowed || [];
+          const matchesAudience =
+            allowed.includes(p.audience) ||
+            allowed.includes(p.attributes?.audience) ||
+            allowed.some((aud) => (p.attributes?.audiences || []).includes(aud));
+          if (!matchesAudience) return false;
+        }
+
+        if (categorySlug === "stock" && !stockMatch) return false;
+
+        if (brandNormalized) {
+          const productBrand = normalizeBrand(resolveBrand(p));
+          if (productBrand !== brandNormalized) return false;
+        }
+
+        return true;
+      });
+
+      return filtered.map((p) => ({
+        ...p,
+        title: p.title,
+        slug: p.slug,
+        category: p.category,
+        audience: p.audience,
+        brand: resolveBrand(p),
+      }));
+    },
+    [config, categorySlug, isStockView, audienceConfig]
+  );
 
   console.log(
     "CategoryPLP render",
@@ -181,63 +268,6 @@ export default function CategoryPLP() {
     }
 
     try {
-      const matchesCategoryConfig = (product) => {
-        const aliases = config.aliases || [];
-        const candidates = [
-          product?.category,
-          product?.attributes?.category,
-          product?.attributes?.category_label,
-          product?.attributes?.category_value,
-          ...(Array.isArray(product?.attributes?.tags) ? product.attributes.tags : []),
-        ];
-        return candidates.some((value) => matchesCategoryAlias(value, aliases));
-      };
-
-      const filterAndProject = (list) => {
-        const filtered = list.filter((p) => {
-          const stockMatch = isStockProduct(p);
-          const baseMatch = matchesCategoryConfig(p);
-          const tagMatch = (Array.isArray(p?.attributes?.tags) ? p.attributes.tags : []).some(
-            (tag) => matchesCategoryAlias(tag, config.aliases || [])
-          );
-          const matchesCategory = (() => {
-            if (categorySlug === "stock") {
-              return stockMatch || baseMatch || tagMatch;
-            }
-            if (isStockView) {
-              return stockMatch && (baseMatch || tagMatch);
-            }
-            return baseMatch;
-          })();
-
-          if (!matchesCategory) return false;
-
-          const requireStockOnly = categorySlug === "stock" || isStockView;
-          if (requireStockOnly && !stockMatch) return false;
-
-          if (audienceConfig) {
-            const allowed = audienceConfig.allowed || [];
-            const matchesAudience =
-              allowed.includes(p.audience) ||
-              allowed.includes(p.attributes?.audience) ||
-              allowed.some((aud) => (p.attributes?.audiences || []).includes(aud));
-            if (!matchesAudience) return false;
-          }
-
-          if (categorySlug === "stock" && !stockMatch) return false;
-
-          return true;
-        });
-
-        return filtered.map((p) => ({
-          ...p,
-          title: p.title,
-          slug: p.slug,
-          category: p.category,
-          audience: p.audience,
-        }));
-      };
-
       // Keep fetching until we have PAGE_SIZE filtered items or no more data
       const baseItems = replace ? [] : items;
       const seenKeys = new Set(
@@ -249,12 +279,13 @@ export default function CategoryPLP() {
       let batchOffset = nextOffset;
       let lastBatchLength = 0;
       let iterations = 0;
-      const MAX_FETCHES = 6; // safety guard
+      const requestLimit = normalizedBrandFilter ? PAGE_SIZE * 5 : PAGE_SIZE;
+      const MAX_FETCHES = normalizedBrandFilter ? 120 : 6; // scan deeper when brand filter is active
 
       while (aggregatedUnique.length < PAGE_SIZE && iterations < MAX_FETCHES) {
         iterations += 1;
         const params = new URLSearchParams();
-        params.set("limit", PAGE_SIZE);
+        params.set("limit", requestLimit);
         params.set("offset", batchOffset);
         (config?.aliases || []).forEach((alias) => params.append("category", alias));
         (audienceConfig?.allowed || []).forEach((aud) => params.append("audience", aud));
@@ -264,7 +295,7 @@ export default function CategoryPLP() {
         const list = Array.isArray(batch) ? batch : [];
         lastBatchLength = list.length;
 
-        const projected = filterAndProject(list);
+        const projected = filterAndProject(list, normalizedBrandFilter);
         for (const product of projected) {
           const key = getProductKey(product);
           if (!key || seenKeys.has(key)) continue;
@@ -274,7 +305,7 @@ export default function CategoryPLP() {
         }
         batchOffset += list.length;
 
-        if (list.length < PAGE_SIZE) break; // no more data server-side
+        if (list.length < requestLimit) break; // no more data server-side
       }
 
       let nextLength = 0;
@@ -286,7 +317,7 @@ export default function CategoryPLP() {
       });
 
       setOffset(batchOffset);
-      setHasMore(lastBatchLength === PAGE_SIZE);
+      setHasMore(lastBatchLength === requestLimit);
       setVisibleCount((c) => Math.min(Math.max(c, PAGE_SIZE), nextLength));
       setState("ok");
     } catch (err) {
@@ -307,24 +338,90 @@ export default function CategoryPLP() {
 
     loadPage(0, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView]);
+  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView, normalizedBrandFilter, filterAndProject]);
+
+  useEffect(() => {
+    if (!config) {
+      setBrandOptions([]);
+      return;
+    }
+    let cancelled = false;
+    const loadBrandOptions = async () => {
+      try {
+        const brandSet = new Set();
+        let offsetCursor = 0;
+        const LIMIT = 200;
+        const MAX_FETCHES = 6;
+        for (let i = 0; i < MAX_FETCHES; i += 1) {
+          const params = new URLSearchParams();
+          params.set("limit", LIMIT);
+          params.set("offset", offsetCursor);
+          (config?.aliases || []).forEach((alias) => params.append("category", alias));
+          (audienceConfig?.allowed || []).forEach((aud) => params.append("audience", aud));
+          const res = await fetch(`${API}/shop-products?${params.toString()}`);
+          if (!res.ok) break;
+          const batch = await res.json();
+          const list = Array.isArray(batch) ? batch : [];
+          const projected = filterAndProject(list);
+          projected.forEach((p) => {
+            if (p?.brand) brandSet.add(p.brand);
+          });
+          if (list.length < LIMIT) break;
+          offsetCursor += list.length;
+        }
+        if (!cancelled) {
+          setBrandOptions(Array.from(brandSet).sort((a, b) => a.localeCompare(b)));
+        }
+      } catch (err) {
+        console.error("Failed to load brand options", err);
+        if (!cancelled) setBrandOptions([]);
+      }
+    };
+    loadBrandOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [config, audienceConfig, categorySlug, audienceSlug, isStockView, filterAndProject]);
 
   const availableBrands = useMemo(() => {
     const set = new Set();
     items.forEach((p) => {
-      if (p?.brand) set.add(p.brand);
+      const brandValue = resolveBrand(p);
+      if (brandValue) set.add(brandValue);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [items]);
 
+  const selectableBrands = useMemo(() => {
+    return brandOptions.length > 0 ? brandOptions : availableBrands;
+  }, [brandOptions, availableBrands]);
+
+  useEffect(() => {
+    if (!normalizedBrandParam) {
+      if (normalizedBrandFilter === "") return;
+      setBrandFilter("");
+      return;
+    }
+    setBrandFilter((prev) => {
+      const prevNormalized = normalizeBrand(prev);
+      if (prevNormalized === normalizedBrandParam) return prev;
+      const match =
+        selectableBrands.find(
+          (brand) => normalizeBrand(brand) === normalizedBrandParam
+        ) || brandParam;
+      return match;
+    });
+  }, [normalizedBrandParam, brandParam, selectableBrands, normalizedBrandFilter]);
+
   const displayItems = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     const filtered = items.filter((p) => {
-      if (brandFilter && p.brand !== brandFilter) return false;
+      const resolvedBrand = resolveBrand(p);
+      if (normalizedBrandFilter && normalizeBrand(resolvedBrand) !== normalizedBrandFilter) return false;
       if (isStockView && !isStockProduct(p)) return false;
       if (!q) return true;
       const title = (p?.title?.el || p?.title?.en || "").toLowerCase();
-      const brand = (p?.brand || "").toLowerCase();
+      const brand = resolveBrand(p).toLowerCase();
       const color =
         (p?.attributes?.color ||
           p?.attributes?.colour ||
@@ -405,7 +502,7 @@ export default function CategoryPLP() {
     }
 
     return sorted;
-  }, [items, brandFilter, searchTerm, sortBy, isStockView]);
+  }, [items, normalizedBrandFilter, searchTerm, sortBy, isStockView]);
 
   const visibleItems = useMemo(
     () => displayItems.slice(0, visibleCount),
@@ -501,12 +598,14 @@ export default function CategoryPLP() {
             <select
               value={brandFilter}
               onChange={(e) => {
-                setBrandFilter(e.target.value);
+                const nextValue = e.target.value;
+                setBrandFilter(nextValue);
+                updateBrandParam(nextValue);
               }}
               className="border rounded-md px-3 py-1 text-sm md:w-48"
             >
               <option value="">Όλα τα brands</option>
-              {availableBrands.map((b) => (
+              {selectableBrands.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
