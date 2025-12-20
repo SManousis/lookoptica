@@ -22,7 +22,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import ProtectAdminRoute from "./components/ProtectAdminRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
-import { useCart } from "./context/CartContext";
+import { CartProvider, useCart } from "./context/CartContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
@@ -999,8 +999,10 @@ export default function App() {
       {/* admin + customer auth available everywhere */}
       <AdminAuthProvider>
         <CustomerAuthProvider>
-          <ScrollToTop />
-          <AppShell />
+          <CartProvider>
+            <ScrollToTop />
+            <AppShell />
+          </CartProvider>
         </CustomerAuthProvider>
       </AdminAuthProvider>
     </BrowserRouter>

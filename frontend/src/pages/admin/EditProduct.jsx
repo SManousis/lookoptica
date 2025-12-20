@@ -130,7 +130,9 @@ export default function EditProduct() {
   const [state, setState] = useState("loading"); // loading | idle | saving | error | success
   const [errorMsg, setErrorMsg] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
+  const [imageUploadState, setImageUploadState] = useState("idle");
+  const [imageUploadMessage, setImageUploadMessage] = useState("");
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
 
@@ -280,6 +282,42 @@ export default function EditProduct() {
       url: URL.createObjectURL(file),
     }));
     setLocalImages(previews);
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploadState("uploading");
+    setImageUploadMessage("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API}/admin/uploads/product-image`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Αποτυχία ανεβάσματος");
+      }
+      const data = await res.json();
+      const imagePath = data?.path;
+      if (imagePath) {
+        setForm((prev) => ({
+          ...prev,
+          imagesText: prev.imagesText ? `${prev.imagesText}\n${imagePath}` : imagePath,
+        }));
+      }
+      setImageUploadState("success");
+      setImageUploadMessage("Η εικόνα αποθηκεύτηκε.");
+    } catch (err) {
+      console.error("Image upload failed", err);
+      setImageUploadState("error");
+      setImageUploadMessage(err.message || "Αποτυχία ανεβάσματος.");
+    } finally {
+      e.target.value = "";
+    }
   }
 
   // brand modal
@@ -979,7 +1017,7 @@ export default function EditProduct() {
 
         {/* Images */}
         <div className="space-y-3">
-          <div>
+          <div className="space-y-2">
             <label className="block text-sm font-medium mb-1">
               Image URLs (μία ανά γραμμή)
             </label>
@@ -988,9 +1026,28 @@ export default function EditProduct() {
               value={form.imagesText}
               onChange={handleChange}
               rows={3}
-              placeholder="https://...\nhttps://..."
+              placeholder="https://...\nhttps://... ή /product_images/xxx"
               className="w-full border rounded-lg px-3 py-2 text-sm"
             />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <label className="text-xs text-slate-600 flex items-center gap-2">
+                <input type="file" accept="image/*" onChange={handleImageUpload} />
+                Ανεβάστε εικόνα (αποθηκεύεται σε /product_images)
+              </label>
+              {imageUploadMessage && (
+                <span
+                  className={`text-xs ${
+                    imageUploadState === "success"
+                      ? "text-green-700"
+                      : imageUploadState === "error"
+                      ? "text-red-600"
+                      : "text-slate-600"
+                  }`}
+                >
+                  {imageUploadMessage}
+                </span>
+              )}
+            </div>
           </div>
 
           <div>

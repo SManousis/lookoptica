@@ -1,6 +1,6 @@
 pupKyjYxEIKj5yBMQiRqMqU0GcP0ANxKFc2TGv88PiA info@lookoptica.gr
 
-
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPSU2Nbq2OC6uVc3+AekqgqqYwtcyDq8vvVbl+2HkHE8 info@lookoptica.gr
 
 scp -i C:/Users/fover/.ssh/id_ed25519 -r H:/sitebackup/uploads/* \
     root@159.69.146.172:/var/www/eshop_frontend/media/wp-content/uploads/
@@ -9,5 +9,12 @@ sudo chown -R www-data:www-data /var/www/eshop_frontend
 sudo find /var/www/eshop_frontend -type d -exec chmod 755 {} \;
 sudo find /var/www/eshop_frontend -type f -exec chmod 644 {} \;
 
-Login to site ssh -i ~/.ssh/id_ed25519 root@159.69.146.172
+
 Restart nginx sudo systemctl restart lookoptica
+
+sudo chown -R root:root /var/www/eshop_frontend/media/uploads/images
+sudo chmod 755 /var/www/eshop_frontend/media/uploads
+sudo chmod 755 /var/www/eshop_frontend/media/uploads/images
+
+scp -i /c/Users/fover/.ssh/id_ed25519 -r dist/* admin@159.69.146.172:/var/www/eshop_frontend/
+ssh admin@159.69.146.172

@@ -104,7 +104,7 @@ async def list_products(db: Session = Depends(get_db)):
     """
     Return all products as a simple list backed by Postgres.
     """
-    rows = db.execute(select(ProductModel).order_by(ProductModel.created_at.desc())).scalars().all()
+    rows = db.execute(select(ProductModel)).scalars().all()
     return [_to_product_schema(r) for r in rows]
 
 

@@ -1,11 +1,41 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useCustomerAuth } from "./customerAuthShared";
 
 const CartContext = createContext(null);
 
 const STORAGE_KEY = "lookoptica_cart_v1";
+const CART_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [lastTouchedAt, setLastTouchedAt] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
+  const expiryTimerRef = useRef(null);
+  const { isLoggedIn, isHydrated: authHydrated } = useCustomerAuth();
+
+  const touchCart = () => setLastTouchedAt(Date.now());
+
+  const clearExpiryTimer = () => {
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = null;
+    }
+  };
+
+  const clearStorage = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      console.error("Failed to clear cart storage", err);
+    }
+  };
 
   // Load from localStorage once
   useEffect(() => {
@@ -15,21 +45,77 @@ export function CartProvider({ children }) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           setItems(parsed);
+          setLastTouchedAt(Date.now());
+        } else if (parsed && Array.isArray(parsed.items)) {
+          setItems(parsed.items);
+          setLastTouchedAt(
+            typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now()
+          );
         }
       }
     } catch (err) {
       console.error("Failed to load cart from storage", err);
+    } finally {
+      setHydrated(true);
     }
+
+    return () => {
+      clearExpiryTimer();
+    };
   }, []);
 
   // Persist to localStorage
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      if (!items.length) {
+        clearStorage();
+        return;
+      }
+
+      const payload = {
+        version: 2,
+        items,
+        updatedAt: lastTouchedAt ?? Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
       console.error("Failed to save cart to storage", err);
     }
-  }, [items]);
+  }, [items, lastTouchedAt, hydrated]);
+
+  // Enforce 12h TTL for guests
+  useEffect(() => {
+    if (!hydrated || !authHydrated) {
+      return;
+    }
+
+    if (isLoggedIn || !lastTouchedAt) {
+      clearExpiryTimer();
+      return;
+    }
+
+    const now = Date.now();
+    const age = now - lastTouchedAt;
+    if (age >= CART_TTL_MS) {
+      clearExpiryTimer();
+      setItems([]);
+      setLastTouchedAt(null);
+      clearStorage();
+      return;
+    }
+
+    const remaining = CART_TTL_MS - age;
+    clearExpiryTimer();
+    expiryTimerRef.current = setTimeout(() => {
+      setItems([]);
+      setLastTouchedAt(null);
+      clearStorage();
+    }, remaining);
+  }, [hydrated, authHydrated, isLoggedIn, lastTouchedAt]);
 
   const addItem = (item, qty = 1) => {
     setItems((prev) => {
@@ -60,10 +146,12 @@ export function CartProvider({ children }) {
         },
       ];
     });
+    touchCart();
   };
 
   const removeItem = (key) => {
     setItems((prev) => prev.filter((it) => it._key !== key));
+    touchCart();
   };
 
   const updateQuantity = (key, qty) => {
@@ -73,9 +161,13 @@ export function CartProvider({ children }) {
         it._key === key ? { ...it, quantity: q } : it
       )
     );
+    touchCart();
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = () => {
+    setItems([]);
+    touchCart();
+  };
 
   const totals = useMemo(() => {
     const subtotal = items.reduce(
