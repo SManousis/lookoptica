@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
@@ -20,7 +20,7 @@ class Title(BaseModel):
 
 
 class Variant(BaseModel):
-    color: str
+    color: Optional[str] = None
     sku: Optional[str] = None
     ean: Optional[str] = None
     price: Optional[float] = None
@@ -100,11 +100,25 @@ def _ensure_sku(prod: Product) -> str:
 
 
 @router.get("")
-async def list_products(db: Session = Depends(get_db)):
+async def list_products(
+    limit: int | None = Query(default=None, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
     """
     Return all products as a simple list backed by Postgres.
     """
-    rows = db.execute(select(ProductModel)).scalars().all()
+    stmt = (
+        select(ProductModel)
+        .where(
+            ProductModel.visible.is_(True),
+            ProductModel.status != "archived",
+        )
+        .order_by(ProductModel.created_at.desc())
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit).offset(offset)
+    rows = db.execute(stmt).scalars().all()
     return [_to_product_schema(r) for r in rows]
 
 
@@ -253,7 +267,13 @@ async def get_product(slug: str, db: Session = Depends(get_db)):
     """
     Fetch a single product by slug from Postgres.
     """
-    product = db.execute(select(ProductModel).where(ProductModel.slug == slug)).scalar_one_or_none()
+    product = db.execute(
+        select(ProductModel).where(
+            ProductModel.slug == slug,
+            ProductModel.visible.is_(True),
+            ProductModel.status != "archived",
+        )
+    ).scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Not found")
     return _to_product_schema(product)

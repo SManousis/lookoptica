@@ -16,5 +16,10 @@ sudo chown -R root:root /var/www/eshop_frontend/media/uploads/images
 sudo chmod 755 /var/www/eshop_frontend/media/uploads
 sudo chmod 755 /var/www/eshop_frontend/media/uploads/images
 
-scp -i /c/Users/fover/.ssh/id_ed25519 -r dist/* admin@159.69.146.172:/var/www/eshop_frontend/
+scp -i /c/Users/fover/.ssh/id_ed25519 -r dist/* \admin@159.69.146.172:/var/www/eshop_frontend/
 ssh admin@159.69.146.172
+
+sudo chgrp -R www-data /var/www/eshop_backend/app
+sudo chmod -R g+w /var/www/eshop_backend/app
+
+journalctl -u lookoptica.service -n 100 --no-pager

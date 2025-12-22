@@ -13,6 +13,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         - Cookie: look_admin_csrf
         - Header: X-CSRF-Token
       And they must match exactly.
+
+    Upload endpoints are explicitly exempt.
     """
 
     def __init__(
@@ -29,15 +31,19 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         method = request.method.upper()
         path = request.url.path
 
-        # Allow explicit exemptions (e.g., login before CSRF cookie exists)
-        if path in self.exempt_paths:
+        # ✅ HARD EXEMPT uploads (multipart/form-data)
+        if path.startswith("/api/admin/uploads"):
+            return await call_next(request)
+
+        # Allow explicit exemptions (login, etc.)
+        if any(path.startswith(p) for p in self.exempt_paths):
             return await call_next(request)
 
         # Only check unsafe methods
         if method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return await call_next(request)
 
-        # Only for selected prefixes
+        # Only protect admin APIs
         if not any(path.startswith(p) for p in self.protected_prefixes):
             return await call_next(request)
 

@@ -241,12 +241,21 @@ export default function PDP() {
   // images: first prefer active.images, then p.images, then placeholder
   const variantImages = Array.isArray(active?.images) ? active.images.filter(Boolean) : [];
   const productImages = Array.isArray(p?.images) ? p.images.filter(Boolean) : [];
-  const imageList =
-    variantImages.length > 0
-      ? variantImages
-      : productImages.length > 0
-        ? productImages
-        : [placeholder];
+  const imageList = (() => {
+    const combined = [];
+    const pushUnique = (url) => {
+      if (!url) return;
+      if (!combined.includes(url)) {
+        combined.push(url);
+      }
+    };
+    variantImages.forEach(pushUnique);
+    productImages.forEach(pushUnique);
+    if (combined.length === 0) {
+      combined.push(placeholder);
+    }
+    return combined;
+  })();
   const safeImageIndex = Math.min(imageIndex, imageList.length - 1);
   const mainImage = imageList[safeImageIndex];
 

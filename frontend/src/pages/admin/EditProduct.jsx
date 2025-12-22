@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "../../context/useAdminAuth";
 import { adminApiFetch } from "../../utils/adminApiFetch";
@@ -7,38 +7,32 @@ const API = import.meta.env.VITE_API_BASE || "";
 
 const CATEGORY_OPTIONS = [
   {
-    value: "Γυαλιά ηλίου",
-    label: "Γυαλιά ηλίου",
-    aliases: ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου"],
+    value: "Γυαλιά Ηλίου",
+    label: "Γυαλιά Ηλίου",
+    aliases: ["sunglasses", "sun-glasses", "γυαλιά ηλίου", "γυαλια ηλιου"],
   },
   {
-    value: "Σκελετοί οράσεως",
-    label: "Σκελετοί οράσεως",
-    aliases: [
-      "ophthalmic_frames",
-      "frames",
-      "σκελετοι ορασεως",
-      "σκελετοί οράσεως",
-      "γυαλια ορασεως",
-      "γυαλιά οράσεως",
-    ],
+    value: "Σκελετοί Οράσεως",
+    label: "Σκελετοί Οράσεως",
+    aliases: ["ophthalmic_frames", "frames", "σκελετοί οράσεως", "σκελετοί ορασεως", "γυαλια ορασεως"],
   },
   {
-    value: "contact_lenses",
-    label: "Φακοί επαφής",
-    aliases: ["contact_lenses", "contact-lenses", "φακοι επαφης", "φακοί επαφής"],
+    value: "Φακοί Επαφής",
+    label: "Φακοί Επαφής",
+    aliases: ["contact_lenses", "contact-lenses", "φακοί επαφης", "φακοί επαφής"],
   },
   {
-    value: "solutions",
+    value: "Υγρά / Λύσεις",
     label: "Υγρά / Λύσεις",
-    aliases: ["solutions", "υγρα", "λυσεις", "διαλύματα"],
+    aliases: ["solutions", "υγρά", "λύσεις", "λυσεις", "υγρα"],
   },
   {
-    value: "other_products",
+    value: "Λοιπά προϊόντα",
     label: "Λοιπά προϊόντα",
-    aliases: ["other_products", "other-products", "αλλα", "άλλα", "accessories"],
+    aliases: ["other_products", "other-products", "λοιπά", "λοιπα", "προϊόντα", "προϊοντα"],
   },
 ];
+
 
 function normalizeCategoryString(str) {
   return str
@@ -46,7 +40,7 @@ function normalizeCategoryString(str) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9α-ω]/g, "");
+    .replace(/[^a-z0-9\u0370-\u03FF\u1F00-\u1FFF]+/g, "");
 }
 
 function resolveCategoryValue(raw) {
@@ -125,7 +119,6 @@ export default function EditProduct() {
   const [variants, setVariants] = useState([]);
   const [brandOptions, setBrandOptions] = useState([]);
   const [initialBrand, setInitialBrand] = useState("");
-  const [localImages, setLocalImages] = useState([]);
   const [slugTouched, setSlugTouched] = useState(true); // editing: do not auto-change slug
   const [state, setState] = useState("loading"); // loading | idle | saving | error | success
   const [errorMsg, setErrorMsg] = useState("");
@@ -135,8 +128,27 @@ export default function EditProduct() {
   const [imageUploadMessage, setImageUploadMessage] = useState("");
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
+  
 
-  const fileInputRef = useRef(null);
+
+  const parsedImageUrls = form.imagesText
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const handleRemoveImageUrl = (index) => {
+    setForm((prev) => {
+      const urls = prev.imagesText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      urls.splice(index, 1);
+      return {
+        ...prev,
+        imagesText: urls.join("\n"),
+      };
+    });
+  };
 
   const listSearch = searchParams.toString();
   const listUrl = listSearch ? `/admin/products?${listSearch}` : "/admin/products";
@@ -216,12 +228,12 @@ export default function EditProduct() {
         //   setBrandOptions([data.brand]);
         // }
 
-        // local preview from URLs only – not original files
-        setLocalImages(
-          Array.isArray(data.images)
-            ? data.images.map((url) => ({ file: null, url }))
-            : []
-        );
+        // local preview from URLs only - not original files
+        // setLocalImages(
+        //   Array.isArray(data.images)
+        //     ? data.images.map((url) => ({ file: null, url }))
+        //     : []
+        // );
 
         setState("idle");
       })
@@ -275,20 +287,31 @@ export default function EditProduct() {
     setVariants((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleFileChange(e) {
-    const files = Array.from(e.target.files || []);
-    const previews = files.map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-    }));
-    setLocalImages(previews);
-  }
+  function assignUploadedImage(imagePath) {
+  // product-level images
+  setForm(prev => ({
+    ...prev,
+    imagesText: prev.imagesText
+      ? `${prev.imagesText}\n${imagePath}`
+      : imagePath,
+  }));
+
+  // variant-level images (default only)
+  setVariants(prev => {
+    if (!prev || prev.length === 0) return prev;
+
+    return prev.map(v =>
+      v.isDefault ? { ...v, imageUrl: imagePath } : v
+    );
+  });
+}
+
 
   async function handleImageUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImageUploadState("uploading");
-    setImageUploadMessage("");
+    setImageUploadMessage("Η εικόνα ανέβηκε με επιτυχία.");
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -299,22 +322,19 @@ export default function EditProduct() {
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Αποτυχία ανεβάσματος");
+        throw new Error(text || "Αποτυχία ανεβάσματος εικόνας");
       }
       const data = await res.json();
       const imagePath = data?.path;
       if (imagePath) {
-        setForm((prev) => ({
-          ...prev,
-          imagesText: prev.imagesText ? `${prev.imagesText}\n${imagePath}` : imagePath,
-        }));
+        assignUploadedImage(imagePath);
       }
       setImageUploadState("success");
-      setImageUploadMessage("Η εικόνα αποθηκεύτηκε.");
+      setImageUploadMessage("Η εικόνα ανέβηκε με επιτυχία.");
     } catch (err) {
       console.error("Image upload failed", err);
       setImageUploadState("error");
-      setImageUploadMessage(err.message || "Αποτυχία ανεβάσματος.");
+      setImageUploadMessage(err.message || "Αποτυχία ανεβάσματος εικόνας.");
     } finally {
       e.target.value = "";
     }
@@ -506,7 +526,7 @@ export default function EditProduct() {
   if (state === "loading") {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        Φόρτωση προϊόντος…
+        Φόρτωση προϊόντος...
       </div>
     );
   }
@@ -587,7 +607,7 @@ export default function EditProduct() {
               }}
               className="px-3 py-2 text-xs rounded-lg border bg-slate-50"
             >
-              Δημιουργία
+              Δημιούργησε
             </button>
           </div>
         </div>
@@ -596,14 +616,16 @@ export default function EditProduct() {
         <div className="grid md:grid-cols-3 gap-4">
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-sm font-medium mb-1">Brand</label>
+              <label className="block text-sm font-medium mb-1">
+              Εταρεία
+            </label>
               <select
                 name="brand"
                 value={form.brand}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
-                <option value="">Select brand</option>
+                <option value="">Επιλογή εταιρείας</option>
                 {brandOptions.map((b) => (
                   <option key={b} value={b}>
                     {b}
@@ -621,14 +643,16 @@ export default function EditProduct() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Category</label>
+            <label className="block text-sm font-medium mb-1">
+              Κατηγορία
+            </label>
             <select
               name="category"
               value={form.category}
               onChange={handleChange}
               className="w-full border rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">Select a category</option>
+              <option value="">Επιλέξτε κατηγορία</option>
               {CATEGORY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -638,14 +662,16 @@ export default function EditProduct() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Audience</label>
+            <label className="block text-sm font-medium mb-1">
+              Κοινό
+            </label>
             <select
               name="audience"
               value={form.audience}
               onChange={handleChange}
               className="w-full border rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">Select audience</option>
+              <option value="">Επιλογή κοινού</option>
               {audienceOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -658,7 +684,9 @@ export default function EditProduct() {
         {/* Price / SKU / EAN */}
         <div className="grid md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Τιμή (€)</label>
+            <label className="block text-sm font-medium mb-1">
+              Τιμή (€)
+            </label>
             <input
               type="number"
               name="price"
@@ -725,7 +753,9 @@ export default function EditProduct() {
             </label>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Reorder level</label>
+            <label className="block text-sm font-medium mb-1">
+            Όριο Επανάληψης
+          </label>
             <input
               type="number"
               name="reorderLevel"
@@ -809,7 +839,9 @@ export default function EditProduct() {
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
+          <label className="block text-sm font-medium mb-1">
+          Περιγραφή
+        </label>
           <textarea
             name="description"
             value={form.description}
@@ -834,8 +866,7 @@ export default function EditProduct() {
 
           {variants.length === 0 && (
             <p className="text-xs text-slate-500">
-              Δεν έχουν προστεθεί χρώματα. Μπορείς να χρησιμοποιήσεις μόνο τα γενικά στοιχεία
-              SKU/τιμής ή να προσθέσεις χρώματα εδώ.
+              Δεν έχουν προστεθεί χρώματα. Μπορείς να χρησιμοποιήσεις μόνο τα γενικά στοιχεία SKU/τιμής ή να προσθέσεις χρώματα εδώ.
             </p>
           )}
 
@@ -847,7 +878,7 @@ export default function EditProduct() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">
-                    Χρώμα #{idx + 1}
+                    Χρώμα Νο {idx + 1}
                   </span>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1 text-xs text-slate-700">
@@ -857,7 +888,7 @@ export default function EditProduct() {
                       checked={v.isDefault}
                       onChange={() => setDefaultVariant(idx)}
                     />
-                    Ορισμός ως προεπιλεγμένο χρώμα
+                    Ορισμός ως προκαθορισμένο
                   </label>
                   <button
                     type="button"
@@ -913,7 +944,9 @@ export default function EditProduct() {
 
                  <div className="grid md:grid-cols-4 gap-3">
                    <div>
-                     <label className="block text-xs font-medium mb-1">Τιμή (€)</label>
+                     <label className="block text-xs font-medium mb-1">
+                     Τιμή (€)
+                   </label>
                      <input
                        type="number"
                        step="0.01"
@@ -925,7 +958,9 @@ export default function EditProduct() {
                      />
                    </div>
                    <div>
-                     <label className="block text-xs font-medium mb-1">Τιμή προσφοράς (€)</label>
+                     <label className="block text-xs font-medium mb-1">
+                     Τιμή προσφοράς (€)
+                   </label>
                      <input
                        type="number"
                        step="0.01"
@@ -949,7 +984,9 @@ export default function EditProduct() {
                      />
                    </div>
                    <div>
-                     <label className="block text-xs font-medium mb-1">Διαθεσιμότητα</label>
+                     <label className="block text-xs font-medium mb-1">
+                     Διαθεσιμότητα
+                   </label>
                      <select
                        value={v.status}
                        onChange={(e) =>
@@ -958,7 +995,7 @@ export default function EditProduct() {
                        className="w-full border rounded-lg px-3 py-2 text-xs"
                      >
                        <option value="in_stock">Διαθέσιμο</option>
-                       <option value="preorder">Κατόπιν παραγγελίας</option>
+                       <option value="preorder">Διαθέσιμο κατόπιν παραγγελίας</option>
                        <option value="unavailable">Μη διαθέσιμο</option>
                      </select>
                    </div>
@@ -967,7 +1004,7 @@ export default function EditProduct() {
                 <div className="grid md:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      Σημείο επαναπαραγγελίας
+                      Όριο επαναπαραγγελίας
                     </label>
                     <input
                       type="number"
@@ -1026,13 +1063,38 @@ export default function EditProduct() {
               value={form.imagesText}
               onChange={handleChange}
               rows={3}
-              placeholder="https://...\nhttps://... ή /product_images/xxx"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
+              placeholder="https://... https://... ή /uploads/images/xxx" className="w-full border rounded-lg px-3 py-2 text-sm"/>
+            {parsedImageUrls.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {parsedImageUrls.map((url, idx) => (
+                  <div
+                    key={`${url}-${idx}`}
+                    className="relative h-20 w-20 overflow-hidden rounded-md border border-slate-300 bg-white"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImageUrl(idx)}
+                      className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white text-xs shadow"
+                      aria-label="Remove image"
+                    >
+                      -
+                    </button>
+                    <img
+                      src={url}
+                      alt={`Περιήγηση... Δεν επιλέχθηκε αρχείο ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.png";
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <label className="text-xs text-slate-600 flex items-center gap-2">
                 <input type="file" accept="image/*" onChange={handleImageUpload} />
-                Ανεβάστε εικόνα (αποθηκεύεται σε /product_images)
+                Ανεβάστε εικόνα (αποθηκεύεται σε /uploads/images)
               </label>
               {imageUploadMessage && (
                 <span
@@ -1050,47 +1112,6 @@ export default function EditProduct() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Εικόνες από τον υπολογιστή
-            </label>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                fileInputRef.current && fileInputRef.current.click()
-              }
-              className="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-sm hover:bg-slate-100"
-            >
-              Προσθήκη εικόνων…
-            </button>
-
-            {localImages.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {localImages.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="w-16 h-16 rounded-md overflow-hidden border border-slate-300"
-                  >
-                    <img
-                      src={img.url}
-                      alt={`Τοπική εικόνα ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -1099,7 +1120,7 @@ export default function EditProduct() {
             disabled={state === "saving"}
             className="px-4 py-2 rounded-xl bg-teal-600 text-white text-sm disabled:opacity-60"
           >
-            {state === "saving" ? "Saving…" : "Save changes"}
+            {state === "saving" ? "Saving..." : "Save changes"}
           </button>
           <button
             type="button"
@@ -1107,7 +1128,7 @@ export default function EditProduct() {
             disabled={state === "saving" || isDeleting}
             className="px-4 py-2 rounded-xl border border-red-200 text-red-700 text-sm disabled:opacity-60"
           >
-            {isDeleting ? "Deleting…" : "Delete product"}
+            {isDeleting ? "Deleting..." : "Delete product"}
           </button>
         </div>
       </form>
@@ -1116,12 +1137,12 @@ export default function EditProduct() {
       {showBrandModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg space-y-3">
-            <h2 className="text-sm font-semibold">Προσθήκη νέου brand</h2>
+            <h2 className="text-sm font-semibold">Προσθήκη νέας εταιρείας</h2>
             <input
               type="text"
               value={newBrandName}
               onChange={(e) => setNewBrandName(e.target.value)}
-              placeholder="π.χ. Ray-Ban"
+              placeholder="?.?. Ray-Ban"
               className="w-full border rounded-lg px-3 py-2 text-sm"
             />
             <div className="flex justify-end gap-2 pt-2">
