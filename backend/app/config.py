@@ -19,8 +19,18 @@ class Settings(BaseSettings):
     contact_to_email: str | None = None
     turnstile_secret_key: str | None = None
     turnstile_site_key: str | None = None
+    viva_env: str = "production"
+    viva_client_id: str = ""
+    viva_client_secret: str = ""
+    viva_source_code: str = ""
+    viva_success_url: str = ""
+    viva_fail_url: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

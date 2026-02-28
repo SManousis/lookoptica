@@ -12,6 +12,9 @@ from app.routers import customer_checkout
 from app.routers import orders
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
+from app.routers.payments_viva import router as viva_router
+
+
 
 import logging
 import logging.config
@@ -62,6 +65,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ------------------ Rate limiting middleware ------------------
 # Apply to all sensitive admin auth endpoints
 app.add_middleware(
@@ -98,6 +102,7 @@ app.include_router(final_checkout.router, prefix="/api")
 app.include_router(customer_checkout.router, prefix="/api")
 app.include_router(customer_auth.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
+app.include_router(viva_router, prefix="/api")
 
 @app.get("/healthz")
 async def healthz():
