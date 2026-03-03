@@ -8,26 +8,23 @@ export default function AdminDashboard() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Admin Dashboard</h1>
       <p className="text-sm text-slate-600">
-        Καλωσήρθατε <strong>{admin?.email}</strong>
+        Welcome <strong>{admin?.email}</strong>
       </p>
 
       <div className="space-x-3">
-        <Link
-          to="/admin/products"
-          className="text-amber-700 underline text-sm"
-        >
-          Σκελετοί και Γυαλιά Ηλίου
+        <Link to="/admin/products" className="text-amber-700 underline text-sm">
+          Sunglasses & Frames
         </Link>
-        <Link
-          to="/admin/contact-lenses"
-          className="text-amber-700 underline text-sm"
-        >
-          Available contact lenses
+        <Link to="/admin/products/deleted" className="text-amber-700 underline text-sm">
+          Deleted products
         </Link>
-        <Link
-          to="/admin/orders"
-          className="text-amber-700 underline text-sm"
-        >
+        <Link to="/admin/media" className="text-amber-700 underline text-sm">
+          Media library
+        </Link>
+        <Link to="/admin/contact-lenses" className="text-amber-700 underline text-sm">
+          Contact lenses
+        </Link>
+        <Link to="/admin/orders" className="text-amber-700 underline text-sm">
           Orders
         </Link>
 

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     hmac_secret: str = "change-me"
     app_env: str = "dev"
     product_image_dir: str = "/var/www/eshop_frontend/media/uploads/images"
+    legacy_product_image_dir: str | None = "/var/www/eshop_frontend/product_images"
     smtp_host: str | None = None
     smtp_port: int | None = None
     smtp_user: str | None = None

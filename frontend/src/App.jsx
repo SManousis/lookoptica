@@ -24,6 +24,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
+import AdminDeletedProductsPage from "./pages/admin/AdminDeletedProductsPage";
+import AdminMediaPage from "./pages/admin/AdminMediaPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
@@ -547,6 +549,7 @@ function AppShell() {
         ...baseMobileOptions,
         { label: "Admin · Orders", to: "/admin/orders" },
         { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
+        { label: "Admin · Media Library", to: "/admin/media" },
         { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
         { label: "Admin · ERP Import", to: "/admin/import" },
         { label: "Admin · Logout", action: "logout" },
@@ -768,6 +771,13 @@ function AppShell() {
                     Sunglasses & Frames
                   </Link>
                   <Link
+                    to="/admin/media"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Media Library
+                  </Link>
+                  <Link
                     to="/admin/contact-lenses"
                     className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
                     onClick={() => setOpenCategory(null)}
@@ -873,6 +883,22 @@ function AppShell() {
             element={
               <ProtectAdminRoute>
                 <AdminProductsPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/products/deleted"
+            element={
+              <ProtectAdminRoute>
+                <AdminDeletedProductsPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/media"
+            element={
+              <ProtectAdminRoute>
+                <AdminMediaPage />
               </ProtectAdminRoute>
             }
           />

@@ -819,17 +819,26 @@ export default function AdminProductsPage() {
 
         </div>
 
-        <button
-
-          onClick={() => navigate("/admin/add-product")}
-
-          className="px-3 py-1.5 rounded-lg bg-amber-700 text-white text-sm"
-
-        >
-
-          + Νέο προϊόν
-
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/admin/products/deleted")}
+            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-sm"
+          >
+            Deleted products
+          </button>
+          <button
+            onClick={() => navigate("/admin/media")}
+            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-sm"
+          >
+            Media library
+          </button>
+          <button
+            onClick={() => navigate("/admin/add-product")}
+            className="px-3 py-1.5 rounded-lg bg-amber-700 text-white text-sm"
+          >
+            + Νέο προϊόν
+          </button>
+        </div>
 
       </header>
 

@@ -6,6 +6,7 @@ from app.routers import public_products
 from app.routers import contact
 from app.routers import admin_contact_lenses
 from app.routers import admin_uploads
+from app.routers import admin_media
 from app.routers import checkout
 from app.routers import final_checkout
 from app.routers import customer_checkout
@@ -97,6 +98,7 @@ app.include_router(public_products.router, prefix="/api")
 app.include_router(shop_products.router, prefix="/api")
 app.include_router(contact.router, prefix="/api")
 app.include_router(admin_uploads.router, prefix="/api")
+app.include_router(admin_media.router, prefix="/api")
 app.include_router(checkout.router, prefix="/api")
 app.include_router(final_checkout.router, prefix="/api")
 app.include_router(customer_checkout.router, prefix="/api")
