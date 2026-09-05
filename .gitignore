@@ -6,6 +6,8 @@ node_modules/
 !.env.example
 !**/.env.example
 backup.md
+*images_backup*.tar*
+*.dump
 
 # python
 __pycache__/

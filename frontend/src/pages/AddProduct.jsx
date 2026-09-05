@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { adminApiFetch } from "../utils/adminApiFetch";
 
 
 
@@ -616,7 +617,7 @@ export default function AddProduct() {
 
     try {
 
-      const res = await fetch(`${API}/products`, {
+      const res = await adminApiFetch(`${API}/products`, {
 
         method: "POST",
 

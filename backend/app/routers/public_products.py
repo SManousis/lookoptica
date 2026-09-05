@@ -147,7 +147,9 @@ def list_products(
         if q:
             like = f"%{q.lower()}%"
             base_stmt = base_stmt.where(
-                (Product.title_el.ilike(like)) | (Product.title_en.ilike(like))
+                (Product.title_el.ilike(like))
+                | (Product.title_en.ilike(like))
+                | (Product.sku.ilike(like))
             )
 
         base_stmt = base_stmt.order_by(Product.created_at.desc())

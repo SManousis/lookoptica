@@ -2,8 +2,9 @@
 import time
 from typing import Callable, Dict, List
 
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 
 class RateLimiterMiddleware(BaseHTTPMiddleware):
@@ -48,9 +49,9 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
 
         if len(timestamps) >= self.max_requests:
             # Too many requests from this IP to this path
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests. Please try again later.",
+                content={"detail": "Too many requests. Please try again later."},
             )
 
         timestamps.append(now)

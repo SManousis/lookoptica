@@ -251,7 +251,7 @@ export default function CategoryPLP() {
     );
   };
 
-  const loadPage = async (nextOffset = 0, replace = false) => {
+  const loadPage = async (nextOffset = 0, replace = false, searchQuery = "") => {
     if (!config) {
       setState("error");
       return;
@@ -287,6 +287,7 @@ export default function CategoryPLP() {
         const params = new URLSearchParams();
         params.set("limit", requestLimit);
         params.set("offset", batchOffset);
+        if (searchQuery) params.set("q", searchQuery);
         (config?.aliases || []).forEach((alias) => params.append("category", alias));
         (audienceConfig?.allowed || []).forEach((aud) => params.append("audience", aud));
         const res = await fetch(`${API}/shop-products?${params.toString()}`);
@@ -329,6 +330,13 @@ export default function CategoryPLP() {
     }
   };
 
+  // Debounced search term for server-side queries
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     if (!config) {
       console.warn("No CATEGORY_CONFIG for slug:", categorySlug);
@@ -336,9 +344,9 @@ export default function CategoryPLP() {
       return;
     }
 
-    loadPage(0, true);
+    loadPage(0, true, debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView, normalizedBrandFilter, filterAndProject]);
+  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView, normalizedBrandFilter, filterAndProject, debouncedSearch]);
 
   useEffect(() => {
     if (!config) {
@@ -519,7 +527,7 @@ export default function CategoryPLP() {
       return;
     }
     if (hasMore) {
-      await loadPage(offset, false);
+      await loadPage(offset, false, debouncedSearch);
       setVisibleCount((c) => c + PAGE_SIZE);
     }
   };

@@ -68,15 +68,13 @@ class OrderNotificationResponse(BaseModel):
 
 
 def _send_notification_email(order_id: int, codes: List[str], payment_method: str) -> None:
-    smtp_host = os.getenv("SMTP_HOST", "")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASS", "")
-    to_email = (
-        os.getenv("ORDERS_NOTIFY_EMAIL")
-        or os.getenv("CONTACT_TO_EMAIL")
-        or "info@lookoptica.gr"
-    )
+    from app.config import settings
+
+    smtp_host = settings.smtp_host or ""
+    smtp_port = settings.smtp_port or 587
+    smtp_user = settings.smtp_user or ""
+    smtp_pass = settings.smtp_pass or ""
+    to_email = settings.contact_to_email or smtp_user or "info@lookoptica.gr"
 
     if not (smtp_host and smtp_port and smtp_user and smtp_pass and to_email):
         print("SMTP config missing, cannot send order notification email")
@@ -97,13 +95,18 @@ def _send_notification_email(order_id: int, codes: List[str], payment_method: st
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        print(f"[Order Email] Connecting to {smtp_host}:{smtp_port} as {smtp_user}")
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
             print(f"Order notification email sent for order #{order_id}")
     except Exception as exc:
+        import traceback
         print(f"Error sending order notification email: {exc}")
+        traceback.print_exc()
 
 
 @router.post("/orders", response_model=PlaceOrderResponse, status_code=status.HTTP_201_CREATED)

@@ -84,6 +84,7 @@ app.add_middleware(
     CSRFMiddleware,
     protected_prefixes=[
         "/api/admin",              # Everything under /api/admin should require CSRF
+        "/api/products",           # Session-authenticated product create/update
     ],
     exempt_paths=[
         "/api/admin/auth/login",   # login issues the CSRF token

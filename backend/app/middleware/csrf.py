@@ -1,6 +1,7 @@
 # app/middleware/csrf.py
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
@@ -51,9 +52,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         header_token = request.headers.get("X-CSRF-Token")
 
         if not cookie_token or not header_token or cookie_token != header_token:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="CSRF validation failed",
+                content={"detail": "CSRF validation failed"},
             )
 
         return await call_next(request)

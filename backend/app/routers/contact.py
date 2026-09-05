@@ -61,11 +61,11 @@ async def verify_turnstile(token: str, remote_ip: str | None = None) -> None:
 
 
 def send_email_background(data: ContactMessage):
-    smtp_host = os.getenv("SMTP_HOST", "")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASS", "")
-    to_email = os.getenv("CONTACT_TO_EMAIL", smtp_user or "")
+    smtp_host = settings.smtp_host or ""
+    smtp_port = settings.smtp_port or 587
+    smtp_user = settings.smtp_user or ""
+    smtp_pass = settings.smtp_pass or ""
+    to_email = settings.contact_to_email or smtp_user
 
     if not (smtp_host and smtp_port and smtp_user and smtp_pass and to_email):
         # In production you'd log this; for now just print so you see it
@@ -88,13 +88,18 @@ def send_email_background(data: ContactMessage):
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        print(f"[Contact Email] Connecting to {smtp_host}:{smtp_port} as {smtp_user}")
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
             print("Contact email sent successfully")
     except Exception as e:
+        import traceback
         print("Error sending contact email:", e)
+        traceback.print_exc()
 
 
 @router.post("", status_code=204)

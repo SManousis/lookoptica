@@ -23,3 +23,30 @@ sudo chgrp -R www-data /var/www/eshop_backend/app
 sudo chmod -R g+w /var/www/eshop_backend/app
 
 journalctl -u lookoptica.service -n 100 --no-pager
+
+How to upload the frontend:
+In powershell:
+scp -i C:\Users\fover\.ssh\id_ed25519 -r dist/* admin@159.69.146.172:~/eshop_dist/
+Then in bash after logging in with ssh admin@159.69.146.172:
+sudo rm -rf /var/www/eshop_frontend/assets/*
+sudo cp -r ~/eshop_dist/assets/* /var/www/eshop_frontend/assets/
+sudo cp ~/eshop_dist/index.html /var/www/eshop_frontend/index.html
+sudo systemctl reload nginx
+rm -rf ~/eshop_dist
+IMPORTANT: index.html references the content-hashed JS/CSS filenames in assets/,
+so it MUST be copied every time too, not just assets/ - otherwise the site breaks
+with "module MIME type text/html" errors (old index.html pointing at deleted hashes).
+
+How to upload the backend:
+Deployed backend path: /var/www/eshop_backend/backend/app
+In powershell, from repo root, upload only the changed file(s), e.g.:
+scp -i ~/.ssh/id_ed25519 backend\app\main.py admin@159.69.146.172:~/main.py
+scp -i ~/.ssh/id_ed25519 backend\app\routers\shop_products.py admin@159.69.146.172:~/shop_products.py
+Then in bash after logging in with ssh admin@159.69.146.172:
+sudo cp ~/main.py /var/www/eshop_backend/backend/app/main.py
+sudo cp ~/shop_products.py /var/www/eshop_backend/backend/app/routers/shop_products.py
+rm ~/main.py ~/shop_products.py
+sudo chgrp -R www-data /var/www/eshop_backend/backend/app
+sudo chmod -R g+w /var/www/eshop_backend/backend/app
+sudo systemctl restart lookoptica
+journalctl -u lookoptica.service -n 100 --no-pager

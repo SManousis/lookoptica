@@ -469,7 +469,7 @@ export default function EditProduct() {
     };
 
     try {
-      const res = await fetch(`${API}/products/${originalSlug}`, {
+      const res = await adminApiFetch(`${API}/products/${originalSlug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

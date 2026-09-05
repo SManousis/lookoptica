@@ -29,6 +29,8 @@ export default function AdminMediaPage() {
   const [unlinkedOnly, setUnlinkedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -39,6 +41,9 @@ export default function AdminMediaPage() {
     if (search.trim()) params.set("q", search.trim());
     return params.toString();
   }, [sourceFilter, unlinkedOnly, search]);
+
+  const allVisibleSelected = items.length > 0 && items.every((item) => selectedIds.has(item.id));
+  const selectedCount = selectedIds.size;
 
   useEffect(() => {
     let cancelled = false;
@@ -54,8 +59,13 @@ export default function AdminMediaPage() {
         }
         const data = await res.json();
         if (cancelled) return;
-        setItems(Array.isArray(data.items) ? data.items : []);
+        const nextItems = Array.isArray(data.items) ? data.items : [];
+        setItems(nextItems);
         setSources(Array.isArray(data.sources) ? data.sources : []);
+        setSelectedIds((prev) => {
+          const validIds = new Set(nextItems.map((x) => x.id));
+          return new Set([...prev].filter((id) => validIds.has(id)));
+        });
         setState("ok");
       } catch (err) {
         if (cancelled) return;
@@ -70,39 +80,55 @@ export default function AdminMediaPage() {
     };
   }, [query, csrfToken]);
 
-  async function deleteFile(item, force = false) {
+  async function requestDelete(item, force = false) {
+    const res = await adminApiFetch(
+      `${API}/admin/media/files`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({
+          source: item.source,
+          path: item.path,
+          force,
+        }),
+      },
+      csrfToken
+    );
+
+    if (res.ok) {
+      return { ok: true };
+    }
+    if (res.status === 409) {
+      return { ok: false, conflict: true };
+    }
+    const txt = await res.text();
+    return { ok: false, conflict: false, error: txt || "Failed to delete file" };
+  }
+
+  async function handleSingleDelete(item) {
+    if (!window.confirm(`Delete image "${item.filename}"?`)) return;
     setBusyId(item.id);
     setErrorMsg("");
     try {
-      const res = await adminApiFetch(
-        `${API}/admin/media/files`,
-        {
-          method: "DELETE",
-          body: JSON.stringify({
-            source: item.source,
-            path: item.path,
-            force,
-          }),
-        },
-        csrfToken
-      );
-
-      if (res.status === 409 && !force) {
+      const result = await requestDelete(item, false);
+      if (!result.ok && result.conflict) {
         const confirmForce = window.confirm(
           `File is linked to product(s): ${item.filename}. Force delete anyway?`
         );
-        if (confirmForce) {
-          await deleteFile(item, true);
+        if (!confirmForce) return;
+        const forced = await requestDelete(item, true);
+        if (!forced.ok) {
+          throw new Error(forced.error || "Failed to force delete file");
         }
-        return;
-      }
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Failed to delete file");
+      } else if (!result.ok) {
+        throw new Error(result.error || "Failed to delete file");
       }
 
       setItems((prev) => prev.filter((x) => x.id !== item.id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
     } catch (err) {
       setErrorMsg(err.message || "Failed to delete file");
     } finally {
@@ -110,9 +136,82 @@ export default function AdminMediaPage() {
     }
   }
 
-  function handleDelete(item) {
-    if (!window.confirm(`Delete image "${item.filename}"?`)) return;
-    deleteFile(item, false);
+  function toggleSelect(itemId) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        items.forEach((item) => next.delete(item.id));
+      } else {
+        items.forEach((item) => next.add(item.id));
+      }
+      return next;
+    });
+  }
+
+  async function handleDeleteSelected() {
+    const selectedItems = items.filter((item) => selectedIds.has(item.id));
+    if (selectedItems.length === 0) return;
+
+    if (!window.confirm(`Delete ${selectedItems.length} selected image(s)?`)) return;
+
+    setDeletingSelected(true);
+    setErrorMsg("");
+
+    try {
+      const deletedIds = [];
+      const conflicts = [];
+      const failures = [];
+
+      for (const item of selectedItems) {
+        const result = await requestDelete(item, false);
+        if (result.ok) {
+          deletedIds.push(item.id);
+        } else if (result.conflict) {
+          conflicts.push(item);
+        } else {
+          failures.push(`${item.filename}: ${result.error || "delete failed"}`);
+        }
+      }
+
+      if (conflicts.length > 0) {
+        const confirmForce = window.confirm(
+          `${conflicts.length} selected image(s) are linked. Force delete them too?`
+        );
+        if (confirmForce) {
+          for (const item of conflicts) {
+            const forced = await requestDelete(item, true);
+            if (forced.ok) {
+              deletedIds.push(item.id);
+            } else {
+              failures.push(`${item.filename}: ${forced.error || "force delete failed"}`);
+            }
+          }
+        }
+      }
+
+      if (deletedIds.length > 0) {
+        const deletedSet = new Set(deletedIds);
+        setItems((prev) => prev.filter((item) => !deletedSet.has(item.id)));
+        setSelectedIds((prev) => new Set([...prev].filter((id) => !deletedSet.has(id))));
+      }
+
+      if (failures.length > 0) {
+        setErrorMsg(`Deleted ${deletedIds.length}. Failed ${failures.length}. First error: ${failures[0]}`);
+      } else if (deletedIds.length > 0) {
+        setErrorMsg("");
+      }
+    } finally {
+      setDeletingSelected(false);
+    }
   }
 
   return (
@@ -170,8 +269,35 @@ export default function AdminMediaPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <button
+          onClick={toggleSelectAllVisible}
+          disabled={state !== "ok" || items.length === 0}
+          className="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 disabled:opacity-50"
+        >
+          {allVisibleSelected ? "Deselect all" : "Select all"}
+        </button>
+        <button
+          onClick={() => setSelectedIds(new Set())}
+          disabled={selectedCount === 0}
+          className="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 disabled:opacity-50"
+        >
+          Clear selection
+        </button>
+        <button
+          onClick={handleDeleteSelected}
+          disabled={selectedCount === 0 || deletingSelected}
+          className="px-3 py-1.5 rounded-md border border-red-200 text-red-700 disabled:opacity-50"
+        >
+          {deletingSelected ? "Deleting selected..." : `Delete selected (${selectedCount})`}
+        </button>
+      </div>
+
       {state === "loading" && <div className="text-sm text-slate-500">Loading images...</div>}
       {state === "error" && (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{errorMsg}</div>
+      )}
+      {state === "ok" && errorMsg && (
         <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{errorMsg}</div>
       )}
 
@@ -183,6 +309,19 @@ export default function AdminMediaPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item) => (
             <article key={item.id} className="border rounded-xl bg-white p-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="inline-flex items-center gap-2 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                  />
+                  Select
+                </label>
+                <span className={item.is_linked ? "text-[11px] text-emerald-700" : "text-[11px] text-amber-700"}>
+                  {item.is_linked ? "Linked" : "Unlinked"}
+                </span>
+              </div>
               <div className="aspect-square overflow-hidden rounded-lg border bg-slate-50">
                 <img
                   src={`${API}/admin/media/preview?source=${encodeURIComponent(item.source)}&path=${encodeURIComponent(item.path)}`}
@@ -198,16 +337,13 @@ export default function AdminMediaPage() {
                   <span>{item.source_label}</span>
                   <span>{formatBytes(item.size_bytes)}</span>
                 </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className={item.is_linked ? "text-emerald-700" : "text-amber-700"}>
-                    {item.is_linked ? "Linked" : "Unlinked"}
-                  </span>
-                  <span className="text-slate-500">{formatDate(item.updated_at)}</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>{formatDate(item.updated_at)}</span>
                 </div>
               </div>
               <button
-                onClick={() => handleDelete(item)}
-                disabled={busyId === item.id}
+                onClick={() => handleSingleDelete(item)}
+                disabled={busyId === item.id || deletingSelected}
                 className="w-full px-2 py-1 rounded-md border border-red-200 text-red-700 text-xs disabled:opacity-60"
               >
                 {busyId === item.id ? "Deleting..." : "Delete"}

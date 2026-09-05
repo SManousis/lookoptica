@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.deps.admin_auth import get_db
@@ -176,11 +177,22 @@ def get_checkout_quote(
     subtotal_dec = Decimal("0.00")
 
     for item in payload.items:
+        # First try base product SKU, then search variant SKUs in JSONB
         product = (
             db.query(ProductModel)
             .filter(ProductModel.sku == item.sku)
             .first()
         )
+        if not product:
+            product = (
+                db.query(ProductModel)
+                .filter(
+                    text(
+                        "attributes->'variants' @> cast(:vj as jsonb)"
+                    ).bindparams(vj=f'[{{"sku": "{item.sku}"}}]')
+                )
+                .first()
+            )
         if not product:
             raise HTTPException(
                 status_code=400,

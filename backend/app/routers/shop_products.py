@@ -7,6 +7,8 @@ from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.models.product import Product as ProductModel
+from app.models.user import User
+from app.deps.admin_auth import get_current_admin_user
 
 router = APIRouter(
     prefix="/products",
@@ -123,9 +125,13 @@ async def list_products(
 
 
 @router.post("", status_code=201)
-async def create_product(prod: Product, db: Session = Depends(get_db)):
+async def create_product(
+    prod: Product,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
     """
-    Create a product for testing against the real DB so that PLP/PDP can see it.
+    Create a product directly in Postgres so that PLP/PDP can see it.
     """
     existing = db.execute(select(ProductModel).where(ProductModel.slug == prod.slug)).scalar_one_or_none()
     if existing:
@@ -181,7 +187,12 @@ async def create_product(prod: Product, db: Session = Depends(get_db)):
     return _to_product_schema(db_product)
 
 @router.put("/{slug}")
-async def update_product(slug: str, prod: Product, db: Session = Depends(get_db)):
+async def update_product(
+    slug: str,
+    prod: Product,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin_user),
+):
     """
     Update an existing product by slug.
     """
