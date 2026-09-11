@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import { useCart } from "../context/CartContext";
 import { usePageSEO } from "../hooks/usePageSEO";
+import { useProductReviews } from "../hooks/useProductReviews";
+import ProductReviews from "../components/ProductReviews";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -62,6 +64,7 @@ function ShippingInfo() {
 export default function ContactLensPDP() {
   const { slug } = useParams();
   const { addItem } = useCart();
+  const reviewsData = useProductReviews(slug);
 
   const [product, setProduct] = useState(null);
   const [state, setState] = useState("loading"); // loading | ok | error
@@ -197,6 +200,14 @@ export default function ContactLensPDP() {
               returnFees: "https://schema.org/ReturnShippingFees",
             },
           },
+          aggregateRating:
+            reviewsData.count > 0
+              ? {
+                  "@type": "AggregateRating",
+                  ratingValue: reviewsData.average_rating,
+                  reviewCount: reviewsData.count,
+                }
+              : undefined,
         }
       : null;
 
@@ -489,7 +500,7 @@ export default function ContactLensPDP() {
       {/* breadcrumbs */}
       <nav className="text-sm text-slate-500 mb-4">
         <Link to="/" className="hover:underline">
-          Home
+          Αρχική
         </Link>{" "}
         <span>›</span>{" "}
         <Link to="/shop/contact-lenses" className="hover:underline">
@@ -732,6 +743,10 @@ export default function ContactLensPDP() {
               )}
             </div>
 
+            <div className="pt-6 border-t border-slate-200 mt-6">
+              <ProductReviews slug={slug} reviewsData={reviewsData} />
+            </div>
+
             <div className="pt-4">
               <Link to="/shop/contact-lenses" className="text-amber-700 hover:underline">
                 ← Πίσω στους φακούς επαφής
@@ -743,7 +758,7 @@ export default function ContactLensPDP() {
 
       {state === "ok" && product && !isContactLens && (
         <div className="text-sm text-slate-600">
-          This product is not marked as a contact lens (product_type ≠
+          Αυτό το προϊόν δεν έχει επισημανθεί ως φακός επαφής (product_type ≠
           contact_lens).
         </div>
       )}

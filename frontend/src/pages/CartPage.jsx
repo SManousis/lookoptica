@@ -2,6 +2,59 @@ import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { usePageSEO } from "../hooks/usePageSEO";
 
+// Mirrors the thresholds in backend/app/routers/final_checkout.py
+// (FREE_BOXNOW_THRESHOLD / FREE_SHIPPING_THRESHOLD) - informational nudge
+// only, the real charge is always computed server-side at checkout.
+const FREE_BOXNOW_THRESHOLD = 40;
+const FREE_SHIPPING_THRESHOLD = 80;
+
+function ShippingProgress({ subtotal }) {
+  if (subtotal >= FREE_SHIPPING_THRESHOLD) {
+    return (
+      <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800">
+        🎉 Έχετε δωρεάν μεταφορικά (courier ή Box Now) και δωρεάν αντικαταβολή!
+      </div>
+    );
+  }
+
+  if (subtotal >= FREE_BOXNOW_THRESHOLD) {
+    const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+    const pct = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
+    return (
+      <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 space-y-2">
+        <div>✅ Έχετε δωρεάν μεταφορικά με Box Now!</div>
+        <div className="text-xs text-emerald-700">
+          Πρόσθεσε ακόμα <strong>€{remaining.toFixed(2)}</strong> για δωρεάν
+          μεταφορικά με courier και δωρεάν αντικαταβολή.
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden">
+          <div
+            className="h-full bg-emerald-500 transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const remaining = FREE_BOXNOW_THRESHOLD - subtotal;
+  const pct = Math.min(100, (subtotal / FREE_BOXNOW_THRESHOLD) * 100);
+  return (
+    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 space-y-2">
+      <div>
+        Πρόσθεσε ακόμα <strong>€{remaining.toFixed(2)}</strong> για δωρεάν
+        μεταφορικά με Box Now!
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-amber-100 overflow-hidden">
+        <div
+          className="h-full bg-amber-500 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   usePageSEO({ title: "Καλάθι Αγορών | Look Οπτικά", noindex: true });
 
@@ -28,17 +81,17 @@ export default function CartPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 lg:py-10">
       <nav className="mb-6 text-sm text-slate-500">
         <Link to="/" className="hover:underline">
-          Home
+          Αρχική
         </Link>{" "}
         <span className="px-1 text-slate-400">›</span>
-        <span className="text-slate-700">Cart</span>
+        <span className="text-slate-700">Καλάθι</span>
       </nav>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-amber-800">Shopping Cart</h1>
+          <h1 className="text-2xl font-semibold text-amber-800">Καλάθι Αγορών</h1>
           <p className="text-sm text-slate-600">
-            {itemCount} {itemCount === 1 ? "item" : "items"} in your cart
+            {itemCount} {itemCount === 1 ? "προϊόν" : "προϊόντα"} στο καλάθι σας
           </p>
         </div>
 
@@ -48,7 +101,7 @@ export default function CartPage() {
             onClick={clearCart}
             className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
           >
-            Clear cart
+            Άδειασμα καλαθιού
           </button>
         )}
       </div>
@@ -56,23 +109,23 @@ export default function CartPage() {
       {isEmpty ? (
         <section className="rounded-xl border border-dashed border-amber-200 bg-white p-10 text-center shadow-sm">
           <p className="text-lg font-medium text-slate-700">
-            Your cart is empty.
+            Το καλάθι σας είναι άδειο.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            Browse our categories and add products you love.
+            Περιηγηθείτε στις κατηγορίες μας και προσθέστε προϊόντα που σας αρέσουν.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
               to="/shop"
               className="rounded-lg bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800"
             >
-              Shop all products
+              Όλα τα προϊόντα
             </Link>
             <Link
               to="/"
               className="rounded-lg border border-amber-200 px-5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
             >
-              Back to home
+              Πίσω στην αρχική
             </Link>
           </div>
         </section>
@@ -88,19 +141,19 @@ export default function CartPage() {
                   {item.image ? (
                     <img
                       src={item.image}
-                      alt={item.title || item.slug || "Product photo"}
+                      alt={item.title || item.slug || "Φωτογραφία προϊόντος"}
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                      No image
+                      Χωρίς εικόνα
                     </div>
                   )}
                 </div>
 
                 <div className="flex-1 space-y-1">
                   <h2 className="text-base font-semibold text-slate-800">
-                    {item.title || item.slug || "Product"}
+                    {item.title || item.slug || "Προϊόν"}
                   </h2>
                   {item.variantLabel && (
                     <p className="text-sm text-slate-500">{item.variantLabel}</p>
@@ -146,7 +199,7 @@ export default function CartPage() {
                     onClick={() => removeItem(item._key)}
                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
                   >
-                    Remove
+                    Αφαίρεση
                   </button>
                 </div>
 
@@ -158,33 +211,37 @@ export default function CartPage() {
           </section>
 
           <aside className="rounded-xl border bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Order summary</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Σύνοψη παραγγελίας</h2>
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
-                <span>Subtotal</span>
+                <span>Υποσύνολο</span>
                 <span>€{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Items</span>
+                <span>Προϊόντα</span>
                 <span>{itemCount}</span>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                Shipping and taxes calculated at checkout.
-              </div>
             </div>
+
+            <div className="mt-3">
+              <ShippingProgress subtotal={subtotal} />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Το τελικό κόστος μεταφορικών και τυχόν αντικαταβολής υπολογίζεται στο checkout.
+            </p>
 
             <Link
               to="/checkout"
               className="mt-6 block rounded-lg bg-amber-700 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-amber-800"
             >
-              Proceed to checkout
+              Συνέχεια στο checkout
             </Link>
 
             <Link
               to="/shop"
               className="mt-3 block rounded-lg border border-amber-200 px-4 py-3 text-center text-sm font-semibold text-amber-800 hover:bg-amber-50"
             >
-              Continue shopping
+              Συνέχεια αγορών
             </Link>
           </aside>
         </div>

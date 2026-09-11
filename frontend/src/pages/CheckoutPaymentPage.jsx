@@ -216,6 +216,7 @@ export default function CheckoutPaymentPage() {
       const res = await fetch(`${API}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           product_codes: productCodes,
           payment_method: paymentMethod,
@@ -274,11 +275,11 @@ export default function CheckoutPaymentPage() {
       {/* Breadcrumbs */}
       <nav className="text-sm text-slate-500 mb-4">
         <Link to="/" className="hover:underline">
-          Home
+          Αρχική
         </Link>{" "}
         <span>›</span>{" "}
         <Link to="/cart" className="hover:underline">
-          Cart
+          Καλάθι
         </Link>{" "}
         <span>›</span>{" "}
         <span className="text-slate-700">Πληρωμή & αποστολή</span>

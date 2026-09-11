@@ -30,6 +30,7 @@ export default function HomePage() {
   });
 
   const [featured, setFeatured] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [state, setState] = useState("loading"); // loading | ok | error
   const [slideIndex, setSlideIndex] = useState(0);
   const [brandsIndex, setBrandsIndex] = useState(0);
@@ -42,6 +43,13 @@ export default function HomePage() {
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setFeatured(list.slice(0, 8));
+        const discounted = list.filter(
+          (p) =>
+            p?.discountPrice != null &&
+            p?.price != null &&
+            p.discountPrice > p.price
+        );
+        setOffers(discounted.slice(0, 8));
         setState("ok");
       })
       .catch(() => setState("error"));
@@ -351,6 +359,61 @@ export default function HomePage() {
             </Link>
         </div>
      </section >
+
+      {/* OFFERS */}
+      {offers.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg text-amber-700 font-semibold">Προσφορές</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {offers.map((p) => (
+              <ProductCard key={p.slug} p={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SERVICES */}
+      <section className="space-y-4">
+        <h2 className="text-lg text-amber-700 font-semibold">Οι Υπηρεσίες μας</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            to="/low-vision"
+            className="group rounded-2xl border border-amber-100 bg-white/80 p-6 shadow-sm transition hover:border-amber-300 hover:shadow-md"
+          >
+            <div className="text-3xl mb-3">🔍</div>
+            <h3 className="font-zen text-xl text-amber-800 mb-2">
+              Βοηθήματα Χαμηλής Όρασης
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Εξειδικευμένες υπηρεσίες και βοηθήματα χαμηλής όρασης, κατόπιν
+              ραντεβού, με χρόνια εμπειρία στον τομέα.
+            </p>
+            <span className="mt-3 inline-block text-sm font-medium text-amber-700 group-hover:underline">
+              Μάθε περισσότερα &rarr;
+            </span>
+          </Link>
+
+          <Link
+            to="/look-at-home"
+            className="group rounded-2xl border border-amber-100 bg-white/80 p-6 shadow-sm transition hover:border-amber-300 hover:shadow-md"
+          >
+            <div className="text-3xl mb-3">🏠</div>
+            <h3 className="font-zen text-xl text-amber-800 mb-2">
+              Οπτικά στο Σπίτι
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Δεν προλαβαίνετε να περάσετε από το κατάστημα; Ερχόμαστε εμείς
+              σε εσάς για να διαλέξετε τα γυαλιά που σας ταιριάζουν.
+            </p>
+            <span className="mt-3 inline-block text-sm font-medium text-amber-700 group-hover:underline">
+              Μάθε περισσότερα &rarr;
+            </span>
+          </Link>
+        </div>
+      </section>
+
       {/* VARIOUS INFOS */}
       <section className="py-12 space-y-4">
         <div className="grid gap-4 sm:gap-6 md:grid-cols-3">

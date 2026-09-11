@@ -152,7 +152,14 @@ def list_products(
                 | (Product.sku.ilike(like))
             )
 
-        base_stmt = base_stmt.order_by(Product.created_at.desc())
+        # Secondary tiebreaker (id) is required: many products share the exact
+        # same created_at from the bulk import, and OFFSET pagination is only
+        # stable/correct across repeated calls when the ORDER BY is fully
+        # deterministic - otherwise Postgres can return tied rows in a
+        # different order per query, silently skipping or duplicating rows
+        # across pages (this was causing brand-filtered results on the PLP
+        # to undercount).
+        base_stmt = base_stmt.order_by(Product.created_at.desc(), Product.id.desc())
 
         # Apply filtering after fetch so pagination respects the filtered list.
         # Fetch in batches until we have enough matching products to satisfy offset+limit.

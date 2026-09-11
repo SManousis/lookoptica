@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 from app.db import Base
 
@@ -9,6 +9,7 @@ class OrderNotification(Base):
     __tablename__ = "order_notifications"
 
     id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
     product_codes = Column(Text, nullable=False)
     payment_method = Column(String(50), nullable=False)
     contact_name = Column(String(255), nullable=True)

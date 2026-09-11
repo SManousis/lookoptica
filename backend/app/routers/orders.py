@@ -1,15 +1,19 @@
 import os
 import smtplib
+from datetime import datetime, timezone
 from email.message import EmailMessage
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, engine
 from app.deps.admin_auth import get_current_admin_user
+from app.models.customer_session import CustomerSession
 from app.models.order_notification import OrderNotification
+from app.routers.customer_auth import get_current_customer
 
 router = APIRouter(tags=["orders"])
 
@@ -20,6 +24,16 @@ def ensure_table():
     global _TABLE_READY
     if not _TABLE_READY:
         OrderNotification.__table__.create(bind=engine, checkfirst=True)
+        # order_notifications already exists in production with real rows -
+        # `create(checkfirst=True)` won't add a new column to an existing
+        # table, so add it explicitly. Idempotent/safe to run every time.
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE order_notifications "
+                    "ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id)"
+                )
+            )
         _TABLE_READY = True
 
 
@@ -29,6 +43,25 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _resolve_customer_id(request: Request, db: Session) -> Optional[int]:
+    """Best-effort: link the order to a logged-in customer if a valid
+    session cookie is present, without requiring login (guests can still
+    place orders)."""
+    sess_id = request.cookies.get("look_customer_sess")
+    if not sess_id:
+        return None
+    session = (
+        db.query(CustomerSession)
+        .filter(CustomerSession.id == sess_id, CustomerSession.is_active.is_(True))
+        .first()
+    )
+    if not session:
+        return None
+    if session.expires_at < datetime.now(timezone.utc):
+        return None
+    return session.customer_id
 
 
 class PlaceOrderPayload(BaseModel):
@@ -110,7 +143,9 @@ def _send_notification_email(order_id: int, codes: List[str], payment_method: st
 
 
 @router.post("/orders", response_model=PlaceOrderResponse, status_code=status.HTTP_201_CREATED)
-def create_order_notification(payload: PlaceOrderPayload, db: Session = Depends(get_db)):
+def create_order_notification(
+    payload: PlaceOrderPayload, request: Request, db: Session = Depends(get_db)
+):
     ensure_table()
     codes = [code.strip() for code in payload.product_codes if code and code.strip()]
     if not codes:
@@ -127,6 +162,7 @@ def create_order_notification(payload: PlaceOrderPayload, db: Session = Depends(
         )
 
     record = OrderNotification(
+        customer_id=_resolve_customer_id(request, db),
         product_codes=",".join(codes),
         payment_method=payment_method,
         contact_name=(payload.contact_name or "").strip() or None,
@@ -147,6 +183,49 @@ def create_order_notification(payload: PlaceOrderPayload, db: Session = Depends(
     _send_notification_email(record.id, codes, payment_method)
 
     return PlaceOrderResponse(id=record.id)
+
+
+@router.get(
+    "/customer/orders",
+    response_model=List[OrderNotificationResponse],
+)
+def list_customer_orders(
+    db: Session = Depends(get_db),
+    customer=Depends(get_current_customer),
+):
+    ensure_table()
+    records = (
+        db.query(OrderNotification)
+        .filter(OrderNotification.customer_id == customer.id)
+        .order_by(OrderNotification.created_at.desc())
+        .all()
+    )
+    response: List[OrderNotificationResponse] = []
+    for record in records:
+        product_codes = [
+            code.strip()
+            for code in (record.product_codes or "").split(",")
+            if code and code.strip()
+        ]
+        response.append(
+            OrderNotificationResponse(
+                id=record.id,
+                product_codes=product_codes,
+                payment_method=record.payment_method,
+                contact_name=record.contact_name,
+                contact_email=record.contact_email,
+                contact_phone=record.contact_phone,
+                shipping_address_line1=record.shipping_address_line1,
+                shipping_address_line2=record.shipping_address_line2,
+                shipping_city=record.shipping_city,
+                shipping_postcode=record.shipping_postcode,
+                shipping_region=record.shipping_region,
+                shipping_country=record.shipping_country,
+                shipping_notes=record.shipping_notes,
+                created_at=record.created_at.isoformat() if record.created_at else "",
+            )
+        )
+    return response
 
 
 @router.get(

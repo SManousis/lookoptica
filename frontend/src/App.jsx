@@ -28,6 +28,7 @@ import { CartProvider, useCart } from "./context/CartContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import AdminDeletedProductsPage from "./pages/admin/AdminDeletedProductsPage";
 import AdminMediaPage from "./pages/admin/AdminMediaPage";
+import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
@@ -40,6 +41,8 @@ import AccountLoginPage from "./pages/AccountLoginPage";
 import AccountHomePage from "./pages/AccountHomePage";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
 import CheckoutDetailsPage from "./pages/CheckoutDetailsPage";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import { useCustomerAuth } from "./context/customerAuthShared";
@@ -78,12 +81,27 @@ function ShopPLP() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") || "");
   const [brandFilter, setBrandFilter] = useState(brandParam);
   const [brandOptions, setBrandOptions] = useState([]);
   const [sortBy, setSortBy] = useState("newest");
   const normalizedBrandFilter = normalizeBrand(brandFilter);
   const PAGE_SIZE = 12;
+
+  // Debounced search term for server-side queries
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // /shop doesn't remount when the navbar search navigates here again with a
+  // different ?q= (same route, query only) - sync searchTerm explicitly so a
+  // second navbar search while already on this page actually takes effect.
+  const urlQuery = searchParams.get("q") || "";
+  useEffect(() => {
+    setSearchTerm(urlQuery);
+  }, [urlQuery]);
 
   const updateView = (nextView) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -116,7 +134,7 @@ function ShopPLP() {
     product?.barcode ||
     `${product?.title?.el || product?.title?.en || product?.title || ""}-${product?.variantLabel || ""}`;
 
-  const loadProducts = async (nextOffset = 0, replace = false) => {
+  const loadProducts = async (nextOffset = 0, replace = false, searchQuery = "") => {
     if (replace) {
       setState("loading");
       setHasMore(true);
@@ -138,14 +156,22 @@ function ShopPLP() {
       let batchOffset = nextOffset;
       let lastBatchLength = 0;
       let iterations = 0;
-      const requestLimit = normalizedBrandFilter ? PAGE_SIZE * 5 : PAGE_SIZE;
-      const MAX_FETCHES = normalizedBrandFilter ? 120 : 6;
+      // Any sort other than "newest" needs the entire matching set fetched
+      // before the client-side sort is stable - see PLP.jsx for the full
+      // explanation. Same applies whenever a brand filter is active.
+      const needsFullScan = Boolean(normalizedBrandFilter) || sortBy !== "newest";
+      const requestLimit = needsFullScan ? PAGE_SIZE * 5 : PAGE_SIZE;
+      const MAX_FETCHES = needsFullScan ? 120 : 6;
 
-      while (aggregatedUnique.length < PAGE_SIZE && iterations < MAX_FETCHES) {
+      while (
+        (needsFullScan || aggregatedUnique.length < PAGE_SIZE) &&
+        iterations < MAX_FETCHES
+      ) {
         iterations += 1;
         const params = new URLSearchParams();
         params.set("limit", requestLimit);
         params.set("offset", batchOffset);
+        if (searchQuery) params.set("q", searchQuery);
         if (isStockView) {
           ["stock", "stok"].forEach((alias) => params.append("category", alias));
         }
@@ -163,12 +189,15 @@ function ShopPLP() {
             return true;
           });
 
+        // Process every match in this batch before deciding whether to fetch
+        // another one - breaking early would silently discard matches
+        // already fetched in this same batch (see PLP.jsx for how this bit
+        // us there).
         for (const product of filtered) {
           const key = getProductKey(product);
           if (!key || seenKeys.has(key)) continue;
           seenKeys.add(key);
           aggregatedUnique.push(product);
-          if (aggregatedUnique.length >= PAGE_SIZE) break;
         }
 
         batchOffset += list.length;
@@ -195,9 +224,9 @@ function ShopPLP() {
   };
 
   useEffect(() => {
-    loadProducts(0, true);
+    loadProducts(0, true, debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStockView, normalizedBrandFilter]);
+  }, [isStockView, normalizedBrandFilter, sortBy, debouncedSearch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,13 +340,15 @@ function ShopPLP() {
     };
 
     const getEffectivePrice = (p) => {
-      const discount = normalizePrice(p?.discountPrice);
+      // `price` is the actual/offer price the customer pays; `discountPrice`
+      // is the original/starting reference price shown struck-through.
       const price = normalizePrice(p?.price);
-      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
-        return discount;
-      }
+      const discount = normalizePrice(p?.discountPrice);
       if (Number.isFinite(price) && price > 0 && price !== Number.POSITIVE_INFINITY) {
         return price;
+      }
+      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
+        return discount;
       }
       return Number.POSITIVE_INFINITY;
     };
@@ -374,7 +405,7 @@ function ShopPLP() {
       return;
     }
     if (hasMore) {
-      await loadProducts(offset, false);
+      await loadProducts(offset, false, debouncedSearch);
       setVisibleCount((c) => c + PAGE_SIZE);
     }
   };
@@ -533,12 +564,23 @@ function ShopPLP() {
 function AppShell() {
   const [openCategory, setOpenCategory] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navSearchOpen, setNavSearchOpen] = useState(false);
+  const [navSearchQuery, setNavSearchQuery] = useState("");
   const { totals } = useCart();
   const { isLoggedIn } = useCustomerAuth();
   const { admin, logout: logoutAdmin } = useAdminAuth();
   const navigate = useNavigate();
 
   const itemCount = totals?.itemCount ?? 0;
+
+  function handleNavSearchSubmit(e) {
+    e.preventDefault();
+    const q = navSearchQuery.trim();
+    if (!q) return;
+    navigate(`/shop?q=${encodeURIComponent(q)}`);
+    setNavSearchOpen(false);
+    setNavSearchQuery("");
+  }
 
   const baseMobileOptions = [
     { label: "Home", to: "/" },
@@ -559,6 +601,7 @@ function AppShell() {
         { label: "Admin · Orders", to: "/admin/orders" },
         { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
         { label: "Admin · Media Library", to: "/admin/media" },
+        { label: "Admin · Reviews", to: "/admin/reviews" },
         { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
         { label: "Admin · ERP Import", to: "/admin/import" },
         { label: "Admin · Logout", action: "logout" },
@@ -582,6 +625,18 @@ function AppShell() {
             </Link>
             {/* Mobile icons row */}
             <div className="flex items-center gap-3 text-xl text-slate-500 md:hidden">
+              <button
+                type="button"
+                onClick={() => setNavSearchOpen((v) => !v)}
+                className="text-slate-600 hover:text-amber-700"
+                aria-label="Αναζήτηση"
+              >
+                {navSearchOpen ? (
+                  <CloseIcon fontSize="inherit" />
+                ) : (
+                  <SearchIcon fontSize="inherit" />
+                )}
+              </button>
               <Link
                 to={isLoggedIn ? "/account" : "/account/login"}
                 className="relative text-slate-600 hover:text-amber-700"
@@ -615,6 +670,22 @@ function AppShell() {
               </Link>
             </div>
           </div>
+
+          {navSearchOpen && (
+            <form
+              onSubmit={handleNavSearchSubmit}
+              className="w-full md:hidden"
+            >
+              <input
+                type="text"
+                autoFocus
+                value={navSearchQuery}
+                onChange={(e) => setNavSearchQuery(e.target.value)}
+                placeholder="Αναζήτηση προϊόντων..."
+                className="w-full rounded-full border border-amber-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-amber-500"
+              />
+            </form>
+          )}
 
           {/* Mobile hamburger menu */}
           <div className="relative md:hidden">
@@ -787,6 +858,13 @@ function AppShell() {
                     Media Library
                   </Link>
                   <Link
+                    to="/admin/reviews"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Reviews
+                  </Link>
+                  <Link
                     to="/admin/contact-lenses"
                     className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
                     onClick={() => setOpenCategory(null)}
@@ -819,6 +897,40 @@ function AppShell() {
 
           {/* Right side: account + cart + socials */}
           <div className="hidden items-center gap-4 text-2xl text-slate-500 md:flex">
+            {/* Site-wide search */}
+            {navSearchOpen ? (
+              <form onSubmit={handleNavSearchSubmit} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  autoFocus
+                  value={navSearchQuery}
+                  onChange={(e) => setNavSearchQuery(e.target.value)}
+                  placeholder="Αναζήτηση προϊόντων..."
+                  className="w-48 rounded-full border border-amber-200 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSearchOpen(false);
+                    setNavSearchQuery("");
+                  }}
+                  className="text-slate-500 hover:text-amber-700"
+                  aria-label="Κλείσιμο αναζήτησης"
+                >
+                  <CloseIcon fontSize="small" />
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setNavSearchOpen(true)}
+                className="text-slate-600 hover:text-amber-700"
+                aria-label="Αναζήτηση"
+              >
+                <SearchIcon fontSize="inherit" />
+              </button>
+            )}
+
             {/* Account icon */}
             <Link
               to={isLoggedIn ? "/account" : "/account/login"}
@@ -909,6 +1021,14 @@ function AppShell() {
             element={
               <ProtectAdminRoute>
                 <AdminMediaPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/reviews"
+            element={
+              <ProtectAdminRoute>
+                <AdminReviewsPage />
               </ProtectAdminRoute>
             }
           />

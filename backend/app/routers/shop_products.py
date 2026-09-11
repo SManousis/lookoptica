@@ -116,7 +116,10 @@ async def list_products(
             ProductModel.visible.is_(True),
             ProductModel.status != "archived",
         )
-        .order_by(ProductModel.created_at.desc())
+        # id as secondary tiebreaker: see public_products.py for why this
+        # matters (duplicate created_at from the bulk import breaks stable
+        # OFFSET pagination without it).
+        .order_by(ProductModel.created_at.desc(), ProductModel.id.desc())
     )
     if limit is not None:
         stmt = stmt.limit(limit).offset(offset)

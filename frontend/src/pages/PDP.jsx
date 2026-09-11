@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import metrics from "/metrics.jpg";
-import { usePageSEO } from "../hooks/usePageSEO"; 
+import { usePageSEO } from "../hooks/usePageSEO";
 import { useCart } from "../context/CartContext";
+import ProductReviews from "../components/ProductReviews";
+import { useProductReviews } from "../hooks/useProductReviews";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -119,8 +121,7 @@ export default function PDP() {
   const [variantIndex, setVariantIndex] = useState(0); // NEW: active colour
   const [imageIndex, setImageIndex] = useState(0);     // NEW: active image
   const [related, setRelated] = useState([]);
-  const [rating, setRating] = useState(0);
-  const [reviewText, setReviewText] = useState("");
+  const reviewsData = useProductReviews(slug);
   const [added, setAdded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { addItem } = useCart();
@@ -179,19 +180,6 @@ export default function PDP() {
         setRelated([]);
       });
   }, [state, p]);
-
-  function Star({ filled, onClick }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="text-xl"
-        aria-label="star"
-      >
-        {filled ? "★" : "☆"}
-      </button>
-    );
-  }
 
   function renderStatus(status) {
     if (!status) return null;
@@ -334,6 +322,14 @@ export default function PDP() {
               returnFees: "https://schema.org/ReturnShippingFees",
             },
           },
+          aggregateRating:
+            reviewsData.count > 0
+              ? {
+                  "@type": "AggregateRating",
+                  ratingValue: reviewsData.average_rating,
+                  reviewCount: reviewsData.count,
+                }
+              : undefined,
         }
       : null;
 
@@ -394,8 +390,8 @@ export default function PDP() {
     <div className="max-w-5xl mx-auto">
       {/* breadcrumbs */}
       <nav className="text-sm text-slate-500 mb-4">
-        <Link to="/" className="hover:underline">Home</Link> <span>›</span>{" "}
-        <Link to="/shop" className="hover:underline">Shop</Link> <span>›</span>{" "}
+        <Link to="/" className="hover:underline">Αρχική</Link> <span>›</span>{" "}
+        <Link to="/shop" className="hover:underline">Κατάστημα</Link> <span>›</span>{" "}
         <span className="text-slate-700">{p ? title : slug}</span>
       </nav>
 
@@ -446,10 +442,6 @@ export default function PDP() {
                 ))}
               </div>
             )}
-            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <h3 className="font-semibold text-sm mb-2">Πληροφορίες</h3>
-              <ShippingInfo />
-            </div>
           </div>
 
           {/* info */}
@@ -561,21 +553,26 @@ export default function PDP() {
                 className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800"
                 disabled={!price}
               >
-                Add to cart
+                Προσθήκη στο καλάθι
               </button>
               {added && (
                 <p className="text-sm text-red-700">
-                  Added to cart!{" "}
+                  Προστέθηκε στο καλάθι!{" "}
                   <Link to="/cart" className="underline">
-                    View cart
+                    Προβολή καλαθιού
                   </Link>
                 </p>
               )}
             </div>
 
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h3 className="font-semibold text-sm mb-2">Πληροφορίες</h3>
+              <ShippingInfo />
+            </div>
+
             <div className="pt-4">
               <Link to="/shop" className="text-amber-700 hover:underline">
-                ← Back to shop
+                ← Πίσω στο κατάστημα
               </Link>
             </div>
           </div>
@@ -661,43 +658,7 @@ export default function PDP() {
 
           {/* Reviews full width */}
           <div className="pt-6 border-t border-slate-200 mt-6">
-            <h3 className="text-sm font-semibold mb-2">Αξιολογήσεις</h3>
-
-            <div className="mb-2 flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Star
-                  key={n}
-                  filled={rating >= n}
-                  onClick={() => setRating(n)}
-                />
-              ))}
-              {rating > 0 && (
-                <span className="ml-2 text-xs text-slate-600">
-                  {rating} / 5
-                </span>
-              )}
-            </div>
-
-            <textarea
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              rows={3}
-              placeholder="Γράψε την εμπειρία σου με το προϊόν..."
-              className="w-full border rounded-lg px-3 py-2 text-xs mb-2"
-            />
-
-            <button
-              type="button"
-              className="px-3 py-1 rounded-lg bg-slate-200 text-xs text-slate-700"
-              onClick={() => {
-                // later will POST to backend
-                setReviewText("");
-                setRating(0);
-                alert("Για την ώρα η αξιολόγηση δεν αποθηκεύεται – UI test 🙂");
-              }}
-            >
-              Υποβολή αξιολόγησης
-            </button>
+            <ProductReviews slug={slug} reviewsData={reviewsData} />
           </div>
         </>
       )}

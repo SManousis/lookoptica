@@ -326,10 +326,20 @@ export default function CategoryPLP() {
       let batchOffset = nextOffset;
       let lastBatchLength = 0;
       let iterations = 0;
-      const requestLimit = normalizedBrandFilter ? PAGE_SIZE * 5 : PAGE_SIZE;
-      const MAX_FETCHES = normalizedBrandFilter ? 120 : 6; // scan deeper when brand filter is active
+      // Any sort other than "newest" needs the *entire* matching set fetched
+      // before the client-side sort is stable - "newest" is the only order
+      // that naturally lines up with incremental, creation-date-ordered
+      // pagination from the backend. Otherwise each additional batch would
+      // get re-sorted into the middle of what's already shown instead of
+      // appending at the end.
+      const needsFullScan = Boolean(normalizedBrandFilter) || sortBy !== "newest";
+      const requestLimit = needsFullScan ? PAGE_SIZE * 5 : PAGE_SIZE;
+      const MAX_FETCHES = needsFullScan ? 120 : 6;
 
-      while (aggregatedUnique.length < PAGE_SIZE && iterations < MAX_FETCHES) {
+      while (
+        (needsFullScan || aggregatedUnique.length < PAGE_SIZE) &&
+        iterations < MAX_FETCHES
+      ) {
         iterations += 1;
         const params = new URLSearchParams();
         params.set("limit", requestLimit);
@@ -343,13 +353,17 @@ export default function CategoryPLP() {
         const list = Array.isArray(batch) ? batch : [];
         lastBatchLength = list.length;
 
+        // Process every match in this batch before deciding whether to fetch
+        // another one - breaking early here would silently discard matches
+        // that were already fetched (e.g. a single batch containing more
+        // than PAGE_SIZE matches), since batchOffset advances past the whole
+        // batch regardless of how much of it we actually used.
         const projected = filterAndProject(list, normalizedBrandFilter);
         for (const product of projected) {
           const key = getProductKey(product);
           if (!key || seenKeys.has(key)) continue;
           seenKeys.add(key);
           aggregatedUnique.push(product);
-          if (aggregatedUnique.length >= PAGE_SIZE) break;
         }
         batchOffset += list.length;
 
@@ -393,7 +407,7 @@ export default function CategoryPLP() {
 
     loadPage(0, true, debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView, normalizedBrandFilter, filterAndProject, debouncedSearch]);
+  }, [categorySlug, audienceSlug, config, audienceConfig, isStockView, normalizedBrandFilter, filterAndProject, debouncedSearch, sortBy]);
 
   useEffect(() => {
     if (!config) {
@@ -509,14 +523,17 @@ export default function CategoryPLP() {
     };
 
     const getEffectivePrice = (p) => {
-      // Prefer discount price; if not present/invalid, fall back to current price
-      const discount = normalizePrice(p?.discountPrice);
+      // `price` is the actual/offer price the customer pays; `discountPrice`
+      // is the original/starting reference price shown struck-through.
+      // Sort by what they'd actually pay, falling back to discountPrice only
+      // when a product has no price set at all.
       const price = normalizePrice(p?.price);
-      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
-        return discount;
-      }
+      const discount = normalizePrice(p?.discountPrice);
       if (Number.isFinite(price) && price > 0 && price !== Number.POSITIVE_INFINITY) {
         return price;
+      }
+      if (Number.isFinite(discount) && discount > 0 && discount !== Number.POSITIVE_INFINITY) {
+        return discount;
       }
       // Treat missing/zero/invalid prices as the most expensive so they sink to bottom
       return Number.POSITIVE_INFINITY;
@@ -695,18 +712,18 @@ export default function CategoryPLP() {
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-medium text-slate-700 text-xs">Sort by</label>
+            <label className="font-medium text-slate-700 text-xs">Ταξινόμηση</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="border rounded-md px-3 py-1 text-sm md:w-52"
             >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="price">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="brand">Brand: A to Z</option>
-              <option value="brand-desc">Brand: Z to A</option>
+              <option value="newest">Νεότερα</option>
+              <option value="oldest">Παλαιότερα</option>
+              <option value="price">Τιμή: Αύξουσα</option>
+              <option value="price-desc">Τιμή: Φθίνουσα</option>
+              <option value="brand">Brand: Α έως Ω</option>
+              <option value="brand-desc">Brand: Ω έως Α</option>
             </select>
           </div>
         </div>
@@ -725,7 +742,7 @@ export default function CategoryPLP() {
 
       {state === "ok" && displayItems.length === 0 && (
         <div className="space-y-4 text-center text-slate-600">
-          <div>No products matched yet.</div>
+          <div>Δεν βρέθηκαν ακόμα προϊόντα.</div>
           {hasMore && (
             <button
               type="button"
@@ -733,7 +750,7 @@ export default function CategoryPLP() {
               disabled={isLoadingMore}
               className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoadingMore ? "Loading..." : "Load more results"}
+              {isLoadingMore ? "Φόρτωση..." : "Περισσότερα αποτελέσματα"}
             </button>
           )}
         </div>
@@ -754,7 +771,7 @@ export default function CategoryPLP() {
                 disabled={isLoadingMore}
                 className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoadingMore ? "Loading..." : "Load more"}
+                {isLoadingMore ? "Φόρτωση..." : "Περισσότερα"}
               </button>
             )}
             {visibleCount > PAGE_SIZE && (
@@ -764,7 +781,7 @@ export default function CategoryPLP() {
                 disabled={state === "loading"}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Show less
+                Λιγότερα
               </button>
             )}
           </div>
