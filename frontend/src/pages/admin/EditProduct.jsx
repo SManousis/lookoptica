@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAdminAuth } from "../../context/useAdminAuth";
 import { adminApiFetch } from "../../utils/adminApiFetch";
+import ProductImagesField from "../../components/admin/ProductImagesField";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -124,11 +125,9 @@ export default function EditProduct() {
   const [errorMsg, setErrorMsg] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [imageUploadState, setImageUploadState] = useState("idle");
-  const [imageUploadMessage, setImageUploadMessage] = useState("");
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
-  
+
 
 
   const parsedImageUrls = form.imagesText
@@ -136,19 +135,18 @@ export default function EditProduct() {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const handleRemoveImageUrl = (index) => {
-    setForm((prev) => {
-      const urls = prev.imagesText
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      urls.splice(index, 1);
-      return {
-        ...prev,
-        imagesText: urls.join("\n"),
-      };
+  function handleImagesChange(newImages) {
+    setForm((prev) => ({ ...prev, imagesText: newImages.join("\n") }));
+  }
+
+  function handleImageUploadedForVariant(imagePath) {
+    setVariants((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      return prev.map((v) =>
+        v.isDefault ? { ...v, imageUrl: imagePath } : v
+      );
     });
-  };
+  }
 
   const listSearch = searchParams.toString();
   const listUrl = listSearch ? `/admin/products?${listSearch}` : "/admin/products";
@@ -191,8 +189,10 @@ export default function EditProduct() {
           brand: data.brand || "",
           category: categoryValue,
           audience: data.audience || "",
-          price: data.price ?? "",
-          discountPrice: data.discountPrice ?? "",
+          // AddProduct saves offer/current price into `price` and regular/original
+          // into `discountPrice` - mirror that swap here so the labels match.
+          price: data.discountPrice ?? "",
+          discountPrice: data.price ?? "",
           sku: data.sku || "",
           ean: data.ean || "",
           description: data.description || "",
@@ -216,8 +216,8 @@ export default function EditProduct() {
           variantList.map((v) => ({
             ...initialVariant,
             ...v,
-            price: v.price ?? "",
-            discountPrice: v.discountPrice ?? "",
+            price: v.discountPrice ?? "",
+            discountPrice: v.price ?? "",
             imageUrl: Array.isArray(v.images) && v.images.length > 0
               ? v.images[0]
               : "",
@@ -287,59 +287,6 @@ export default function EditProduct() {
     setVariants((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function assignUploadedImage(imagePath) {
-  // product-level images
-  setForm(prev => ({
-    ...prev,
-    imagesText: prev.imagesText
-      ? `${prev.imagesText}\n${imagePath}`
-      : imagePath,
-  }));
-
-  // variant-level images (default only)
-  setVariants(prev => {
-    if (!prev || prev.length === 0) return prev;
-
-    return prev.map(v =>
-      v.isDefault ? { ...v, imageUrl: imagePath } : v
-    );
-  });
-}
-
-
-  async function handleImageUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageUploadState("uploading");
-    setImageUploadMessage("Η εικόνα ανέβηκε με επιτυχία.");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`${API}/admin/uploads/product-image`, {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Αποτυχία ανεβάσματος εικόνας");
-      }
-      const data = await res.json();
-      const imagePath = data?.path;
-      if (imagePath) {
-        assignUploadedImage(imagePath);
-      }
-      setImageUploadState("success");
-      setImageUploadMessage("Η εικόνα ανέβηκε με επιτυχία.");
-    } catch (err) {
-      console.error("Image upload failed", err);
-      setImageUploadState("error");
-      setImageUploadMessage(err.message || "Αποτυχία ανεβάσματος εικόνας.");
-    } finally {
-      e.target.value = "";
-    }
-  }
-
   // brand modal
   function handleOpenBrandModal() {
     setNewBrandName("");
@@ -406,8 +353,9 @@ export default function EditProduct() {
       color: v.color,
       sku: v.sku || null,
       ean: v.ean || null,
-      price: v.price ? Number(v.price) : null,
-      discountPrice: v.discountPrice ? Number(v.discountPrice) : null,
+      // offer/current price goes to price, regular/original to discountPrice
+      price: v.discountPrice ? Number(v.discountPrice) : null,
+      discountPrice: v.price ? Number(v.price) : null,
       stock: v.stock ? Number(v.stock) : null,
       reorderLevel: v.reorderLevel ? Number(v.reorderLevel) : null,
       allowBackorder: !!v.allowBackorder,
@@ -422,10 +370,8 @@ export default function EditProduct() {
           color: form.color,
           sku: form.sku || null,
           ean: form.ean || null,
-          price: form.price ? Number(form.price) : null,
-          discountPrice: form.discountPrice
-            ? Number(form.discountPrice)
-            : null,
+          price: form.discountPrice ? Number(form.discountPrice) : null,
+          discountPrice: form.price ? Number(form.price) : null,
           stock: form.stock ? Number(form.stock) : null,
           reorderLevel: form.reorderLevel
             ? Number(form.reorderLevel)
@@ -442,10 +388,9 @@ export default function EditProduct() {
       slug: form.slug,
       brand: form.brand || initialBrand || null,
       category: form.category || null,
-      price: form.price ? Number(form.price) : null,
-      discountPrice: form.discountPrice
-        ? Number(form.discountPrice)
-        : null,
+      // offer/current price goes to price, regular/original to discountPrice
+      price: form.discountPrice ? Number(form.discountPrice) : null,
+      discountPrice: form.price ? Number(form.price) : null,
       sku: form.sku || null,
       ean: form.ean || null,
       title: {
@@ -1053,66 +998,12 @@ export default function EditProduct() {
         </div>
 
         {/* Images */}
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium mb-1">
-              Image URLs (μία ανά γραμμή)
-            </label>
-            <textarea
-              name="imagesText"
-              value={form.imagesText}
-              onChange={handleChange}
-              rows={3}
-              placeholder="https://... https://... ή /uploads/images/xxx" className="w-full border rounded-lg px-3 py-2 text-sm"/>
-            {parsedImageUrls.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {parsedImageUrls.map((url, idx) => (
-                  <div
-                    key={`${url}-${idx}`}
-                    className="relative h-20 w-20 overflow-hidden rounded-md border border-slate-300 bg-white"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImageUrl(idx)}
-                      className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white text-xs shadow"
-                      aria-label="Remove image"
-                    >
-                      -
-                    </button>
-                    <img
-                      src={url}
-                      alt={`Περιήγηση... Δεν επιλέχθηκε αρχείο ${idx + 1}`}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.png";
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <label className="text-xs text-slate-600 flex items-center gap-2">
-                <input type="file" accept="image/*" onChange={handleImageUpload} />
-                Ανεβάστε εικόνα (αποθηκεύεται σε /uploads/images)
-              </label>
-              {imageUploadMessage && (
-                <span
-                  className={`text-xs ${
-                    imageUploadState === "success"
-                      ? "text-green-700"
-                      : imageUploadState === "error"
-                      ? "text-red-600"
-                      : "text-slate-600"
-                  }`}
-                >
-                  {imageUploadMessage}
-                </span>
-              )}
-            </div>
-          </div>
-
-        </div>
+        <ProductImagesField
+          images={parsedImageUrls}
+          onChange={handleImagesChange}
+          onImageUploaded={handleImageUploadedForVariant}
+          label="Εικόνες προϊόντος"
+        />
 
         <div className="flex flex-wrap gap-3">
           <button

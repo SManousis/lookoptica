@@ -1,4 +1,13 @@
+import { usePageSEO } from "../hooks/usePageSEO";
+
 export default function LookAtHome() {
+  usePageSEO({
+    title: "Οπτικά στο Σπίτι | Look Οπτικά",
+    description:
+      "Δεν μπορείτε να επισκεφθείτε το κατάστημα; Το Look Οπτικά έρχεται σε εσάς - δείτε γυαλιά στον χώρο σας με το Οπτικά στο Σπίτι.",
+    url: "https://www.lookoptica.gr/look-at-home",
+  });
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header className="space-y-2 text-center">

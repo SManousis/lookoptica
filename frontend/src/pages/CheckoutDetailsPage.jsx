@@ -2,10 +2,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
 export default function CheckoutDetailsPage() {
+  usePageSEO({ title: "Στοιχεία Παραγγελίας | Look Οπτικά", noindex: true });
+
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn, guestEmail, customer, setGuestEmail } =

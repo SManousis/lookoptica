@@ -3,8 +3,11 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTurnstile } from "../hooks/useTurnstile";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 export default function AccountLoginPage() {
+  usePageSEO({ title: "Σύνδεση | Look Οπτικά", noindex: true });
+
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useCustomerAuth();

@@ -30,7 +30,33 @@ function ensureLinkRel(rel) {
   return link;
 }
 
-export function usePageSEO({ title, description, url, image }) {
+const JSON_LD_SCRIPT_ID = "page-seo-jsonld";
+
+function setJsonLd(jsonLd) {
+  const existing = document.getElementById(JSON_LD_SCRIPT_ID);
+  if (!jsonLd) {
+    if (existing) existing.remove();
+    return;
+  }
+  const schemas = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+  let tag = existing;
+  if (!tag) {
+    tag = document.createElement("script");
+    tag.id = JSON_LD_SCRIPT_ID;
+    tag.type = "application/ld+json";
+    document.head.appendChild(tag);
+  }
+  tag.textContent = JSON.stringify(schemas.length === 1 ? schemas[0] : schemas);
+}
+
+export function usePageSEO({
+  title,
+  description,
+  url,
+  image,
+  noindex = false,
+  jsonLd,
+}) {
   useEffect(() => {
     if (title) {
       document.title = title;
@@ -45,6 +71,12 @@ export function usePageSEO({ title, description, url, image }) {
       const canonical = ensureLinkRel("canonical");
       canonical.setAttribute("href", url);
     }
+
+    const robotsTag = ensureMetaByName("robots");
+    robotsTag.setAttribute(
+      "content",
+      noindex ? "noindex, nofollow" : "index, follow"
+    );
 
     // Basic OpenGraph
     if (title) {
@@ -66,5 +98,8 @@ export function usePageSEO({ title, description, url, image }) {
       const ogImg = ensureMetaByProperty("og:image");
       ogImg.setAttribute("content", image);
     }
-  }, [title, description, url, image]);
+
+    setJsonLd(jsonLd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, url, image, noindex, JSON.stringify(jsonLd)]);
 }

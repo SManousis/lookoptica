@@ -11,6 +11,7 @@ from app.routers import checkout
 from app.routers import final_checkout
 from app.routers import customer_checkout
 from app.routers import orders
+from app.routers import withdrawal
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
 from app.routers.payments_viva import router as viva_router
@@ -105,6 +106,7 @@ app.include_router(final_checkout.router, prefix="/api")
 app.include_router(customer_checkout.router, prefix="/api")
 app.include_router(customer_auth.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
+app.include_router(withdrawal.router, prefix="/api")
 app.include_router(viva_router, prefix="/api")
 
 @app.get("/healthz")

@@ -2,8 +2,11 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 export default function AccountHomePage() {
+  usePageSEO({ title: "Ο Λογαριασμός μου | Look Οπτικά", noindex: true });
+
   const navigate = useNavigate();
   const { customer, isLoggedIn, logout } = useCustomerAuth();
 

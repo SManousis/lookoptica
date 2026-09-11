@@ -2,8 +2,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 export default function AccountRegisterPage() {
+  usePageSEO({ title: "Εγγραφή | Look Οπτικά", noindex: true });
+
   const navigate = useNavigate();
   const { register } = useCustomerAuth();
   const [form, setForm] = useState({

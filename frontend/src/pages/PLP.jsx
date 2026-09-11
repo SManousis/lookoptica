@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { isStockProduct, matchesCategoryAlias } from "../utils/categoryHelpers";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 const API = import.meta.env.VITE_API_BASE || "";
 const normalizeBrand = (value) => (value || "").trim().toLowerCase();
@@ -18,7 +19,7 @@ const CATEGORY_CONFIG = {
   sunglasses: {
     labelEl: "Γυαλιά Ηλίου",
     subtitle:
-      "Στυλάτα και προστατευτικά γυαλιά ηλίου για πόλη, θάλασσα και οδήγηση.",
+      "Στο Look Οπτικά θα βρεις μεγάλη ποικιλία γυαλιών ηλίου από αναγνωρισμένες μάρκες όπως Converse, Guess, DKNY, Ted Baker, Pepe Jeans και Hickmann, για άνδρες, γυναίκες και παιδιά. Όλα τα γυαλιά ηλίου διαθέτουν φακούς με προστασία UV400 και είναι αυθεντικά προϊόντα από την επίσημη αντιπροσωπεία κάθε μάρκας. Είτε ψάχνεις κάτι κλασικό για την καθημερινότητα είτε ένα statement κομμάτι για το καλοκαίρι, θα βρεις σκελετούς σε κάθε στυλ. Δωρεάν παραλαβή από το κατάστημά μας στο Χαλάνδρι ή δωρεάν μεταφορικά για αγορές άνω των 40€.",
     aliases: [
       "sunglasses",
       "sun-glasses",
@@ -34,7 +35,7 @@ const CATEGORY_CONFIG = {
   frames: {
     labelEl: "Σκελετοί Οράσεως",
     subtitle:
-      "Σκελετοί για καθημερινή χρήση, γραφείο και οδήγηση – από minimal μέχρι statement.",
+      "Οι σκελετοί οράσεως του Look Οπτικά καλύπτουν κάθε ανάγκη, από την καθημερινή χρήση στο γραφείο μέχρι πιο ιδιαίτερα σχέδια για βραδινές εξόδους. Συνεργαζόμαστε με αναγνωρισμένες μάρκες όπως Converse, Guess, DKNY, Ted Baker, Pepe Jeans και Hickmann, ώστε να βρεις τον σκελετό που ταιριάζει στο πρόσωπο και στο στυλ σου. Με πάνω από 50 χρόνια εμπειρίας στην οπτομετρία, η ομάδα μας μπορεί να σε καθοδηγήσει στην επιλογή του κατάλληλου μεγέθους και σχήματος. Όλοι οι σκελετοί είναι αυθεντικοί, με δυνατότητα δωρεάν παραλαβής από το κατάστημά μας στο Χαλάνδρι.",
     aliases: [
       "ophthalmic_frames",
       "frames",
@@ -51,7 +52,7 @@ const CATEGORY_CONFIG = {
   stock: {
     labelEl: "Stock",
     subtitle:
-      "Προσφορές stock για γυαλιά ηλίου και οράσεως σε περιορισμένα τεμάχια.",
+      "Στην κατηγορία Stock θα βρεις επιλεγμένα γυαλιά ηλίου και οράσεως σε προνομιακές τιμές, σε περιορισμένη διαθεσιμότητα τεμαχίων. Πρόκειται για αυθεντικά προϊόντα από τις ίδιες αναγνωρισμένες μάρκες που διαθέτουμε στο κατάστημα, σε τελευταία τεμάχια ή προηγούμενες σεζόν. Ιδανική επιλογή αν ψάχνεις ποιοτικά γυαλιά σε καλύτερη τιμή, χωρίς συμβιβασμό στην αυθεντικότητα.",
     aliases: [
       "stock",
       "stok",
@@ -67,7 +68,7 @@ const CATEGORY_CONFIG = {
   "contact-lenses": {
     labelEl: "Φακοί Επαφής",
     subtitle:
-      "Ημερήσιοι, μηνιαίοι και ειδικές λύσεις ανάλογα με τις ανάγκες της όρασής σου.",
+      "Το Look Οπτικά προσφέρει ημερήσιους, μηνιαίους και εξειδικευμένους φακούς επαφής (τορικούς, πολυεστιακούς) από αξιόπιστες μάρκες, ανάλογα με τις ανάγκες της όρασής σου. Αν δεν είσαι σίγουρος/η ποιος τύπος φακού σου ταιριάζει, η ομάδα μας με εμπειρία στην οπτομετρία μπορεί να σε καθοδηγήσει. Δωρεάν παραλαβή από το κατάστημα στο Χαλάνδρι ή αποστολή σε όλη την Ελλάδα.",
     aliases: [
       "contact_lenses",
       "contact-lenses",
@@ -79,7 +80,7 @@ const CATEGORY_CONFIG = {
   "other-products": {
     labelEl: "Άλλα προϊόντα",
     subtitle:
-      "Αξεσουάρ, θήκες, καθαριστικά και άλλα προϊόντα φροντίδας για τα γυαλιά σου.",
+      "Στα Άλλα Προϊόντα θα βρεις ό,τι χρειάζεσαι για τη φροντίδα των γυαλιών και των φακών επαφής σου: υγρά φακών επαφής, θήκες, πανάκια καθαρισμού και αξεσουάρ όπως αλυσίδες γυαλιών (Accessor-Eyes). Αυθεντικά προϊόντα, άμεσα διαθέσιμα με παραλαβή από το κατάστημα ή αποστολή σε όλη την Ελλάδα.",
     aliases: [
       "other_products",
       "other-products",
@@ -128,6 +129,52 @@ export default function CategoryPLP() {
 
   const config = CATEGORY_CONFIG[categorySlug];
   const audienceConfig = audienceSlug ? AUDIENCE_CONFIG[audienceSlug] : null;
+
+  const plpTitle = config
+    ? `${config.labelEl}${audienceConfig ? ` ${audienceConfig.labelEl}` : ""} | Look Οπτικά`
+    : "Look Οπτικά";
+  const plpDescription = config
+    ? `${config.subtitle} Δες όλη τη συλλογή${audienceConfig ? ` για ${audienceConfig.labelEl.toLowerCase()}` : ""} στο Look Οπτικά.`
+    : undefined;
+  const plpUrl = `https://www.lookoptica.gr/shop/${categorySlug || ""}${audienceSlug ? `/${audienceSlug}` : ""}`;
+  const plpCategoryUrl = `https://www.lookoptica.gr/shop/${categorySlug || ""}`;
+
+  usePageSEO({
+    title: plpTitle,
+    description: plpDescription,
+    url: plpUrl,
+    jsonLd: config
+      ? {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Αρχική",
+              item: "https://www.lookoptica.gr/",
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: config.labelEl,
+              item: audienceConfig ? plpCategoryUrl : plpUrl,
+            },
+            ...(audienceConfig
+              ? [
+                  {
+                    "@type": "ListItem",
+                    position: 3,
+                    name: audienceConfig.labelEl,
+                    item: plpUrl,
+                  },
+                ]
+              : []),
+          ],
+        }
+      : undefined,
+  });
+
   const view = searchParams.get("view") === "stock" ? "stock" : "all";
   const isStockView = view === "stock";
   const brandParam = searchParams.get("brand") || "";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
-import metrics from "/metrics.png";
+import metrics from "/metrics.jpg";
 import { usePageSEO } from "../hooks/usePageSEO"; 
 import { useCart } from "../context/CartContext";
 
@@ -14,7 +14,7 @@ function ShippingInfo() {
       <p><strong>Αντικαταβολή:</strong> <strong>Δωρεάν αντικαταβολή</strong> για αγορες ανω το 60€.</p>
       <p><strong>Αποστολή:</strong> 1–3 εργάσιμες μέρες για προϊόντα που είναι σε διαθεσιμα στο κατάστημα.</p>
       <p><strong>Παραλαβή:</strong> <strong>Δωρεάν </strong>παραλαβή από το κατάστημα Look Optica (Χαλάνδρι).</p>
-      <p><strong>Επιστροφες:</strong> 14 εργάσιμες μέρες για αλλαγές/επιστροφές, υπό την προϋπόθεση ότι το προϊόν δεν είναι χρησιμοποιημένο και στην αρχική του συσκευασία. Τα έξοδα επιστροφής επιβαρυνούν τον καταναλωτή.</p>
+      <p><strong>Επιστροφές:</strong> Δικαίωμα υπαναχώρησης εντός 14 ημερολογιακών ημερών από την παραλαβή, με πλήρη επιστροφή χρημάτων. Δείτε τους <a href="/terms" className="underline">όρους χρήσης</a> για λεπτομέρειες και εξαιρέσεις. Τα έξοδα επιστροφής επιβαρύνουν τον καταναλωτή.</p>
       <p><strong>Προϊόντα </strong> Ολα τα προϊόντα είναι αυθεντικά από την επίσημη αντιπροσωπεία.</p>
       <p><strong>Πληροφοριες:</strong> Για πληροφορίες τηλεφωνήστε στο <strong>+30 210 6898658</strong> ή στο <strong>+30 6944 223853</strong>.</p>
     </div>
@@ -267,25 +267,102 @@ export default function PDP() {
     active?.color || active?.colour || active?.name || active?.variantLabel || "";
 
   const siteName = "Look Optica";
-  const baseUrl = "https://lookoptica.gr";
+  const baseUrl = "https://www.lookoptica.gr";
+  const absoluteUrl = (path) =>
+    !path ? null : path.startsWith("http") ? path : `${baseUrl}${path}`;
 
-  const seoTitle = `${title} | ${siteName}`;
+  const seoTitle = brand
+    ? `${title} | ${brand} | ${siteName}`
+    : `${title} | ${siteName}`;
+
+  const truncate = (text, max) =>
+    text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
+
   const seoDescription =
     p?.metaDescription ||
-    p?.description ||
-    "Γυαλιά οράσεως και ηλίου από το Look Optica στο Χαλάνδρι.";
+    (p?.description ? truncate(p.description, 157) : null) ||
+    [
+      title,
+      brand ? `από ${brand}` : null,
+      (price ?? discountPrice) != null
+        ? `${Number(price ?? discountPrice).toFixed(2)}€`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" – ") +
+      ". Αυθεντικό προϊόν, δωρεάν παραλαβή από το Look Optica στο Χαλάνδρι.";
   const canonicalUrl = `${baseUrl}/product/${slug}`;
 
   const mainImageUrl =
     Array.isArray(p?.images) && p.images.length > 0
-      ? p.images[0]
+      ? absoluteUrl(p.images[0])
       : `${baseUrl}/placeholder.png`;
+
+  const AVAILABILITY_MAP = {
+    in_stock: "https://schema.org/InStock",
+    preorder: "https://schema.org/PreOrder",
+    unavailable: "https://schema.org/OutOfStock",
+  };
+
+  const sellingPrice = price ?? discountPrice;
+
+  const productJsonLd =
+    p && sellingPrice != null
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: title,
+          description: seoDescription,
+          image: imageList.map(absoluteUrl).filter(Boolean),
+          sku: sku || undefined,
+          gtin: ean || undefined,
+          brand: brand ? { "@type": "Brand", name: brand } : undefined,
+          offers: {
+            "@type": "Offer",
+            url: canonicalUrl,
+            priceCurrency: "EUR",
+            price: Number(sellingPrice).toFixed(2),
+            availability:
+              AVAILABILITY_MAP[statusValue] || "https://schema.org/InStock",
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "GR",
+              returnPolicyCategory:
+                "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: 14,
+              returnMethod: "https://schema.org/ReturnByMail",
+              returnFees: "https://schema.org/ReturnShippingFees",
+            },
+          },
+        }
+      : null;
 
   usePageSEO({
     title: seoTitle,
     description: seoDescription,
     url: canonicalUrl,
     image: mainImageUrl,
+    jsonLd: [
+      productJsonLd,
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Αρχική",
+            item: baseUrl + "/",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: title,
+            item: canonicalUrl,
+          },
+        ],
+      },
+    ].filter(Boolean),
   });
 
   useEffect(() => {
@@ -319,7 +396,7 @@ export default function PDP() {
       <nav className="text-sm text-slate-500 mb-4">
         <Link to="/" className="hover:underline">Home</Link> <span>›</span>{" "}
         <Link to="/shop" className="hover:underline">Shop</Link> <span>›</span>{" "}
-        <span className="text-slate-700">{slug}</span>
+        <span className="text-slate-700">{p ? title : slug}</span>
       </nav>
 
       {state === "loading" && <div>Loading…</div>}

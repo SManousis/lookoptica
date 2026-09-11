@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCustomerAuth } from "../context/customerAuthShared";
 import { useTurnstile } from "../hooks/useTurnstile";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 export default function CheckoutIdentifyPage() {
+  usePageSEO({ title: "Ολοκλήρωση Παραγγελίας | Look Οπτικά", noindex: true });
+
   const { isLoggedIn, customer, login, register, guestEmail, setGuestEmail } =
     useCustomerAuth();
   const {

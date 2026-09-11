@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApiFetch } from "../utils/adminApiFetch";
+import ProductImagesField from "../components/admin/ProductImagesField";
 
 
 
@@ -205,41 +206,22 @@ export default function AddProduct() {
 
 
 
-  const handleRemoveImageUrl = (index) => {
+  function handleImagesChange(newImages) {
+    setForm((prev) => ({ ...prev, imagesText: newImages.join("\n") }));
+  }
 
-    setForm((prev) => {
-
-      const urls = prev.imagesText
-
-        .split("\n")
-
-        .map((s) => s.trim())
-
-        .filter(Boolean);
-
-      urls.splice(index, 1);
-
-      return {
-
-        ...prev,
-
-        imagesText: urls.join("\n"),
-
-      };
-
+  function handleImageUploadedForVariant(imagePath) {
+    setVariants((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      return prev.map((v) =>
+        v.isDefault ? { ...v, imageUrl: imagePath } : v
+      );
     });
-
-  };
-
-  
+  }
 
 
 
   // ? NEW: brand options + modal state
-
-  const [imageUploadState, setImageUploadState] = useState("idle");
-
-  const [imageUploadMessage, setImageUploadMessage] = useState("");
 
   const [brandOptions, setBrandOptions] = useState([]);
 
@@ -327,72 +309,6 @@ export default function AddProduct() {
 
 
 
-  async function handleImageUpload(e) {
-
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    setImageUploadState("uploading");
-
-    setImageUploadMessage("");
-
-    try {
-
-      const formData = new FormData();
-
-      formData.append("file", file);
-
-      const res = await fetch(`${API}/admin/uploads/product-image`, {
-
-        method: "POST",
-
-        body: formData,
-
-        credentials: "include",
-
-      });
-
-      if (!res.ok) {
-
-        const text = await res.text();
-
-        throw new Error(text || "Αποτυχία ανεβάσματος εικόνας");
-
-      }
-
-      const data = await res.json();
-
-      const imagePath = data?.path;
-
-      if (imagePath) {
-
-        assignUploadedImage(imagePath);
-
-      }
-
-      setImageUploadState("success");
-
-      setImageUploadMessage("Η εικόνα ανέβηκε με επιτυχία.");
-
-    } catch (err) {
-
-      console.error("Image upload failed", err);
-
-      setImageUploadState("error");
-
-      setImageUploadMessage(err.message || "Αποτυχία ανεβάσματος εικόνας.");
-
-    } finally {
-
-      e.target.value = "";
-
-    }
-
-  }
-
-
-
   // ? NEW: handle adding a brand from the popup
 
   function handleOpenBrandModal() {
@@ -400,44 +316,6 @@ export default function AddProduct() {
     setNewBrandName("");
 
     setShowBrandModal(true);
-
-  }
-
-
-
-  function assignUploadedImage(imagePath) {
-
-    // product-level images
-
-    setForm(prev => ({
-
-      ...prev,
-
-      imagesText: prev.imagesText
-
-        ? `${prev.imagesText}\n${imagePath}`
-
-        : imagePath,
-
-    }));
-
-
-
-    // variant-level images (default only)
-
-    setVariants(prev => {
-
-      if (!prev || prev.length === 0) return prev;
-
-
-
-      return prev.map(v =>
-
-        v.isDefault ? { ...v, imageUrl: imagePath } : v
-
-      );
-
-    });
 
   }
 
@@ -1737,141 +1615,12 @@ export default function AddProduct() {
 
         {/* Images */}
 
-        <div className="space-y-3">
-
-            <div className="space-y-2">
-
-                <label className="block text-sm font-medium mb-1">
-
-                Image URLs (μία ανά γραμμή)
-
-                </label>
-
-                <textarea
-
-                name="imagesText"
-
-                value={form.imagesText}
-
-                onChange={handleChange}
-
-                rows={3}
-
-                placeholder="https://...\nhttps://... ή /uploads/images/xxx"
-
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-
-                />
-
-                {parsedImageUrls.length > 0 && (
-
-                  <div className="mt-2 flex flex-wrap gap-2">
-
-                    {parsedImageUrls.map((url, idx) => (
-
-                      <div
-
-                        key={`${url}-${idx}`}
-
-                        className="relative h-20 w-20 overflow-hidden rounded-md border border-slate-300 bg-white"
-
-                      >
-
-                        <button
-
-                          type="button"
-
-                          onClick={() => handleRemoveImageUrl(idx)}
-
-                          className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white text-xs shadow"
-
-                          aria-label="Remove image"
-
-                        >
-
-                          -
-
-                        </button>
-
-                        <img
-
-                          src={url}
-
-                          alt={`Περιήγηση... Δεν επιλέχθηκε αρχείο ${idx + 1}`}
-
-                          className="h-full w-full object-cover"
-
-                          onError={(e) => {
-
-                            e.currentTarget.src = "/placeholder.png";
-
-                          }}
-
-                        />
-
-                      </div>
-
-                    ))}
-
-                  </div>
-
-                )}
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-
-                  <label className="text-xs text-slate-600 flex items-center gap-2">
-
-                    <input
-
-                      type="file"
-
-                      accept="image/*"
-
-                      onChange={handleImageUpload}
-
-                      className="text-sm"
-
-                    />
-
-                    Ανεβάστε εικόνα (αποθηκεύεται σε /uploads/images)
-
-                  </label>
-
-                  {imageUploadMessage && (
-
-                    <span
-
-                      className={`text-xs ${
-
-                        imageUploadState === "success"
-
-                          ? "text-green-700"
-
-                          : imageUploadState === "error"
-
-                          ? "text-red-600"
-
-                          : "text-slate-600"
-
-                      }`}
-
-                    >
-
-                      {imageUploadMessage}
-
-                    </span>
-
-                  )}
-
-                </div>
-
-            </div>
-
-
-
-          </div>
-
-
+        <ProductImagesField
+          images={parsedImageUrls}
+          onChange={handleImagesChange}
+          onImageUploaded={handleImageUploadedForVariant}
+          label="Εικόνες προϊόντος"
+        />
 
         <div className="flex flex-wrap gap-3">
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 
 const API = import.meta.env.VITE_API_BASE || "";
@@ -20,6 +21,14 @@ const BRAND_SLIDE_INTERVAL = 3000;
 const BRAND_TRANSITION_MS = 600;
 
 export default function HomePage() {
+  usePageSEO({
+    title: "Look Οπτικά | Γυαλιά Ηλίου, Οράσεως & Φακοί Επαφής",
+    description:
+      "Ανακαλύψτε γυαλιά ηλίου, σκελετούς οράσεως και φακούς επαφής από κορυφαίες μάρκες στο Look Οπτικά. Παραλαβή από κατάστημα ή παράδοση με courier.",
+    url: "https://www.lookoptica.gr/",
+    image: "https://www.lookoptica.gr/logo.png",
+  });
+
   const [featured, setFeatured] = useState([]);
   const [state, setState] = useState("loading"); // loading | ok | error
   const [slideIndex, setSlideIndex] = useState(0);
@@ -136,11 +145,11 @@ export default function HomePage() {
           <div className="text-xs md:text-sm font-semibold text-amber-800 uppercase tracking-[0.2em]">
             Premium Eyewear
           </div>
-          <h2 className="mt-3 text-3xl md:text-5xl font-semibold text-white leading-tight">
+          <h1 className="mt-3 text-3xl md:text-5xl font-semibold text-white leading-tight">
             Νέες συλλογές γυαλιών
             <br />
             Ηλίου &amp; Οράσεως
-          </h2>
+          </h1>
           <p className="mt-4 max-w-xl text-sm md:text-base text-slate-100">
             Ελάτε σήμερα στο κατάστημα μας και διάλεξτε άπο μια πλούσια συλλογή γυαλιών ηλίου και οράσεως.
           </p>
@@ -285,7 +294,7 @@ export default function HomePage() {
             className="relative group rounded-2xl overflow-hidden"
             >
             <img
-                src="/cat-contacts.png"
+                src="/cat-contacts.jpg"
                 alt="Φακοί Επαφής"
                 className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {
@@ -316,7 +325,7 @@ export default function HomePage() {
             className="relative group rounded-2xl overflow-hidden"
             >
             <img
-                src="/cat-other.png"
+                src="/cat-other.jpg"
                 alt="Άλλα προϊόντα"
                 className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {

@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Link, useSearchParams, useNavigate } from
 import ProductCard from "./components/ProductCard";
 import PDP from "./pages/PDP";
 import { NAV_CATEGORIES } from "./components/NavConfig";
+import { usePageSEO } from "./hooks/usePageSEO";
 import AddProduct from "./pages/AddProduct";
 import CategoryPLP from "./pages/PLP";
 import "./index.css";
 import HomePage from "./pages/HomePage";
 import CartPage from "./pages/CartPage";
 import UsageTerms from "./pages/UsageTerms";
+import WithdrawalRequestPage from "./pages/WithdrawalRequestPage";
 import Contact from "./pages/Contact";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import InstagramIcon from "@mui/icons-material/Instagram";
@@ -49,6 +51,13 @@ import { isStockProduct } from "./utils/categoryHelpers";
 const API = import.meta.env.VITE_API_BASE;
 
 function ShopPLP() {
+  usePageSEO({
+    title: "Όλα τα Προϊόντα | Look Οπτικά",
+    description:
+      "Δες όλη τη συλλογή γυαλιών ηλίου, σκελετών οράσεως, φακών επαφής και αξεσουάρ στο Look Οπτικά.",
+    url: "https://www.lookoptica.gr/shop",
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get("view") === "stock" ? "stock" : "all";
   const isStockView = view === "stock";
@@ -863,6 +872,7 @@ function AppShell() {
           <Route path="/contact-lens/:slug" element={<ContactLensPDP />} />
           <Route path="/product/:slug" element={<PDP />} />
           <Route path="/terms" element={<UsageTerms />} />
+          <Route path="/returns" element={<WithdrawalRequestPage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout/details" element={<CheckoutDetailsPage />} />
@@ -999,6 +1009,10 @@ function AppShell() {
             <span>|</span>
             <Link to="/terms" className="hover:text-red-800">
               Όροι χρήσης
+            </Link>
+            <span>|</span>
+            <Link to="/returns" className="hover:text-red-800">
+              Υπαναχώρηση / Επιστροφές
             </Link>
           </span>
           <span className="md:text-right">

@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 export default function CartPage() {
+  usePageSEO({ title: "Καλάθι Αγορών | Look Οπτικά", noindex: true });
+
   const { items, totals, removeItem, updateQuantity, clearCart } = useCart();
 
   const subtotal = totals?.subtotal ?? 0;

@@ -1,4 +1,13 @@
+import { usePageSEO } from "../hooks/usePageSEO";
+
 export default function LowVision() {
+  usePageSEO({
+    title: "Βοηθήματα Χαμηλής Όρασης | Look Οπτικά",
+    description:
+      "Εξειδικευμένες υπηρεσίες και βοηθήματα χαμηλής όρασης, κατόπιν ραντεβού, στο Look Οπτικά.",
+    url: "https://www.lookoptica.gr/low-vision",
+  });
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header className="space-y-2 text-center">

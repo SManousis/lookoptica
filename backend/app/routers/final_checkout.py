@@ -2,7 +2,7 @@
 
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -53,15 +53,6 @@ def _to_decimal(value) -> Decimal:
         return Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
         return Decimal("0.00")
-
-
-def _maybe_decimal(value) -> Optional[Decimal]:
-    if value is None:
-        return None
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
 
 
 def compute_shipping_and_cod(
@@ -199,10 +190,9 @@ def get_checkout_quote(
                 detail=f"Product with SKU '{item.sku}' not found",
             )
 
-        provided_price = _maybe_decimal(item.unit_price)
-        unit_price = (
-            provided_price if provided_price is not None else _to_decimal(product.price)
-        ).quantize(Decimal("0.01"))
+        # item.unit_price is client-supplied and never trusted for the authoritative
+        # total - always price from the DB record.
+        unit_price = _to_decimal(product.price).quantize(Decimal("0.01"))
 
         line_subtotal = (unit_price * item.quantity).quantize(Decimal("0.01"))
         subtotal_dec += line_subtotal

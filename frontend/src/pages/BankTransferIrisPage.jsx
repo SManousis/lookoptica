@@ -2,6 +2,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import irisQR from "/IrisQr.png";
 import { useCart } from "../context/CartContext";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 const IBAN = import.meta.env.VITE_BANK_IBAN || "GR00 0000 0000 0000 0000 0000 000";
 const BANK_NAME = import.meta.env.VITE_BANK_NAME || "Eurobank";
@@ -35,6 +36,8 @@ function CopyField({ label, value }) {
 }
 
 export default function BankTransferIrisPage() {
+  usePageSEO({ title: "Τραπεζική Κατάθεση | Look Οπτικά", noindex: true });
+
   const location = useLocation();
   const navigate = useNavigate();
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);

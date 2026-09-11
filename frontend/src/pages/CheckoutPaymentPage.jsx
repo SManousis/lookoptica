@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/customerAuthShared";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -21,6 +22,8 @@ const PAYMENT_OPTIONS = [
 ];
 
 export default function CheckoutPaymentPage() {
+  usePageSEO({ title: "Πληρωμή & Αποστολή | Look Οπτικά", noindex: true });
+
   const { items, clearCart } = useCart();
   const navigate = useNavigate();
   const { isLoggedIn, customer, guestEmail } = useCustomerAuth();

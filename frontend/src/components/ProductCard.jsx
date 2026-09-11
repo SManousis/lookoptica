@@ -57,8 +57,16 @@ export default function ProductCard({ p }) {
 
       {/* Price */}
       <div className="flex items-baseline gap-2">
-        <div className="text-xl font-bold text-amber-700">€{p?.price}</div>
-        <div className="text-sm text-slate-400 line-through">€{p?.discountPrice}</div> 
+        {p?.discountPrice != null && p?.price != null && p.discountPrice > p.price ? (
+          <>
+            <div className="text-xl font-bold text-amber-700">€{p.price}</div>
+            <div className="text-sm text-slate-400 line-through">€{p.discountPrice}</div>
+          </>
+        ) : (
+          <div className="text-xl font-bold text-amber-700">
+            €{p?.price ?? p?.discountPrice}
+          </div>
+        )}
       </div>
     </Link>
   );

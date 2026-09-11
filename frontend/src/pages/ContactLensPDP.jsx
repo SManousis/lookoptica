@@ -41,9 +41,11 @@ function ShippingInfo() {
         παραλαβή από το κατάστημα Look Optica (Χαλάνδρι).
       </p>
       <p>
-        <strong>Επιστροφές:</strong> 14 εργάσιμες μέρες για αλλαγές/επιστροφές,
-        υπό την προϋπόθεση ότι το προϊόν δεν είναι χρησιμοποιημένο και στην
-        αρχική του συσκευασία. Τα έξοδα επιστροφής επιβαρύνουν τον καταναλωτή.
+        <strong>Επιστροφές:</strong> Δικαίωμα υπαναχώρησης εντός 14 ημερολογιακών
+        ημερών από την παραλαβή, με πλήρη επιστροφή χρημάτων, εκτός αν η
+        σφράγιση του προϊόντος έχει ανοιχτεί για λόγους υγιεινής. Δείτε τους{" "}
+        <a href="/terms" className="underline">όρους χρήσης</a> για λεπτομέρειες.
+        Τα έξοδα επιστροφής επιβαρύνουν τον καταναλωτή.
       </p>
       <p>
         <strong>Προϊόντα:</strong> Όλα τα προϊόντα είναι αυθεντικά από την
@@ -130,21 +132,95 @@ export default function ContactLensPDP() {
 
   const siteName = "Look Optica";
   const baseUrl = "https://www.lookoptica.gr";
-  const seoTitle = `${title} | ${siteName}`;
+  const absoluteUrl = (path) =>
+    !path ? null : path.startsWith("http") ? path : `${baseUrl}${path}`;
+  const seoTitle = product?.brand
+    ? `${title} | ${product.brand} | ${siteName}`
+    : `${title} | ${siteName}`;
+
+  const truncate = (text, max) =>
+    text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
+
   const seoDescription =
     product?.metaDescription ||
-    product?.description ||
-    "Φακοί επαφής από το Look Optica στο Χαλάνδρι.";
+    (product?.description ? truncate(product.description, 157) : null) ||
+    [
+      title,
+      product?.brand ? `από ${product.brand}` : null,
+      (price ?? discountPrice) != null
+        ? `${Number(price ?? discountPrice).toFixed(2)}€`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" – ") +
+      ". Αυθεντικό προϊόν, δωρεάν παραλαβή από το Look Optica στο Χαλάνδρι.";
   const canonicalUrl = `${baseUrl}/contact-lens/${slug}`;
   const mainImageUrl =
-    (Array.isArray(product?.images) && product.images[0]) ||
+    (Array.isArray(product?.images) && product.images[0] && absoluteUrl(product.images[0])) ||
     `${baseUrl}/placeholder.png`;
+
+  const AVAILABILITY_MAP = {
+    in_stock: "https://schema.org/InStock",
+    preorder: "https://schema.org/PreOrder",
+    unavailable: "https://schema.org/OutOfStock",
+  };
+  const sellingPrice = price ?? discountPrice;
+  const brand = product?.brand;
+
+  const productJsonLd =
+    product && sellingPrice != null
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: title,
+          description: seoDescription,
+          image: (Array.isArray(product?.images) ? product.images : [mainImage])
+            .map(absoluteUrl)
+            .filter(Boolean),
+          sku: sku || undefined,
+          gtin: ean || undefined,
+          brand: brand ? { "@type": "Brand", name: brand } : undefined,
+          offers: {
+            "@type": "Offer",
+            url: canonicalUrl,
+            priceCurrency: "EUR",
+            price: Number(sellingPrice).toFixed(2),
+            availability:
+              AVAILABILITY_MAP[product?.status] || "https://schema.org/InStock",
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "GR",
+              returnPolicyCategory:
+                "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: 14,
+              returnMethod: "https://schema.org/ReturnByMail",
+              returnFees: "https://schema.org/ReturnShippingFees",
+            },
+          },
+        }
+      : null;
 
   usePageSEO({
     title: seoTitle,
     description: seoDescription,
     url: canonicalUrl,
     image: mainImageUrl,
+    jsonLd: [
+      productJsonLd,
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Αρχική", item: baseUrl + "/" },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: title,
+            item: canonicalUrl,
+          },
+        ],
+      },
+    ].filter(Boolean),
   });
 
   // ---------- options derived from variants ----------
@@ -420,7 +496,7 @@ export default function ContactLensPDP() {
           Φακοί επαφής
         </Link>{" "}
         <span>›</span>{" "}
-        <span className="text-slate-700">{slug}</span>
+        <span className="text-slate-700">{product ? title : slug}</span>
       </nav>
 
       {state === "loading" && <div>Loading…</div>}

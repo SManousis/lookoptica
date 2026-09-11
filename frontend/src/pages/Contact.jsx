@@ -1,10 +1,18 @@
 
 import { useState } from "react";
 import { useTurnstile } from "../hooks/useTurnstile";
+import { usePageSEO } from "../hooks/usePageSEO";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
 export default function Contact() {
+  usePageSEO({
+    title: "Επικοινωνία | Look Οπτικά",
+    description:
+      "Επικοινωνήστε με το Look Οπτικά στο Χαλάνδρι. Στοιχεία καταστήματος, τηλέφωνο και φόρμα επικοινωνίας για ραντεβού και ερωτήσεις.",
+    url: "https://www.lookoptica.gr/contact",
+  });
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -90,10 +98,10 @@ export default function Contact() {
 
         {/* Right side */}
         <div className="space-y-4">
-          <h1 className="text-2xl font-semibold text-amber-700">Ωράριο</h1>
-          <p className="text-slate-700">Δευτέρα - Τετάρτη: 10:00 - 15:30</p>
+          <h2 className="text-2xl font-semibold text-amber-700">Ωράριο</h2>
+          <p className="text-slate-700">Δευτέρα, Τετάρτη: 10:00 - 15:30</p>
           <p className="text-slate-700">
-            Τρίτη - Πέμπτη - Παρασκευή: 10:00 - 21:00
+            Τρίτη, Πέμπτη, Παρασκευή: 10:00 - 21:00
           </p>
           <p className="text-slate-700">Σάββατο: 10:00 - 16:00</p>
         </div>

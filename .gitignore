@@ -21,3 +21,4 @@ __pycache__/
 dist/
 build/
 coverage/
+frontend/public/sitemap.xml
