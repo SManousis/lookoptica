@@ -13,6 +13,9 @@ from app.routers import customer_checkout
 from app.routers import orders
 from app.routers import withdrawal
 from app.routers import reviews
+from app.routers import newsletter
+from app.routers import promo_codes
+from app.routers import wishlist
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
 from app.routers.payments_viva import router as viva_router
@@ -77,6 +80,7 @@ app.add_middleware(
     window_seconds=60,             # 1 minute
     protected_prefixes=[
         "/api/admin/auth",         # ALL auth endpoints
+        "/api/newsletter/subscribe",  # throttle newsletter signup spam
     ],
 )
 
@@ -109,6 +113,9 @@ app.include_router(customer_auth.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(withdrawal.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
+app.include_router(newsletter.router, prefix="/api")
+app.include_router(promo_codes.router, prefix="/api")
+app.include_router(wishlist.router, prefix="/api")
 app.include_router(viva_router, prefix="/api")
 
 @app.get("/healthz")

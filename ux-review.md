@@ -168,7 +168,7 @@ even for logged-in customers. `AccountHomePage.jsx` now has an "Οι
 παραγγελίες μου" section listing each order's date, item count, and payment
 method.
 
-## 7. No promo codes, no wishlist, and the newsletter form is fake
+## 7. ~~The newsletter form is fake~~ — FIXED. ~~No promo codes, no wishlist.~~ — FIXED
 
 Correcting myself from the first pass of this review: there **is** a
 newsletter section on the homepage (`HomePage.jsx`) — I missed it initially.
@@ -180,12 +180,64 @@ subscribed; you never actually receive it. This is worth fixing properly
 with collected emails) rather than leaving it as UI that quietly lies to
 both you and the customer.
 
+**Fix:** new `NewsletterSubscriber` model/table (`email` unique) and
+`backend/app/routers/newsletter.py`: `POST /api/newsletter/subscribe`
+(public) stores the email and emails you a notification (same SMTP pattern
+as contact-form/review notifications), `GET /api/admin/newsletter`
+(admin-auth) lists subscribers for whenever you need to export/use the list.
+Deliberately **not** sending a confirmation email to the subscriber — a
+public signup endpoint that emails whatever address it's given is a classic
+abuse vector for spamming a third party's inbox; storing + notifying you is
+enough for now, with no inbox exposed to abuse. Duplicate signups are
+silently treated as success (no email-enumeration signal). Rate-limited to
+10 requests/min per IP via the existing `RateLimiterMiddleware`, same as the
+admin-auth endpoints. `HomePage.jsx`'s form now actually calls this endpoint
+with loading/success/error states instead of a fake `alert()`.
+
 Still genuinely missing:
 - **Promo codes** — useful for the exact kind of one-off campaigns (referral,
   abandoned-cart win-back, social media promo) that convert hesitant buyers.
 - **Wishlist** — lower priority for this catalog size, but relevant for
   prescription frames specifically, where people often browse across
   multiple visits before committing.
+
+**Fix (promo codes):** new `PromoCode` model (code, `discount_type`
+percent/fixed, `discount_value`, optional `min_order_amount` and `max_uses`,
+`times_used` counter, optional `expires_at`, `is_active`) and
+`backend/app/routers/promo_codes.py` with a shared `validate_promo_code()`
+helper plus full admin CRUD (`/api/admin/promo-codes`, new
+`AdminPromoCodesPage.jsx` at `/admin/promo-codes`, linked from the admin
+nav). The discount is **always computed server-side from the DB-trusted
+subtotal**, matching the existing rule that checkout pricing is never
+trusted from the client (same principle as the SKU-price fix in
+`final_checkout.py`). `POST /api/checkout/quote` now accepts an optional
+`promo_code` and returns `discount_amount` / `promo_code_applied` /
+`promo_code_error` without incrementing usage (a preview shouldn't burn a
+use). `CheckoutPaymentPage.jsx` has a code input + "Εφαρμογή" button in the
+order summary, showing the discount line or the validation error inline.
+Free-shipping thresholds are still evaluated against the *pre-discount*
+subtotal, so a coupon can't accidentally cost someone their free shipping.
+Usage is only actually incremented, and the code recorded on the order,
+when `POST /api/orders` is called (a new `promo_code` column on
+`OrderNotification`, added the same idempotent `ALTER TABLE ... ADD COLUMN
+IF NOT EXISTS` way as `customer_id` was in Section 6) — so browsing with an
+invalid/expired code costs nothing, only a completed order does.
+
+**Fix (wishlist):** new `WishlistItem` model (`customer_id` + `product_slug`,
+unique together) and `backend/app/routers/wishlist.py`
+(`GET/POST /api/customer/wishlist`, `DELETE /api/customer/wishlist/{slug}`,
+all auth-gated the same way as order history). Frontend: a new
+`WishlistContext` fetches the logged-in customer's wishlisted slugs once and
+keeps them in memory (optimistic add/remove, reverted on a failed request);
+a heart-icon `WishlistButton` is wired into `ProductCard.jsx` (top-right
+corner of every product image, sitewide), `PDP.jsx`, and
+`ContactLensPDP.jsx` (next to "Προσθήκη στο καλάθι"). Clicking it while
+logged out redirects to `/account/login` instead of silently failing. New
+`/account/wishlist` page (linked from `AccountHomePage.jsx`) lists full
+product cards for each wishlisted slug, fetched from the existing public
+product-detail endpoint. Not persisted client-side (e.g. localStorage) since
+it's inherently tied to a logged-in customer, unlike the guest-friendly
+cart.
 
 ---
 
@@ -198,13 +250,43 @@ Still genuinely missing:
   a real active discount (`discountPrice > price`) — reuses the product data
   the homepage already fetches for "featured," so no extra network request.
   Only renders when there's actually a live discount to show.
+
+  **2026-09-15 follow-up:** that first version just took the first 8 items
+  from the "featured" fetch (newest 24 products) that happened to have a
+  discount — so the bar was really just "latest discounted products," could
+  skew entirely to one category, and had no price ceiling. Changed to two
+  targeted `/api/shop-products` requests (reusing the same category-alias
+  matching `PLP.jsx` already uses for `/shop/sunglasses` and `/shop/frames`,
+  since the catalog has several spelling variants per category from the
+  bulk import), filtered to real discount + price ≤ €80, then interleaved
+  sunglasses/frames so the bar is an actual mix instead of whichever
+  category happened to dominate the newest batch. Verified live: fetching
+  only the 60 newest per category found just 2 eligible frames vs 8
+  sunglasses (too thin a pool); bumped to the backend's max limit (200),
+  which found 34 sunglasses / 42 frames — a real, balanced pool to draw
+  from.
 - **youandeyeoptics.gr** organizes primary navigation by **brand** as a
   first-class browsing path (`/brands/sunglasses`, `/brands/frames`), in
   addition to category. You have a brand *filter* within category pages
   (`PLP.jsx`'s brand dropdown), but no direct "shop by brand" entry point —
   relevant since you already lean on recognizable brand names (Converse,
-  Guess, DKNY, Ted Baker, Pepe Jeans, Hickmann) as a trust signal. **Not yet
-  done** — still open.
+  Guess, DKNY, Ted Baker, Pepe Jeans, Hickmann) as a trust signal.
+  ~~Not yet done~~ — **turned out to already exist and be broken, now
+  fixed.** `HomePage.jsx` already has a brand-logo marquee (Converse, DKNY,
+  Guess, Hickmann, Paul Frank, Pepe Jeans, Ted Baker) linking each logo to
+  `/shop?brand=<Name>`, and `/shop` already reads and filters on that param
+  — this is the same pattern as youandeyeoptics.gr's `/brands/...` URLs,
+  just query-param-based instead of path-based. Checked it against the live
+  catalog (1017 products, 38 distinct brand values) before touching
+  anything: the **"Hickmann" logo linked to zero results** — the catalog's
+  actual brand value is "Ana Hickmann" (51 products), not "Hickmann", and
+  the filter is an exact match. **Fixed** by correcting the logo's `brand`
+  value to `"Ana Hickmann"`. The other six logos all resolved correctly
+  (17–73 products each). Deliberately left as-is otherwise, per your call:
+  the marquee only surfaces 7 of 38 brands (missing bigger sellers like
+  Prime/163, Moritz/132, Rebecca Blu/99, Lussile/72, Bulget/45) — expanding
+  the bar or adding a dedicated all-brands page is a separate future option
+  if you want it, not done now.
 - **youandeyeoptics.gr** prominently advertises **free optometry services**
   at their physical locations on the homepage itself — using an in-person
   service as an online trust/differentiation signal. You have genuinely
@@ -319,3 +401,4 @@ touches the checkout flow directly — want me to hide it now?
    need a campaign to use them for, etc.).
 
 Want to start with #1 now? It's the fastest win in here.
+

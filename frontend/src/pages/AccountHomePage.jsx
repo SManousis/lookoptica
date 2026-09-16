@@ -129,12 +129,18 @@ export default function AccountHomePage() {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Link
           to="/checkout/details"
           className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white"
         >
           Συνέχεια στο checkout
+        </Link>
+        <Link
+          to="/account/wishlist"
+          className="rounded-lg border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+        >
+          Λίστα επιθυμιών
         </Link>
         <button
           onClick={logout}

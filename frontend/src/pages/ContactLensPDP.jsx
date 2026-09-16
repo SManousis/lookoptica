@@ -5,6 +5,8 @@ import { useCart } from "../context/CartContext";
 import { usePageSEO } from "../hooks/usePageSEO";
 import { useProductReviews } from "../hooks/useProductReviews";
 import ProductReviews from "../components/ProductReviews";
+import WishlistButton from "../components/WishlistButton";
+import { sanitizeSku, sanitizeGtin } from "../utils/structuredData";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -131,7 +133,9 @@ export default function ContactLensPDP() {
   const discountPrice = product?.discountPrice ?? attrs.discountPrice; // regular/compare price
 
   const sku = product?.sku;
-  const ean = product?.ean;
+  // Sanitize before use in structured data / display - see structuredData.js
+  const displaySku = sanitizeSku(product?.sku);
+  const displayGtin = sanitizeGtin(product?.ean);
 
   const siteName = "Look Optica";
   const baseUrl = "https://www.lookoptica.gr";
@@ -180,8 +184,8 @@ export default function ContactLensPDP() {
           image: (Array.isArray(product?.images) ? product.images : [mainImage])
             .map(absoluteUrl)
             .filter(Boolean),
-          sku: sku || undefined,
-          gtin: ean || undefined,
+          sku: displaySku,
+          gtin: displayGtin,
           brand: brand ? { "@type": "Brand", name: brand } : undefined,
           offers: {
             "@type": "Offer",
@@ -584,8 +588,8 @@ export default function ContactLensPDP() {
 
             {/* SKU / EAN */}
             <div className="text-sm text-slate-600">
-              {sku && <span className="mr-4">SKU: {sku}</span>}
-              {ean && <span>EAN: {ean}</span>}
+              {displaySku && <span className="mr-4">SKU: {displaySku}</span>}
+              {displayGtin && <span>EAN: {displayGtin}</span>}
             </div>
 
             {/* BC / Dia */}
@@ -725,14 +729,20 @@ export default function ContactLensPDP() {
 
             {/* Add to cart */}
             <div className="pt-4 space-y-2">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800 disabled:opacity-60"
-                disabled={!canAddToCart}
-              >
-                Προσθήκη στο καλάθι
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800 disabled:opacity-60"
+                  disabled={!canAddToCart}
+                >
+                  Προσθήκη στο καλάθι
+                </button>
+                <WishlistButton
+                  slug={slug}
+                  className="rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50"
+                />
+              </div>
               {added && (
                 <p className="text-sm text-emerald-700">
                   Προστέθηκε στο καλάθι!{" "}

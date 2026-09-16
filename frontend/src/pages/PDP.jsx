@@ -6,6 +6,8 @@ import { usePageSEO } from "../hooks/usePageSEO";
 import { useCart } from "../context/CartContext";
 import ProductReviews from "../components/ProductReviews";
 import { useProductReviews } from "../hooks/useProductReviews";
+import WishlistButton from "../components/WishlistButton";
+import { sanitizeSku, sanitizeGtin } from "../utils/structuredData";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -224,7 +226,12 @@ export default function PDP() {
   const price = active?.price ?? p?.price;
   const discountPrice = active?.discountPrice ?? p?.discountPrice;
   const sku = active?.sku || p?.sku;
-  const ean = active?.ean || p?.ean;
+  // Some imported variant SKUs are garbage (empty, or 100+ char URL-encoded
+  // slug fragments) and some "ean" values aren't valid GTINs - sanitize
+  // before using them in structured data or showing them to customers,
+  // falling back to the base product's sku/ean when the variant's is bad.
+  const displaySku = sanitizeSku(active?.sku) || sanitizeSku(p?.sku);
+  const displayGtin = sanitizeGtin(active?.ean) || sanitizeGtin(p?.ean);
 
   // images: first prefer active.images, then p.images, then placeholder
   const variantImages = Array.isArray(active?.images) ? active.images.filter(Boolean) : [];
@@ -302,8 +309,8 @@ export default function PDP() {
           name: title,
           description: seoDescription,
           image: imageList.map(absoluteUrl).filter(Boolean),
-          sku: sku || undefined,
-          gtin: ean || undefined,
+          sku: displaySku,
+          gtin: displayGtin,
           brand: brand ? { "@type": "Brand", name: brand } : undefined,
           offers: {
             "@type": "Offer",
@@ -487,8 +494,8 @@ export default function PDP() {
 
             {/* SKU / EAN */}
             <div className="text-sm text-slate-600">
-              {sku && <span className="mr-4">SKU: {sku}</span>}
-              {ean && <span>EAN: {ean}</span>}
+              {displaySku && <span className="mr-4">SKU: {displaySku}</span>}
+              {displayGtin && <span>EAN: {displayGtin}</span>}
             </div>
 
             {/* Stock info */}
@@ -547,14 +554,20 @@ export default function PDP() {
             
             {/* Buttons & back link */}
             <div className="pt-4 space-y-2">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800"
-                disabled={!price}
-              >
-                Προσθήκη στο καλάθι
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="px-4 py-2 rounded-xl bg-amber-700 text-white font-semibold hover:bg-amber-800"
+                  disabled={!price}
+                >
+                  Προσθήκη στο καλάθι
+                </button>
+                <WishlistButton
+                  slug={slug}
+                  className="rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50"
+                />
+              </div>
               {added && (
                 <p className="text-sm text-red-700">
                   Προστέθηκε στο καλάθι!{" "}

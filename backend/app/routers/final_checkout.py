@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.deps.admin_auth import get_db
 from app.models.product import Product as ProductModel
+from app.routers.promo_codes import validate_promo_code
 
 router = APIRouter(
     prefix="/checkout",
@@ -127,6 +128,7 @@ class CheckoutQuoteRequest(BaseModel):
     items: List[CheckoutItem]
     shipping_method: ShippingMethod
     payment_method: PaymentMethod
+    promo_code: str | None = None
 
 
 class CheckoutQuoteLine(BaseModel):
@@ -144,6 +146,9 @@ class CheckoutQuoteResponse(BaseModel):
     subtotal: float
     shipping_cost: float
     cod_fee: float
+    discount_amount: float = 0.0
+    promo_code_applied: bool = False
+    promo_code_error: str | None = None
     total: float
 
 
@@ -212,18 +217,37 @@ def get_checkout_quote(
             )
         )
 
+    # Shipping/COD thresholds are evaluated against the pre-discount subtotal,
+    # same as before - a coupon shouldn't cost the customer their free-shipping
+    # eligibility.
     shipping_cost_dec, cod_fee_dec = compute_shipping_and_cod(
         subtotal=subtotal_dec,
         shipping_method=payload.shipping_method,
         payment_method=payload.payment_method,
     )
 
-    total_dec = (subtotal_dec + shipping_cost_dec + cod_fee_dec).quantize(Decimal("0.01"))
+    discount_dec = Decimal("0.00")
+    promo_applied = False
+    promo_error = None
+    if payload.promo_code:
+        promo_row, discount_dec, promo_error = validate_promo_code(
+            db, payload.promo_code, subtotal_dec
+        )
+        promo_applied = promo_row is not None
+
+    total_dec = (
+        subtotal_dec - discount_dec + shipping_cost_dec + cod_fee_dec
+    ).quantize(Decimal("0.01"))
+    if total_dec < Decimal("0.00"):
+        total_dec = Decimal("0.00")
 
     return CheckoutQuoteResponse(
         items=lines,
         subtotal=float(subtotal_dec),
         shipping_cost=float(shipping_cost_dec),
         cod_fee=float(cod_fee_dec),
+        discount_amount=float(discount_dec),
+        promo_code_applied=promo_applied,
+        promo_code_error=promo_error,
         total=float(total_dec),
     )

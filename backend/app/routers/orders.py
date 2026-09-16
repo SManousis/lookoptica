@@ -13,6 +13,7 @@ from app.db import SessionLocal, engine
 from app.deps.admin_auth import get_current_admin_user
 from app.models.customer_session import CustomerSession
 from app.models.order_notification import OrderNotification
+from app.models.promo_code import PromoCode
 from app.routers.customer_auth import get_current_customer
 
 router = APIRouter(tags=["orders"])
@@ -32,6 +33,12 @@ def ensure_table():
                 text(
                     "ALTER TABLE order_notifications "
                     "ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "ALTER TABLE order_notifications "
+                    "ADD COLUMN IF NOT EXISTS promo_code VARCHAR(50)"
                 )
             )
         _TABLE_READY = True
@@ -67,6 +74,7 @@ def _resolve_customer_id(request: Request, db: Session) -> Optional[int]:
 class PlaceOrderPayload(BaseModel):
     product_codes: List[str] = Field(..., min_length=1)
     payment_method: str = Field(..., min_length=2, max_length=50)
+    promo_code: Optional[str] = Field(default=None, max_length=50)
     contact_name: Optional[str] = Field(default=None, max_length=255)
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = Field(default=None, max_length=50)
@@ -87,6 +95,7 @@ class OrderNotificationResponse(BaseModel):
     id: int
     product_codes: List[str]
     payment_method: str
+    promo_code: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
@@ -161,10 +170,29 @@ def create_order_notification(
             detail="Payment method is required.",
         )
 
+    promo_code_input = (payload.promo_code or "").strip().upper() or None
+    if promo_code_input:
+        promo_row = (
+            db.query(PromoCode).filter(PromoCode.code == promo_code_input).first()
+        )
+        if (
+            promo_row
+            and promo_row.is_active
+            and (promo_row.max_uses is None or promo_row.times_used < promo_row.max_uses)
+            and (
+                promo_row.expires_at is None
+                or promo_row.expires_at.replace(tzinfo=promo_row.expires_at.tzinfo or timezone.utc)
+                >= datetime.now(timezone.utc)
+            )
+        ):
+            promo_row.times_used += 1
+            db.add(promo_row)
+
     record = OrderNotification(
         customer_id=_resolve_customer_id(request, db),
         product_codes=",".join(codes),
         payment_method=payment_method,
+        promo_code=promo_code_input,
         contact_name=(payload.contact_name or "").strip() or None,
         contact_email=(payload.contact_email or "").strip() or None,
         contact_phone=(payload.contact_phone or "").strip() or None,
@@ -212,6 +240,7 @@ def list_customer_orders(
                 id=record.id,
                 product_codes=product_codes,
                 payment_method=record.payment_method,
+                promo_code=record.promo_code,
                 contact_name=record.contact_name,
                 contact_email=record.contact_email,
                 contact_phone=record.contact_phone,
@@ -254,6 +283,7 @@ def list_order_notifications(
                 id=record.id,
                 product_codes=product_codes,
                 payment_method=record.payment_method,
+                promo_code=record.promo_code,
                 contact_name=record.contact_name,
                 contact_email=record.contact_email,
                 contact_phone=record.contact_phone,

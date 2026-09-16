@@ -11,6 +11,7 @@ class OrderNotification(Base):
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
     product_codes = Column(Text, nullable=False)
+    promo_code = Column(String(50), nullable=True)
     payment_method = Column(String(50), nullable=False)
     contact_name = Column(String(255), nullable=True)
     contact_email = Column(String(255), nullable=True)

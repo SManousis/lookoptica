@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import placeholder from "/placeholder.png"; // Vite-resolved path
+import WishlistButton from "./WishlistButton";
 
 function formatCategory(category) {
   if (!category) return "";
@@ -27,12 +28,16 @@ export default function ProductCard({ p }) {
 
   return (
     <Link to={productUrl} className="block group">
-        <div className="w-full rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+        <div className="relative w-full rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
           <img
             src={firstImage}
             alt={title}
             className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-105"
             onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
+          />
+          <WishlistButton
+            slug={p.slug}
+            className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
           />
         </div>
 

@@ -25,10 +25,12 @@ import ProtectAdminRoute from "./components/ProtectAdminRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
 import AdminDeletedProductsPage from "./pages/admin/AdminDeletedProductsPage";
 import AdminMediaPage from "./pages/admin/AdminMediaPage";
 import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
+import AdminPromoCodesPage from "./pages/admin/AdminPromoCodesPage";
 import EditProduct from "./pages/admin/EditProduct";
 import AdminContactLensesPage from "./pages/admin/AdminContactLensesPage";
 import AdminContactLensVariantsPage from "./pages/admin/AdminContactLensVariantsPage";
@@ -39,6 +41,7 @@ import CheckoutIdentifyPage from "./pages/CheckoutIdentifyPage";
 import AccountRegisterPage from "./pages/AccountRegisterPage";
 import AccountLoginPage from "./pages/AccountLoginPage";
 import AccountHomePage from "./pages/AccountHomePage";
+import WishlistPage from "./pages/WishlistPage";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import SearchIcon from "@mui/icons-material/Search";
@@ -602,6 +605,7 @@ function AppShell() {
         { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
         { label: "Admin · Media Library", to: "/admin/media" },
         { label: "Admin · Reviews", to: "/admin/reviews" },
+        { label: "Admin · Promo Codes", to: "/admin/promo-codes" },
         { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
         { label: "Admin · ERP Import", to: "/admin/import" },
         { label: "Admin · Logout", action: "logout" },
@@ -865,6 +869,13 @@ function AppShell() {
                     Reviews
                   </Link>
                   <Link
+                    to="/admin/promo-codes"
+                    className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
+                    onClick={() => setOpenCategory(null)}
+                  >
+                    Promo Codes
+                  </Link>
+                  <Link
                     to="/admin/contact-lenses"
                     className="block px-4 py-2 text-sm hover:bg-slate-100 whitespace-nowrap"
                     onClick={() => setOpenCategory(null)}
@@ -997,6 +1008,7 @@ function AppShell() {
           <Route path="/account/register" element={<AccountRegisterPage />} />
           <Route path="/account/login" element={<AccountLoginPage />} />
           <Route path="/account" element={<AccountHomePage />} />
+          <Route path="/account/wishlist" element={<WishlistPage />} />
           <Route path="/checkout/bank-transfer" element={<BankTransferIrisPage />} />
 
           {/* Admin products list (protected) */}
@@ -1029,6 +1041,14 @@ function AppShell() {
             element={
               <ProtectAdminRoute>
                 <AdminReviewsPage />
+              </ProtectAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/promo-codes"
+            element={
+              <ProtectAdminRoute>
+                <AdminPromoCodesPage />
               </ProtectAdminRoute>
             }
           />
@@ -1160,8 +1180,10 @@ export default function App() {
       <AdminAuthProvider>
         <CustomerAuthProvider>
           <CartProvider>
-            <ScrollToTop />
-            <AppShell />
+            <WishlistProvider>
+              <ScrollToTop />
+              <AppShell />
+            </WishlistProvider>
           </CartProvider>
         </CustomerAuthProvider>
       </AdminAuthProvider>

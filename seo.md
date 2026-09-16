@@ -168,6 +168,47 @@ Results Test](https://search.google.com/test/rich-results) and confirm it
 detects the `Product` and `BreadcrumbList` types with no errors. Same for the
 homepage to confirm the `Optician` block validates.
 
+### 2026-09-15: Merchant listings errors from Search Console ("Invalid string
+length in field sku", "Invalid GTIN") — FIXED
+
+Search Console flagged both issues sitewide. Root-caused by pulling every
+product's live `sku`/variant-`sku`/`ean` from the API (~1000 products) and
+checking them against Google's actual rules instead of guessing:
+
+- **`sku`**: `PDP.jsx` prefers the *selected variant's* sku (`active?.sku`)
+  over the base product's for its `Product` JSON-LD. Many WooCommerce-import
+  variant SKUs turned out to be garbage — either empty, or a URL-encoded slug
+  fragment (Greek text percent-encoded) up to **196 characters long**, e.g.
+  `pepe-jeans-pj-7476-%ce%b1%ce%bd%cf%84%ce%b9%ce%b3%cf%81%ce%b1%cf%86%ce%ae-3`.
+  857 variants across 675 variant-bearing products had a bad sku. Base
+  product SKUs are fine (max 32 chars across the whole catalog).
+- **`gtin`**: 9 products have an `ean` value that isn't actually a valid
+  GTIN — wrong digit length (7 or 11 digits instead of 8/12/13/14) or a
+  14/13-digit number that fails the GS1 check-digit algorithm (verified by
+  implementing and running the real checksum, not just a length check) —
+  almost certainly a typo'd digit from import, not a real barcode.
+
+**Fix:** `frontend/src/utils/structuredData.js` — `sanitizeSku()` (rejects
+empty or >50-char values, matching Google Merchant Center's documented SKU
+length limit; real data tops out at 32 so there's comfortable margin) and
+`sanitizeGtin()` (rejects anything that isn't numeric, isn't 8/12/13/14
+digits, or fails the GTIN check-digit calculation). Both `PDP.jsx` and
+`ContactLensPDP.jsx` now use `sanitizeSku(active?.sku) ||
+sanitizeSku(p?.sku)` for the JSON-LD `sku` (and the visible "SKU: ..."
+label — the raw 196-char garbage was also being shown to real customers,
+not just Google) — falling back to the base product's sku when the
+variant's is bad, and to nothing at all rather than publish either a bogus
+GTIN or a broken sku string. This is a presentation-layer fix only; the
+underlying garbage variant-sku data in the DB is untouched (a bigger,
+separate data-cleanup task if ever worth doing) and cart/checkout logic
+(which does its own SKU lookup against the DB) is unaffected since the raw
+`sku`/`ean` values used there were deliberately left alone.
+
+**To verify after deploying:** in Search Console, open the Merchant listings
+report and request validation once Google recrawls a sample of affected
+URLs (can take days) — or spot-check a few of the previously-listed
+products above with the Rich Results Test in the meantime.
+
 ## Phase 3 — On-page content quality
 
 - [x] Meta title formula: `{Product title} | {Brand} | Look Optica` when a

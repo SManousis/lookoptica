@@ -31,6 +31,8 @@ export default function CheckoutPaymentPage() {
   const [shippingMethod, setShippingMethod] = useState("courier_home");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [selectedLockerId, setSelectedLockerId] = useState(""); // future BoxNow integration
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
 
   const [quote, setQuote] = useState(null);
   const [quoteState, setQuoteState] = useState("idle"); // idle | loading | ok | error
@@ -134,6 +136,7 @@ export default function CheckoutPaymentPage() {
       shippingMethod === "boxnow" && selectedLockerId.trim().length > 0
         ? selectedLockerId.trim()
         : null,
+    promo_code: appliedPromoCode || null,
   });
 
   const collectProductCodes = () => {
@@ -190,7 +193,7 @@ export default function CheckoutPaymentPage() {
         setQuoteState("error");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingMethod, paymentMethod, selectedLockerId, subtotal]);
+  }, [shippingMethod, paymentMethod, selectedLockerId, subtotal, appliedPromoCode]);
 
   const handlePlaceOrder = async () => {
     if (!quote) {
@@ -220,6 +223,7 @@ export default function CheckoutPaymentPage() {
         body: JSON.stringify({
           product_codes: productCodes,
           payment_method: paymentMethod,
+          promo_code: quote?.promo_code_applied ? appliedPromoCode : null,
           ...contactPayload,
         }),
       });
@@ -268,6 +272,10 @@ export default function CheckoutPaymentPage() {
     quote && typeof quote.total === "number"
         ? quote.total.toFixed(2)
         : "—";
+    const formattedDiscount =
+    quote && typeof quote.discount_amount === "number"
+        ? quote.discount_amount.toFixed(2)
+        : "0.00";
 
 
   return (
@@ -419,6 +427,42 @@ export default function CheckoutPaymentPage() {
             <span>Υποσύνολο προϊόντων</span>
             <span>€{formattedSubtotal}</span>
           </div>
+
+          <div className="space-y-1">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoCodeInput}
+                onChange={(e) => setPromoCodeInput(e.target.value)}
+                placeholder="Κωδικός έκπτωσης"
+                className="flex-1 rounded-md border px-3 py-2 text-sm uppercase"
+              />
+              <button
+                type="button"
+                onClick={() => setAppliedPromoCode(promoCodeInput.trim())}
+                disabled={!promoCodeInput.trim() || quoteState === "loading"}
+                className="rounded-md border border-amber-300 px-3 py-2 text-xs font-semibold text-amber-800 disabled:opacity-60"
+              >
+                Εφαρμογή
+              </button>
+            </div>
+            {appliedPromoCode && quote && (
+              quote.promo_code_applied ? (
+                <p className="text-xs text-emerald-700">
+                  Ο κωδικός «{appliedPromoCode}» εφαρμόστηκε.
+                </p>
+              ) : quote.promo_code_error ? (
+                <p className="text-xs text-red-700">{quote.promo_code_error}</p>
+              ) : null
+            )}
+          </div>
+
+          {quote?.promo_code_applied && (
+            <div className="flex justify-between text-emerald-700">
+              <span>Έκπτωση</span>
+              <span>-€{formattedDiscount}</span>
+            </div>
+          )}
 
           <div className="flex justify-between">
             <span>Μεταφορικά</span>

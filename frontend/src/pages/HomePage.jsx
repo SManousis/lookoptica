@@ -11,7 +11,7 @@ const BRAND_ITEMS = [
   { src: "/Converse.png", alt: "Converse", brand: "Converse" },
   { src: "/Dkny.png", alt: "DKNY", brand: "DKNY" },
   { src: "/Guess.png", alt: "Guess", brand: "Guess" },
-  { src: "/Hickmann.png", alt: "Hickmann", brand: "Hickmann" },
+  { src: "/Hickmann.png", alt: "Hickmann", brand: "Ana Hickmann" },
   { src: "/PaulFrank.png", alt: "Paul Frank", brand: "Paul Frank" },
   { src: "/PepeJeans.png", alt: "Pepe Jeans", brand: "Pepe Jeans" },
   { src: "/TedBaker.png", alt: "Ted Baker", brand: "Ted Baker" },
@@ -19,6 +19,19 @@ const BRAND_ITEMS = [
 const BRAND_SLIDE_WIDTH = 180;
 const BRAND_SLIDE_INTERVAL = 3000;
 const BRAND_TRANSITION_MS = 600;
+
+const OFFERS_MAX_PRICE = 80;
+// Mirrors the alias lists in PLP.jsx's CATEGORY_CONFIG - the catalog has
+// several spelling/casing variants for the same category from the bulk
+// import (e.g. "Γυαλιά Ηλίου" vs "Γυαλία Ηλίου" vs "sunglasses").
+const SUNGLASSES_CATEGORY_ALIASES = ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου"];
+const FRAMES_CATEGORY_ALIASES = [
+  "ophthalmic_frames",
+  "frames",
+  "σκελετοι ορασεως",
+  "σκελετοί οράσεως",
+  "γυαλια ορασεως",
+];
 
 export default function HomePage() {
   usePageSEO({
@@ -31,6 +44,8 @@ export default function HomePage() {
 
   const [featured, setFeatured] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterState, setNewsletterState] = useState("idle"); // idle | loading | ok | error
   const [state, setState] = useState("loading"); // loading | ok | error
   const [slideIndex, setSlideIndex] = useState(0);
   const [brandsIndex, setBrandsIndex] = useState(0);
@@ -43,16 +58,60 @@ export default function HomePage() {
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setFeatured(list.slice(0, 8));
-        const discounted = list.filter(
-          (p) =>
-            p?.discountPrice != null &&
-            p?.price != null &&
-            p.discountPrice > p.price
-        );
-        setOffers(discounted.slice(0, 8));
         setState("ok");
       })
       .catch(() => setState("error"));
+  }, []);
+
+  // Offers bar: a mix of sunglasses + frames, real discount, price up to
+  // OFFERS_MAX_PRICE - not just whatever happens to be newest (that was the
+  // old behavior and skewed toward a single category).
+  useEffect(() => {
+    const buildQuery = (aliases) => {
+      const params = new URLSearchParams();
+      aliases.forEach((alias) => params.append("category", alias));
+      // 200 is the backend's max allowed limit - verified live that a
+      // smaller pool (e.g. 60 newest) only turned up 2 eligible frames vs
+      // 8 sunglasses, an unbalanced "mix". 200 gave 34 sunglasses / 42
+      // frames, plenty to interleave from.
+      params.set("limit", "200");
+      return params.toString();
+    };
+
+    const isEligibleOffer = (p) =>
+      p?.price != null &&
+      p.price > 0 &&
+      p.price <= OFFERS_MAX_PRICE &&
+      p?.discountPrice != null &&
+      p.discountPrice > p.price;
+
+    Promise.all([
+      fetch(`${API}/shop-products?${buildQuery(SUNGLASSES_CATEGORY_ALIASES)}`).then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetch(`${API}/shop-products?${buildQuery(FRAMES_CATEGORY_ALIASES)}`).then((r) =>
+        r.ok ? r.json() : []
+      ),
+    ])
+      .then(([sunglasses, frames]) => {
+        const sunglassesOffers = (Array.isArray(sunglasses) ? sunglasses : []).filter(
+          isEligibleOffer
+        );
+        const framesOffers = (Array.isArray(frames) ? frames : []).filter(isEligibleOffer);
+
+        // Interleave the two categories so the bar is an actual mix, not
+        // whichever category happened to have more matches.
+        const mixed = [];
+        const max = Math.max(sunglassesOffers.length, framesOffers.length);
+        for (let i = 0; i < max && mixed.length < 8; i++) {
+          if (sunglassesOffers[i]) mixed.push(sunglassesOffers[i]);
+          if (mixed.length < 8 && framesOffers[i]) mixed.push(framesOffers[i]);
+        }
+        setOffers(mixed);
+      })
+      .catch(() => {
+        /* offers bar just stays empty/hidden on failure */
+      });
   }, []);
 
   // Hero slider: change image every 5 seconds
@@ -473,30 +532,58 @@ export default function HomePage() {
             Μάθε πρώτος για νέες συλλογές, προσφορές και αποκλειστικά events στο Look Optica.
           </p>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert("Ευχαριστούμε! Θα ενημερώνεστε για όλα τα νέα μας.");
-            }}
-            className="flex flex-col items-center justify-center gap-3 md:flex-row"
-          >
-            <input
-              type="email"
-              required
-              placeholder="Το email σας…"
-              className="w-full md:w-80 px-4 py-3 rounded-xl border border-amber-200
-                        focus:outline-none focus:border-amber-500
-                        shadow-sm text-amber-800 placeholder-amber-500"
-            />
-
-            <button
-              type="submit"
-              className="px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-600
-                        text-white font-semibold shadow-lg transition"
+          {newsletterState === "ok" ? (
+            <p className="text-amber-800 font-semibold">
+              Ευχαριστούμε! Η εγγραφή σας ολοκληρώθηκε.
+            </p>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const email = newsletterEmail.trim();
+                if (!email) return;
+                setNewsletterState("loading");
+                try {
+                  const res = await fetch(`${API}/newsletter/subscribe`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                  });
+                  if (!res.ok) throw new Error("subscribe failed");
+                  setNewsletterState("ok");
+                  setNewsletterEmail("");
+                } catch {
+                  setNewsletterState("error");
+                }
+              }}
+              className="flex flex-col items-center justify-center gap-3 md:flex-row"
             >
-              Εγγραφή
-            </button>
-          </form>
+              <input
+                type="email"
+                required
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Το email σας…"
+                className="w-full md:w-80 px-4 py-3 rounded-xl border border-amber-200
+                          focus:outline-none focus:border-amber-500
+                          shadow-sm text-amber-800 placeholder-amber-500"
+              />
+
+              <button
+                type="submit"
+                disabled={newsletterState === "loading"}
+                className="px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-600
+                          text-white font-semibold shadow-lg transition disabled:opacity-60"
+              >
+                {newsletterState === "loading" ? "Αποστολή..." : "Εγγραφή"}
+              </button>
+            </form>
+          )}
+          {newsletterState === "error" && (
+            <p className="mt-3 text-sm text-red-700">
+              Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.
+            </p>
+          )}
         </div>
       </section>
 
