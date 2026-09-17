@@ -263,6 +263,83 @@ Pick one, roughly in order of effort vs. payoff:
 Start with option 1 for the homepage and top category pages only — that alone
 fixes the social-share-preview problem for your most-linked pages.
 
+## 2026-09-17: Search Console indexing report — investigated + fixed the
+fixable part
+
+Two Search Console emails flagged: "Alternate page with proper canonical
+tag", "Duplicate without user-selected canonical", "Page with redirect",
+"Excluded by 'noindex' tag", "Duplicate, Google chose different canonical
+than user". Pulled the actual Coverage export (not just the email summary)
+before doing anything — the real counts told a very different story than
+the email made it sound:
+
+| Reason | Source | Pages |
+|---|---|---|
+| Discovered - currently not indexed | Google systems | 892 |
+| Crawled - currently not indexed | Google systems | 72 |
+| Alternate page with proper canonical tag | Website | 95 |
+| Duplicate without user-selected canonical | Website | 17 |
+| Page with redirect | Website | 17 |
+| Duplicate, Google chose different canonical than user | Google systems | 2 |
+| Excluded by 'noindex' tag | Website | 3 |
+| Soft 404 | Website | 1 |
+
+**88% of "not indexed" (964/1099) is Google being cautious about crawl
+budget/trust on a young, ~1000-product site** ("Discovered"/"Crawled -
+currently not indexed") — not a code bug, not something a patch fixes
+quickly. Time/backlinks/reduced thin-content-at-scale are the only real
+levers there, not urgent engineering work.
+
+Of the "Website"-attributed reasons, most turned out to already be correct,
+intentional behavior once checked against the code:
+- **95 "Alternate page with proper canonical"** — filtered/sorted PLP
+  variants (`?brand=`, `?view=stock`) correctly self-canonicalize to the
+  clean category URL. Working as designed.
+- **17 "Page with redirect"** — verified live: apex→www and http→https both
+  301 correctly to `https://www.lookoptica.gr/`. Working as designed.
+- **3 "Excluded by noindex"** — matches the intentional `noindex: true` on
+  cart/checkout/account pages.
+
+**The two that were real, and got fixed:** got the actual affected URLs
+from the user (not just counts) for "Duplicate without user-selected
+canonical" (17) and "Soft 404" (1). Nearly every one was a **stale URL from
+the pre-migration WordPress/WooCommerce site** (`/product-category/...`,
+`/product-tag/...`, `/en/about-us/`, `/.../feed/`) that Google is still
+periodically re-crawling months later. Root cause: this is a client-only
+SPA with **no catch-all route at all** — any unmatched path (including a
+completely made-up nonsense URL, tested live) returned a bare `200` with
+the generic `index.html` shell: no page-specific title, no canonical tag,
+no content. That single gap explains the whole "duplicate, no clear
+canonical" pattern - dozens of unrelated dead URLs all looking identical
+and signal-less to Google.
+
+Fixed in two layers:
+1. **nginx** (`/etc/nginx/sites-enabled/...`): real `404` responses for the
+   known-dead legacy prefixes (`/product-category/`, `/product-tag/`,
+   `/en/`, `/feed`), plus a `301` stripping trailing slashes site-wide
+   (`/contact/` → `/contact`, `/shop/sunglasses/` → `/shop/sunglasses`) so
+   Google converges on one URL per page instead of treating both as
+   separate pages. Verified live after reload: all previously-200 dead
+   URLs now correctly 404 or 301.
+2. **Frontend** (`frontend/src/pages/NotFoundPage.jsx` + a
+   `<Route path="*">` catch-all in `App.jsx`): anything nginx doesn't
+   specifically recognize now gets a real page with `noindex: true` and
+   actual content, instead of a blank, signal-less shell — covers both
+   real visitors hitting a dead link and any URL pattern the nginx rules
+   don't enumerate.
+
+Also fixed the specific Soft 404 (`/product/soflens-comfort-.../`): a
+contact lens product hit via the frame-PDP's `/product/` prefix instead of
+its real `/contact-lens/` route. `PDP.jsx` now detects
+`attributes.product_type === "contact_lens"` after loading and redirects
+to the correct URL instead of rendering the wrong (frame-oriented)
+template.
+
+Deployed and verified live: nginx changes confirmed via direct `curl`
+status-code checks on all the reported URLs (dead prefixes → 404, trailing
+slashes → 301); frontend deploy confirmed via matching bundle hash on the
+live site.
+
 ## Phase 5 — Local SEO (store pickup is a real advantage here)
 
 - [x] Claimed and verified the Google Business Profile (a listing already

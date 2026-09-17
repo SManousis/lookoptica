@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import placeholder from "/placeholder.png";
 import metrics from "/metrics.jpg";
 import { usePageSEO } from "../hooks/usePageSEO";
@@ -118,6 +118,7 @@ function formatAudience(audience) {
 
 export default function PDP() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [p, setP] = useState(null);
   const [state, setState] = useState("loading"); // loading | ok | error
   const [variantIndex, setVariantIndex] = useState(0); // NEW: active colour
@@ -133,6 +134,17 @@ export default function PDP() {
     fetch(`${API}/products/${slug}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((data) => {
+        // Contact lenses live at /contact-lens/:slug - a /product/:slug hit
+        // for one (stale link, old bookmark) should redirect there instead
+        // of rendering the wrong (frame-oriented) template. Flagged by
+        // Search Console as a soft 404 for exactly this reason.
+        const isContactLens =
+          String(data?.category || "").toLowerCase().includes("contact") ||
+          data?.attributes?.product_type === "contact_lens";
+        if (isContactLens) {
+          navigate(`/contact-lens/${slug}`, { replace: true });
+          return;
+        }
         setP(data);
         setState("ok");
 
@@ -142,7 +154,7 @@ export default function PDP() {
         setImageIndex(0);
       })
       .catch(() => setState("error"));
-  }, [slug]);
+  }, [slug, navigate]);
   useEffect(() => {
     // after product is loaded, fetch all to compute related
     if (state !== "ok" || !p) return;

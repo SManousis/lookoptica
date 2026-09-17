@@ -42,6 +42,7 @@ import AccountRegisterPage from "./pages/AccountRegisterPage";
 import AccountLoginPage from "./pages/AccountLoginPage";
 import AccountHomePage from "./pages/AccountHomePage";
 import WishlistPage from "./pages/WishlistPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import SearchIcon from "@mui/icons-material/Search";
@@ -1129,6 +1130,11 @@ function AppShell() {
               </ProtectAdminRoute>
             }
           />
+          {/* Catch-all: unmatched routes (dead links, old WordPress URLs)
+              get a real noindex 404 page instead of an empty shell with no
+              title/canonical - previously produced a silent 200 with no
+              page content, which Search Console flagged as duplicate/soft-404. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 
