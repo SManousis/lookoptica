@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T18:18:56.7359214+03:00",
+  "title": "Design System: Look Optica",
+  "extensions": {
+    "colorMeta": {
+      "honeyed-brass": {
+        "role": "primary",
+        "displayName": "Honeyed Brass",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["oklch(24% 0.08 75)", "oklch(34% 0.11 75)", "oklch(44% 0.14 75)", "oklch(54% 0.16 75)", "oklch(64% 0.17 75)", "oklch(74% 0.15 75)", "oklch(85% 0.10 75)", "oklch(95% 0.04 75)"]
+      },
+      "opticians-amber": {
+        "role": "primary",
+        "displayName": "Optician's Amber",
+        "canonical": "#b45309",
+        "tonalRamp": ["oklch(22% 0.07 55)", "oklch(31% 0.10 55)", "oklch(40% 0.13 55)", "oklch(49% 0.15 55)", "oklch(59% 0.15 55)", "oklch(70% 0.13 55)", "oklch(83% 0.08 55)", "oklch(95% 0.03 55)"]
+      },
+      "warm-cognac": {
+        "role": "primary",
+        "displayName": "Warm Cognac",
+        "canonical": "#92400e",
+        "tonalRamp": ["oklch(20% 0.06 48)", "oklch(29% 0.09 48)", "oklch(38% 0.12 48)", "oklch(47% 0.14 48)", "oklch(57% 0.14 48)", "oklch(69% 0.12 48)", "oklch(82% 0.07 48)", "oklch(95% 0.025 48)"]
+      },
+      "amber-cream": {
+        "role": "neutral",
+        "displayName": "Amber Cream",
+        "canonical": "#fffbeb",
+        "tonalRamp": ["oklch(20% 0.025 90)", "oklch(31% 0.03 90)", "oklch(43% 0.035 90)", "oklch(55% 0.04 90)", "oklch(67% 0.04 90)", "oklch(78% 0.035 90)", "oklch(89% 0.025 90)", "oklch(97% 0.015 90)"]
+      },
+      "amber-border": {
+        "role": "neutral",
+        "displayName": "Amber Veil",
+        "canonical": "#fde68a",
+        "tonalRamp": ["oklch(22% 0.04 90)", "oklch(33% 0.06 90)", "oklch(44% 0.08 90)", "oklch(55% 0.10 90)", "oklch(66% 0.11 90)", "oklch(77% 0.10 90)", "oklch(88% 0.07 90)", "oklch(96% 0.025 90)"]
+      },
+      "clean-white": {
+        "role": "neutral",
+        "displayName": "Clean White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(100% 0 0)"]
+      },
+      "mist-slate": {
+        "role": "neutral",
+        "displayName": "Mist Slate",
+        "canonical": "#f8fafc",
+        "tonalRamp": ["oklch(18% 0.012 250)", "oklch(29% 0.014 250)", "oklch(40% 0.015 250)", "oklch(52% 0.016 250)", "oklch(64% 0.015 250)", "oklch(76% 0.013 250)", "oklch(88% 0.009 250)", "oklch(98% 0.004 250)"]
+      },
+      "slate-border": {
+        "role": "neutral",
+        "displayName": "Silver Slate",
+        "canonical": "#e2e8f0",
+        "tonalRamp": ["oklch(18% 0.02 255)", "oklch(29% 0.025 255)", "oklch(40% 0.03 255)", "oklch(52% 0.03 255)", "oklch(64% 0.028 255)", "oklch(76% 0.022 255)", "oklch(87% 0.015 255)", "oklch(96% 0.007 255)"]
+      },
+      "slate-muted": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "#64748b",
+        "tonalRamp": ["oklch(18% 0.025 255)", "oklch(29% 0.035 255)", "oklch(40% 0.045 255)", "oklch(51% 0.05 255)", "oklch(62% 0.045 255)", "oklch(73% 0.035 255)", "oklch(85% 0.022 255)", "oklch(95% 0.008 255)"]
+      },
+      "lens-slate": {
+        "role": "neutral",
+        "displayName": "Lens Slate",
+        "canonical": "#334155",
+        "tonalRamp": ["oklch(16% 0.025 255)", "oklch(26% 0.04 255)", "oklch(36% 0.05 255)", "oklch(47% 0.055 255)", "oklch(59% 0.05 255)", "oklch(71% 0.04 255)", "oklch(84% 0.025 255)", "oklch(95% 0.008 255)"]
+      },
+      "error-red": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "canonical": "#b91c1c",
+        "tonalRamp": ["oklch(20% 0.08 27)", "oklch(30% 0.13 27)", "oklch(40% 0.18 27)", "oklch(50% 0.21 27)", "oklch(61% 0.19 27)", "oklch(72% 0.15 27)", "oklch(84% 0.09 27)", "oklch(95% 0.03 27)"]
+      },
+      "success-emerald": {
+        "role": "tertiary",
+        "displayName": "Assurance Emerald",
+        "canonical": "#047857",
+        "tonalRamp": ["oklch(20% 0.06 165)", "oklch(30% 0.09 165)", "oklch(40% 0.12 165)", "oklch(50% 0.14 165)", "oklch(61% 0.13 165)", "oklch(72% 0.11 165)", "oklch(84% 0.07 165)", "oklch(95% 0.025 165)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Large desktop hero statements with a warm editorial voice." },
+      "headline": { "displayName": "Headline", "purpose": "Service, newsletter, and campaign headings." },
+      "title": { "displayName": "Title", "purpose": "Product prices, card headings, and form titles." },
+      "body": { "displayName": "Body", "purpose": "Product, service, form, and transactional copy." },
+      "label": { "displayName": "Label", "purpose": "Metadata, category chips, and compact controls." }
+    },
+    "shadows": [
+      { "name": "quiet-lift", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Inputs, service cards, and low-emphasis controls." },
+      { "name": "interactive-lift", "value": "0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10)", "purpose": "Hovered cards and medium-priority floating content." },
+      { "name": "menu-lift", "value": "0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10)", "purpose": "Dropdowns, prominent actions, and overlay labels." }
+    ],
+    "motion": [
+      { "name": "state-standard", "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Color, border, opacity, and shadow state changes." },
+      { "name": "product-zoom", "value": "500ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Gentle product and category image enlargement on hover." },
+      { "name": "brand-carousel", "value": "600ms ease", "purpose": "Brand carousel slide transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The default branded action for purchase, submit, and forward progress.",
+      "html": "<button class=\"ds-btn-primary\">Συνέχεια</button>",
+      "css": ".ds-btn-primary { background: #b45309; color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font: 600 14px/1.5 ui-sans-serif, system-ui, sans-serif; transition: background 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #92400e; } .ds-btn-primary:focus-visible { outline: 3px solid rgba(245,158,11,.38); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A reassuring alternate action that keeps the primary path dominant.",
+      "html": "<button class=\"ds-btn-secondary\">Πίσω στο κατάστημα</button>",
+      "css": ".ds-btn-secondary { background: #fff; color: #92400e; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 16px; font: 600 14px/1.5 ui-sans-serif, system-ui, sans-serif; transition: background 150ms cubic-bezier(0.4,0,0.2,1), border-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { background: #fffbeb; border-color: #fbbf24; } .ds-btn-secondary:focus-visible { outline: 3px solid rgba(245,158,11,.3); outline-offset: 2px; }"
+    },
+    {
+      "name": "Customer Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "A warm-bordered field for customer search, contact, account, and checkout flows.",
+      "html": "<label class=\"ds-field\"><span>Email</span><input class=\"ds-input\" type=\"email\" placeholder=\"example@mail.com\"></label>",
+      "css": ".ds-field { display: grid; gap: 4px; color: #92400e; font: 600 14px/1.5 ui-sans-serif, system-ui, sans-serif; } .ds-input { min-width: 260px; background: #fff; color: #334155; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 16px; font: 400 14px/1.5 ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px rgb(0 0 0 / .05); transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input:focus { border-color: #f59e0b; outline: 3px solid rgba(245,158,11,.2); outline-offset: 1px; }"
+    },
+    {
+      "name": "Navigation Link",
+      "kind": "nav",
+      "description": "Compact amber navigation that stays subordinate to products and core actions.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">Γυαλιά Ηλίου</a><a href=\"#\">Φακοί Επαφής</a><a href=\"#\">Επικοινωνία</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 16px; font: 400 14px/1.5 ui-sans-serif, system-ui, sans-serif; } .ds-nav a { color: #b45309; text-decoration: none; transition: color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-nav a:hover { color: #d97706; } .ds-nav a:focus-visible { outline: 2px solid #f59e0b; outline-offset: 4px; border-radius: 4px; }"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip-category",
+      "description": "A compact taxonomy label used beside product brand metadata.",
+      "html": "<span class=\"ds-chip\">ΓΥΑΛΙΑ ΗΛΙΟΥ</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; border: 1px solid #f59e0b; border-radius: 9999px; padding: 2px 8px; color: #f59e0b; background: transparent; font: 600 10px/1.5 ui-sans-serif, system-ui, sans-serif; letter-spacing: .025em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Service Card",
+      "kind": "card",
+      "refersTo": "card-service",
+      "description": "A softly layered card for expert services and reassurance content.",
+      "html": "<article class=\"ds-service-card\"><div class=\"ds-service-icon\">⌂</div><h3>Οπτικά στο Σπίτι</h3><p>Προσωπική εξυπηρέτηση και επιλογή γυαλιών στον χώρο σας.</p><a href=\"#\">Μάθε περισσότερα →</a></article>",
+      "css": ".ds-service-card { max-width: 360px; background: rgba(255,255,255,.8); color: #334155; border: 1px solid #fef3c7; border-radius: 16px; padding: 24px; box-shadow: 0 1px 2px rgb(0 0 0 / .05); font-family: ui-sans-serif, system-ui, sans-serif; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-service-card:hover { border-color: #fcd34d; box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1); } .ds-service-icon { margin-bottom: 12px; color: #b45309; font-size: 28px; } .ds-service-card h3 { margin: 0 0 8px; color: #92400e; font: 400 20px/1.4 'Zen Antique', Georgia, serif; } .ds-service-card p { margin: 0; color: #475569; font-size: 14px; line-height: 1.625; } .ds-service-card a { display: inline-block; margin-top: 12px; color: #b45309; font-size: 14px; font-weight: 600; text-decoration: none; } .ds-service-card a:hover { text-decoration: underline; } .ds-service-card a:focus-visible { outline: 2px solid #f59e0b; outline-offset: 3px; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "custom",
+      "description": "The signature commerce component: image first, restrained metadata, and an amber price.",
+      "html": "<article class=\"ds-product\"><div class=\"ds-product-image\"><span>PRODUCT IMAGE</span><button aria-label=\"Προσθήκη στα αγαπημένα\">♡</button></div><div class=\"ds-product-meta\">BRAND <span>ΓΥΑΛΙΑ</span></div><h3>Όνομα προϊόντος</h3><strong>€79</strong></article>",
+      "css": ".ds-product { width: 250px; color: #334155; font-family: ui-sans-serif, system-ui, sans-serif; } .ds-product-image { position: relative; display: grid; place-items: center; aspect-ratio: 4/3; overflow: hidden; border-radius: 12px; background: #f3f4f6; color: #94a3b8; font-size: 12px; transition: transform 500ms cubic-bezier(0.4,0,0.2,1); } .ds-product:hover .ds-product-image { transform: scale(1.02); } .ds-product-image button { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 9999px; background: rgba(255,255,255,.9); color: #64748b; box-shadow: 0 1px 3px rgb(0 0 0 / .12); font-size: 20px; } .ds-product-image button:focus-visible { outline: 3px solid rgba(245,158,11,.35); outline-offset: 2px; } .ds-product-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: #f59e0b; font-size: 12px; font-weight: 600; letter-spacing: .025em; } .ds-product-meta span { border: 1px solid currentColor; border-radius: 9999px; padding: 2px 8px; font-size: 10px; } .ds-product h3 { margin: 4px 0; font-size: 14px; font-weight: 500; } .ds-product strong { color: #b45309; font-size: 20px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Golden Lens",
+    "overview": "The Golden Lens presents optical retail through warmth, clarity, and measured polish. Amber communicates care and value, slate supplies professional restraint, and generous white or cream surfaces keep product photography and practical information easy to read. The result should feel refined, calm, and professional rather than clinical or luxurious for its own sake.\n\nThe interface is softly layered: fine borders establish most structure, while restrained shadows lift menus, interactive cards, and important actions. Rounded forms make commerce and service workflows reassuring without becoming playful. Zen Antique appears selectively as a warm editorial accent; the system sans serif carries navigation, product data, forms, checkout, and administrative work.",
+    "keyCharacteristics": [
+      "Warm amber hierarchy against quiet slate neutrals",
+      "Product-led imagery with calm, readable supporting UI",
+      "Rounded, reassuring controls and containers",
+      "Fine borders first, soft elevation second",
+      "Selective display typography paired with practical system text"
+    ],
+    "rules": [
+      { "name": "The Amber Hierarchy Rule", "body": "Bright, core, and deep amber tones must communicate increasing emphasis; do not use them interchangeably as decoration.", "section": "colors" },
+      { "name": "The Quiet Canvas Rule", "body": "Product imagery and transactional content sit on white, cream, or mist-slate surfaces so the merchandise remains the visual lead.", "section": "colors" },
+      { "name": "The Selective Serif Rule", "body": "Zen Antique is an accent for meaningful customer-facing moments, not the default for dense forms, navigation, prices, or administration.", "section": "typography" },
+      { "name": "The Readable Commerce Rule", "body": "Functional text remains in the system sans serif, with semibold weight used to signal action or hierarchy rather than ornamental styling.", "section": "typography" },
+      { "name": "The Product Breathing Room Rule", "body": "Dense data can remain compact, but product imagery, major services, and checkout decisions must keep clear separation and stable alignment.", "section": "layout" },
+      { "name": "The Border-Before-Shadow Rule", "body": "Establish structure with a fine border or tonal shift first; add a shadow only when an element needs to sit above its surroundings.", "section": "elevation" },
+      { "name": "The Reassuring Curve Rule", "body": "Corners should feel soft and deliberate; do not mix square and highly rounded elements within the same component family without a functional reason.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use Optician's Amber for the primary commercial action and price emphasis.",
+      "Do keep most surfaces white, Amber Cream, or Mist Slate so products and service information remain clear.",
+      "Do use thin borders and tonal shifts before adding elevation.",
+      "Do reserve Zen Antique for selective customer-facing headlines and service moments.",
+      "Do preserve visible keyboard focus, readable contrast, and scalable text across customer journeys."
+    ],
+    "donts": [
+      "Don't turn the amber family into undifferentiated decoration; every shade must carry a clear hierarchy role.",
+      "Don't use heavy shadows on every card or control; elevation is a response to hierarchy and interaction.",
+      "Don't apply the display serif to dense product data, forms, checkout, or administrative interfaces.",
+      "Don't let decorative overlays overpower product photography or reduce text contrast.",
+      "Don't introduce sharp, clinical geometry into an otherwise rounded and reassuring component family."
+    ]
+  }
+}

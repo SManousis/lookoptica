@@ -16,6 +16,7 @@ export default function ProductCard({ p }) {
   const title = p?.title?.el || p?.title?.en || "Product";
   const isContactLens =
     String(p?.category || "").toLowerCase().includes("contact") ||
+    p?.productType === "contact_lens" ||
     p?.attributes?.product_type === "contact_lens";
   const productUrl = isContactLens
     ? `/contact-lens/${p.slug || ""}`
@@ -27,52 +28,64 @@ export default function ProductCard({ p }) {
     placeholder;
 
   return (
-    <Link to={productUrl} className="block group">
-        <div className="relative w-full rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+    <article className="group relative text-ink-primary">
+      <Link
+        to={productUrl}
+        className="block rounded-xl focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring"
+      >
+        <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface-canvas">
           <img
             src={firstImage}
             alt={title}
-            className="w-full max-h-[520px] object-contain cursor-zoom-in transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => { e.currentTarget.src = "/placeholder.png"; }}
-          />
-          <WishlistButton
-            slug={p.slug}
-            className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
+            width="600"
+            height="600"
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-contain transition-transform duration-500 motion-reduce:transition-none group-hover:scale-105 motion-reduce:group-hover:scale-100"
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = "/placeholder.png";
+            }}
           />
         </div>
 
-      {/* Brand + category */}
-      <div className="mt-2 text-xs text-amber-500 flex items-center gap-2">
-        {p?.brand && (
-          <span className="font-medium uppercase tracking-wide">
-            {p.brand}
-          </span>
-        )}
-        {p?.category && (
-          <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide">
-            {formatCategory(p.category)}
-          </span>
-        )}
-      </div>
+        {/* Brand + category */}
+        <div className="mt-2 flex items-center gap-2 text-xs text-brand-primary">
+          {p?.brand && (
+            <span className="font-medium uppercase tracking-wide">
+              {p.brand}
+            </span>
+          )}
+          {p?.category && (
+            <span className="inline-flex items-center rounded-full border border-current px-2 py-0.5 text-[10px] uppercase tracking-wide">
+              {formatCategory(p.category)}
+            </span>
+          )}
+        </div>
 
-      {/* Title */}
-      <div className="mt-1 text-sm font-medium line-clamp-2">
-        {title}
-      </div>
+        {/* Title */}
+        <div className="mt-1 line-clamp-2 text-sm font-medium">
+          {title}
+        </div>
 
-      {/* Price */}
-      <div className="flex items-baseline gap-2">
-        {p?.discountPrice != null && p?.price != null && p.discountPrice > p.price ? (
-          <>
-            <div className="text-xl font-bold text-amber-700">€{p.price}</div>
-            <div className="text-sm text-slate-400 line-through">€{p.discountPrice}</div>
-          </>
-        ) : (
-          <div className="text-xl font-bold text-amber-700">
-            €{p?.price ?? p?.discountPrice}
-          </div>
-        )}
-      </div>
-    </Link>
+        {/* Price */}
+        <div className="flex items-baseline gap-2">
+          {p?.discountPrice != null && p?.price != null && p.discountPrice > p.price ? (
+            <>
+              <div className="text-xl font-bold text-brand-primary">€{p.price}</div>
+              <div className="text-sm text-ink-muted line-through">€{p.discountPrice}</div>
+            </>
+          ) : (
+            <div className="text-xl font-bold text-brand-primary">
+              €{p?.price ?? p?.discountPrice}
+            </div>
+          )}
+        </div>
+      </Link>
+      <WishlistButton
+        slug={p.slug}
+        className="absolute right-2 top-2 z-10 grid size-11 place-items-center rounded-full bg-surface-raised/90 shadow transition hover:bg-surface-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+      />
+    </article>
   );
 }

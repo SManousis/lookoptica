@@ -1,7 +1,7 @@
 import unicodedata
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
@@ -43,6 +43,18 @@ class ProductListItem(BaseModel):
     attributes: dict = Field(default_factory=dict)
     isStock: Optional[bool] = None
 
+
+class CompactProductListItem(BaseModel):
+    slug: str | None
+    title: dict
+    price: float
+    discountPrice: float | None = None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    images: list[str] = Field(default_factory=list)
+    productType: Optional[str] = None
+
+
 class ProductDetail(ProductListItem):
     ean: str | None
     images: list
@@ -61,6 +73,19 @@ def get_db():
     finally:
         db.close()
 ALLOWED_STATUSES = {"published", "in_stock", "preorder"}
+SUNGLASSES_CATEGORY_ALIASES = [
+    "sunglasses",
+    "sun-glasses",
+    "γυαλια ηλιου",
+    "γυαλιά ηλίου",
+]
+FRAMES_CATEGORY_ALIASES = [
+    "ophthalmic_frames",
+    "frames",
+    "σκελετοι ορασεως",
+    "σκελετοί οράσεως",
+    "γυαλια ορασεως",
+]
 
 
 def _normalize_category_string(value: Any) -> str:
@@ -120,6 +145,57 @@ def _gather_category_candidates(
         candidates.append(title_en)
     # Deduplicate while preserving order
     return list(dict.fromkeys([c for c in candidates if c]))
+
+
+def _compact_product_item(product: Product) -> CompactProductListItem:
+    attrs = product.attributes if isinstance(product.attributes, dict) else {}
+    category = (
+        attrs.get("category_label")
+        or attrs.get("category")
+        or attrs.get("category_value")
+    )
+    product_type = attrs.get("product_type")
+    if not category and product_type == "contact_lens":
+        category = "contact_lenses"
+
+    return CompactProductListItem(
+        slug=product.slug,
+        title={"el": product.title_el, "en": product.title_en},
+        price=float(product.price or 0),
+        discountPrice=(
+            float(product.compare_at_price)
+            if product.compare_at_price is not None
+            else None
+        ),
+        brand=attrs.get("brand_label") or attrs.get("brand"),
+        category=category,
+        images=(product.images or [])[:1],
+        productType=product_type,
+    )
+
+
+def _category_candidates_for_product(product: Product) -> List[str]:
+    attrs = product.attributes if isinstance(product.attributes, dict) else {}
+    raw_categories = [
+        value
+        for key in ("category_label", "category", "category_value")
+        if isinstance((value := attrs.get(key)), str)
+    ]
+    raw_tags = attrs.get("tags") or []
+    tags = (
+        [tag for tag in raw_tags if isinstance(tag, str)]
+        if isinstance(raw_tags, list)
+        else []
+    )
+    return _gather_category_candidates(
+        cat_value=raw_categories[0] if raw_categories else None,
+        raw_categories=raw_categories,
+        tags=tags,
+        slug=product.slug,
+        title_el=product.title_el,
+        title_en=product.title_en,
+        product_type=attrs.get("product_type"),
+    )
 
 
 @router.get("", response_model=List[ProductListItem])
@@ -310,6 +386,114 @@ def list_products(
     except Exception as e:
         print("ERROR /api/products:", repr(e))
         raise HTTPException(status_code=500, detail="Internal error")
+
+
+@router.get("/featured", response_model=List[CompactProductListItem])
+def featured_products(
+    limit: int = Query(default=8, ge=1, le=12),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        select(Product)
+        .options(
+            load_only(
+                Product.slug,
+                Product.title_el,
+                Product.title_en,
+                Product.price,
+                Product.compare_at_price,
+                Product.images,
+                Product.attributes,
+            )
+        )
+        .where(
+            Product.visible.is_(True),
+            Product.status.in_(ALLOWED_STATUSES),
+        )
+        .order_by(Product.created_at.desc(), Product.id.desc())
+        .limit(limit)
+    ).scalars().all()
+    return [_compact_product_item(product) for product in rows]
+
+
+@router.get("/offers", response_model=List[CompactProductListItem])
+def homepage_offers(
+    limit: int = Query(default=8, ge=1, le=12),
+    max_price: float = Query(default=80, gt=0, le=10000),
+    db: Session = Depends(get_db),
+):
+    """Return a small, balanced set of discounted sunglasses and frames."""
+    base_stmt = (
+        select(Product)
+        .options(
+            load_only(
+                Product.slug,
+                Product.title_el,
+                Product.title_en,
+                Product.price,
+                Product.compare_at_price,
+                Product.images,
+                Product.attributes,
+            )
+        )
+        .where(
+            Product.visible.is_(True),
+            Product.status.in_(ALLOWED_STATUSES),
+            Product.price > 0,
+            Product.price <= max_price,
+            Product.compare_at_price.is_not(None),
+            Product.compare_at_price > Product.price,
+        )
+        .order_by(Product.created_at.desc(), Product.id.desc())
+    )
+
+    target_per_category = (limit + 1) // 2
+    sunglasses: List[Product] = []
+    frames: List[Product] = []
+    batch_size = 50
+    cursor = 0
+
+    while len(sunglasses) < target_per_category or len(frames) < target_per_category:
+        rows = db.execute(base_stmt.limit(batch_size).offset(cursor)).scalars().all()
+        if not rows:
+            break
+
+        for product in rows:
+            candidates = _category_candidates_for_product(product)
+            if (
+                len(sunglasses) < limit
+                and any(
+                    _matches_category_alias(candidate, SUNGLASSES_CATEGORY_ALIASES)
+                    for candidate in candidates
+                )
+            ):
+                sunglasses.append(product)
+            elif (
+                len(frames) < limit
+                and any(
+                    _matches_category_alias(candidate, FRAMES_CATEGORY_ALIASES)
+                    for candidate in candidates
+                )
+            ):
+                frames.append(product)
+
+        cursor += len(rows)
+        if len(rows) < batch_size:
+            break
+
+    balanced: List[Product] = []
+    for index in range(max(len(sunglasses), len(frames))):
+        if index < len(sunglasses):
+            balanced.append(sunglasses[index])
+        if len(balanced) >= limit:
+            break
+        if index < len(frames):
+            balanced.append(frames[index])
+        if len(balanced) >= limit:
+            break
+
+    return [_compact_product_item(product) for product in balanced]
+
 
 @router.get("/{slug}", response_model=ProductDetail)
 def get_product(slug: str, db: Session = Depends(get_db)):

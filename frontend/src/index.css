@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+@theme {
+  /* The Golden Lens: semantic color roles */
+  --color-brand-primary: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-strong: #92400e;
+  --color-brand-deep: #78350f;
+  --color-brand-accent: #f59e0b;
+
+  --color-surface-canvas: #f8fafc;
+  --color-surface-raised: #ffffff;
+  --color-surface-warm: #fffbeb;
+  --color-surface-warm-strong: #fef3c7;
+
+  --color-border-warm-subtle: #fef3c7;
+  --color-border-brand: #fde68a;
+  --color-border-brand-highlight: #fcd34d;
+  --color-border-brand-strong: #fbbf24;
+
+  --color-ink-primary: #334155;
+  --color-ink-secondary: #475569;
+  --color-ink-muted: #64748b;
+  --color-on-media: #ffffff;
+  --color-on-media-muted: #f1f5f9;
+  --color-on-media-warm: #fef3c7;
+  --color-overlay-dark: #000000;
+
+  --color-focus-ring: #d97706;
+  --color-status-error: #b91c1c;
+  --color-status-success: #047857;
+}

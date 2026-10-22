@@ -216,10 +216,14 @@ export default function ContactLensPDP() {
       : null;
 
   usePageSEO({
-    title: seoTitle,
+    title: state === "error" ? "Το προϊόν δεν βρέθηκε | Look Οπτικά" : seoTitle,
     description: seoDescription,
     url: canonicalUrl,
     image: mainImageUrl,
+    // See the matching comment in PDP.jsx - a missing product still 200s
+    // with a self-referencing canonical, which is exactly what Search
+    // Console flags as a soft 404 without this.
+    noindex: state === "error",
     jsonLd: [
       productJsonLd,
       {
@@ -516,8 +520,25 @@ export default function ContactLensPDP() {
 
       {state === "loading" && <div>Loading…</div>}
       {state === "error" && (
-        <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
-          {errorMsg || "Could not load product."}
+        <div className="text-center py-10 space-y-4">
+          <p className="text-slate-700">
+            {errorMsg ||
+              "Αυτό το προϊόν δεν βρέθηκε. Ίσως έχει αφαιρεθεί ή ο σύνδεσμος είναι παλιός."}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link
+              to="/shop"
+              className="rounded-lg bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+            >
+              Όλα τα προϊόντα
+            </Link>
+            <Link
+              to="/"
+              className="rounded-lg border border-amber-200 px-5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+            >
+              Αρχική σελίδα
+            </Link>
+          </div>
         </div>
       )}
 

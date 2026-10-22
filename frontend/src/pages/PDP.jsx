@@ -353,10 +353,16 @@ export default function PDP() {
       : null;
 
   usePageSEO({
-    title: seoTitle,
+    title: state === "error" ? "Το προϊόν δεν βρέθηκε | Look Οπτικά" : seoTitle,
     description: seoDescription,
     url: canonicalUrl,
     image: mainImageUrl,
+    // A deleted/missing product still returns HTTP 200 (this is a client-
+    // rendered SPA) with a self-referencing canonical and a generic title -
+    // without this, Google sees a normal-looking page whose only content is
+    // "Could not load product.", which is exactly what gets flagged as a
+    // soft 404.
+    noindex: state === "error",
     jsonLd: [
       productJsonLd,
       {
@@ -416,8 +422,24 @@ export default function PDP() {
 
       {state === "loading" && <div>Loading…</div>}
       {state === "error" && (
-        <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
-          Could not load product.
+        <div className="text-center py-10 space-y-4">
+          <p className="text-slate-700">
+            Αυτό το προϊόν δεν βρέθηκε. Ίσως έχει αφαιρεθεί ή ο σύνδεσμος είναι παλιός.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link
+              to="/shop"
+              className="rounded-lg bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+            >
+              Όλα τα προϊόντα
+            </Link>
+            <Link
+              to="/"
+              className="rounded-lg border border-amber-200 px-5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+            >
+              Αρχική σελίδα
+            </Link>
+          </div>
         </div>
       )}
       {state === "ok" && p && (

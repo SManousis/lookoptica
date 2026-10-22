@@ -586,55 +586,24 @@ function AppShell() {
     setNavSearchQuery("");
   }
 
-  const baseMobileOptions = [
-    { label: "Home", to: "/" },
-    ...NAV_CATEGORIES.map((cat) => {
-      const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
-      return { label: cat.label, to: mainHref };
-    }),
-    { label: "Stock", to: "/shop?view=stock" },
-    { label: "Contact", to: "/contact" },
-    { label: "Low Vision", to: "/low-vision" },
-    { label: "Look at Home", to: "/look-at-home" },
-    { label: "About us", to: "/about-us" },
-  ];
-
-  const mobileOptions = admin
-    ? [
-        ...baseMobileOptions,
-        { label: "Admin · Orders", to: "/admin/orders" },
-        { label: "Admin · Sunglasses & Frames", to: "/admin/products" },
-        { label: "Admin · Media Library", to: "/admin/media" },
-        { label: "Admin · Reviews", to: "/admin/reviews" },
-        { label: "Admin · Promo Codes", to: "/admin/promo-codes" },
-        { label: "Admin · Contact Lenses", to: "/admin/contact-lenses" },
-        { label: "Admin · ERP Import", to: "/admin/import" },
-        { label: "Admin · Logout", action: "logout" },
-      ]
-    : baseMobileOptions;
-
-  const handleMobileNav = (next) => {
-    if (next) {
-      navigate(next);
-      setOpenCategory(null);
-    }
-  };
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
-        <div className="flex w-full flex-col gap-3 px-3 py-2 md:h-24 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex w-full flex-col gap-3 px-3 py-2 lg:h-24 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="flex items-center justify-between gap-3">
             <Link to="/" className="font-semibold">
-              <img src="/logo.png" alt="Look Optica" className="h-12 w-12 md:h-24 md:w-24" />
+              <img src="/logo.png" alt="Look Optica" className="h-12 w-12 lg:h-24 lg:w-24" />
             </Link>
             {/* Mobile icons row */}
-            <div className="flex items-center gap-3 text-xl text-slate-500 md:hidden">
+            <div className="flex items-center gap-2 text-xl text-slate-500 lg:hidden">
               <button
                 type="button"
                 onClick={() => setNavSearchOpen((v) => !v)}
-                className="text-slate-600 hover:text-amber-700"
+                className="grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 aria-label="Αναζήτηση"
+                aria-expanded={navSearchOpen}
               >
                 {navSearchOpen ? (
                   <CloseIcon fontSize="inherit" />
@@ -644,14 +613,14 @@ function AppShell() {
               </button>
               <Link
                 to={isLoggedIn ? "/account" : "/account/login"}
-                className="relative text-slate-600 hover:text-amber-700"
+                className="relative grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 aria-label="Λογαριασμός"
               >
                 <PersonOutlineIcon fontSize="inherit" />
               </Link>
               <Link
                 to="/cart"
-                className="relative text-slate-600 hover:text-amber-700"
+                className="relative grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 aria-label="Καλάθι"
               >
                 <ShoppingCartOutlinedIcon fontSize="inherit" />
@@ -661,25 +630,13 @@ function AppShell() {
                   </span>
                 )}
               </Link>
-              <Link
-                to="https://www.facebook.com/lookoptikahalandri"
-                target="_blank"
-              >
-                <FacebookIcon className="text-blue-700" />
-              </Link>
-              <Link
-                to="https://www.instagram.com/lookopticahalandri"
-                target="_blank"
-              >
-                <InstagramIcon className="text-red-700" />
-              </Link>
             </div>
           </div>
 
           {navSearchOpen && (
             <form
               onSubmit={handleNavSearchSubmit}
-              className="w-full md:hidden"
+              className="w-full lg:hidden"
             >
               <input
                 type="text"
@@ -687,71 +644,99 @@ function AppShell() {
                 value={navSearchQuery}
                 onChange={(e) => setNavSearchQuery(e.target.value)}
                 placeholder="Αναζήτηση προϊόντων..."
-                className="w-full rounded-full border border-amber-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-amber-500"
+                className="min-h-11 w-full rounded-full border border-amber-200 px-4 py-2 text-sm text-slate-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
               />
             </form>
           )}
 
-          {/* Mobile hamburger menu */}
-          <div className="relative md:hidden">
+          {/* Mobile and tablet navigation */}
+          <div className="relative lg:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:border-amber-400"
-              aria-label="Toggle navigation"
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm hover:border-amber-400 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+              aria-label="Άνοιγμα κύριας πλοήγησης"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
-              <span className="flex h-4 w-4 flex-col justify-between">
-                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
-                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
-                <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+              <span className="flex items-center gap-2">
+                <span className="flex h-4 w-4 flex-col justify-between" aria-hidden="true">
+                  <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+                  <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+                  <span className="h-[2px] w-full rounded-sm bg-amber-700"></span>
+                </span>
+                Μενού
               </span>
-              <span>Menu</span>
+              <span aria-hidden="true">{mobileMenuOpen ? "−" : "+"}</span>
             </button>
-            <div
+            <nav
+              id="mobile-navigation"
+              aria-label="Κύρια πλοήγηση"
               className={`${
                 mobileMenuOpen ? "flex" : "hidden"
-              } absolute left-0 right-0 top-full mt-2 flex-col gap-1 rounded-2xl border border-amber-100 bg-white p-3 text-sm text-amber-800 shadow-lg`}
+              } absolute left-0 right-0 top-full z-30 mt-2 max-h-[70vh] flex-col gap-2 overflow-y-auto rounded-2xl border border-amber-100 bg-white p-3 text-sm text-amber-900 shadow-lg`}
             >
-              {mobileOptions.map((opt) => (
-                <button
-                  key={opt.to || opt.label}
-                  type="button"
-                  onClick={() => {
-                    if (opt.action === "logout") {
-                      logoutAdmin();
-                      navigate("/admin/login");
-                    } else if (opt.to) {
-                      handleMobileNav(opt.to);
-                    }
-                    setMobileMenuOpen(false);
-                  }}
-                  className="rounded-lg px-3 py-2 text-left hover:bg-amber-50"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+              <Link to="/" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 font-semibold hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600">Αρχική</Link>
+              {NAV_CATEGORIES.map((cat) => {
+                const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
+                return (
+                  <details key={cat.slug || cat.label} className="rounded-xl border border-amber-100 bg-amber-50/40 open:bg-amber-50">
+                    <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-amber-600">{cat.label}<span aria-hidden="true">+</span></summary>
+                    <div className="grid gap-1 border-t border-amber-100 p-2">
+                      <Link to={mainHref} onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 font-semibold hover:bg-white">Όλα στην κατηγορία</Link>
+                      {cat.audiences?.map((audience) => <Link key={audience.slug} to={`/shop/${cat.slug}/${audience.slug}`} onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">{audience.label}</Link>)}
+                      {cat.children?.map((item) => <Link key={item.to || item.label} to={item.to || "/shop"} onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">{item.label}</Link>)}
+                      {cat.extras?.map((extra) => <Link key={extra.view || extra.label} to={extra.to || `${mainHref}${mainHref.includes("?") ? "&" : "?"}view=${extra.view}`} onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">{extra.label}</Link>)}
+                    </div>
+                  </details>
+                );
+              })}
+              <details className="rounded-xl border border-amber-100 bg-amber-50/40 open:bg-amber-50">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-amber-600">Υπηρεσίες & υποστήριξη<span aria-hidden="true">+</span></summary>
+                <div className="grid gap-1 border-t border-amber-100 p-2">
+                  <Link to="/contact" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Επικοινωνία & βοήθεια επιλογής</Link>
+                  <Link to="/low-vision" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Βοηθήματα χαμηλής όρασης</Link>
+                  <Link to="/look-at-home" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Οπτικά στο σπίτι · Αττική</Link>
+                  <Link to="/about-us" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Σχετικά με εμάς</Link>
+                </div>
+              </details>
+              {admin && (
+                <details className="rounded-xl border border-slate-200 bg-slate-50">
+                  <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 py-3 font-semibold text-slate-800">Διαχείριση<span aria-hidden="true">+</span></summary>
+                  <div className="grid gap-1 border-t border-slate-200 p-2 text-slate-700">
+                    <Link to="/admin/orders" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Παραγγελίες</Link>
+                    <Link to="/admin/products" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Προϊόντα</Link>
+                    <Link to="/admin/contact-lenses" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Φακοί επαφής</Link>
+                    <button type="button" onClick={() => { logoutAdmin(); navigate("/admin/login"); closeMobileMenu(); }} className="min-h-11 rounded-lg px-3 py-3 text-left text-red-700 hover:bg-white">Αποσύνδεση</button>
+                  </div>
+                </details>
+              )}
+            </nav>
           </div>
 
           {/* Main navigation */}
-          <nav className="hidden items-center gap-4 text-sm text-amber-700 md:flex md:text-md">
+          <nav className="hidden items-center gap-4 text-sm text-amber-700 lg:flex">
             {NAV_CATEGORIES.map((cat) => {
               const hasChildren = Array.isArray(cat.children) && cat.children.length > 0;
               const hasAudiences = Array.isArray(cat.audiences) && cat.audiences.length > 0;
               const mainHref = cat.href || (cat.slug ? `/shop/${cat.slug}` : "/shop");
 
               return (
-                <div
-                  key={cat.slug || cat.label}
-                  className="relative"
-                  onMouseEnter={() => setOpenCategory(cat.slug || cat.label)}
-                  onMouseLeave={() => setOpenCategory(null)}
-                >
+               <div
+                 key={cat.slug || cat.label}
+                 className="relative"
+                 onMouseEnter={() => setOpenCategory(cat.slug || cat.label)}
+                 onMouseLeave={() => setOpenCategory(null)}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setOpenCategory(null);
+                  }}
+               >
                   {/* Main link */}
                   <Link
                     to={mainHref}
-                    className="hover:text-amber-600"
-                    onClick={() => setOpenCategory(null)}
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-amber-50 hover:text-amber-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+                    onFocus={() => setOpenCategory(cat.slug || cat.label)}
+                   onClick={() => setOpenCategory(null)}
                   >
                     {cat.label}
                   </Link>
@@ -804,21 +789,32 @@ function AppShell() {
                 </div>
               );
             })}
-            <Link to="/shop?view=stock" className="hover:text-red-800">
+            <Link to="/shop?view=stock" className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-amber-50 hover:text-amber-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
               Stock
             </Link>
-            <Link to="/contact" className="hover:text-red-800">
-              Επικοινωνία
-            </Link>
-            <Link to="/low-vision" className="hover:text-red-800">
-              Βοηθήματα Χαμηλής Όρασης
-            </Link>
-            <Link to="/look-at-home" className="hover:text-red-800">
-              Οπτικά στο σπίτι
-            </Link>
-            <Link to="/about-us" className="hover:text-red-800">
-              Σχετικά με εμάς
-            </Link>
+            <div
+              className="relative"
+              onMouseEnter={() => setOpenCategory("services-menu")}
+              onMouseLeave={() => setOpenCategory(null)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setOpenCategory(null);
+              }}
+            >
+              <button
+                type="button"
+                className="min-h-11 rounded-lg px-2 hover:bg-amber-50 hover:text-amber-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+                aria-expanded={openCategory === "services-menu"}
+                onClick={() => setOpenCategory((current) => current === "services-menu" ? null : "services-menu")}
+              >
+                Υπηρεσίες & βοήθεια
+              </button>
+              <div className={`absolute right-0 top-full z-50 min-w-64 flex-col rounded-lg border border-amber-100 bg-white py-2 text-amber-900 shadow-lg ${openCategory === "services-menu" ? "flex" : "hidden"}`}>
+                <Link to="/contact" onClick={() => setOpenCategory(null)} className="min-h-11 px-4 py-3 hover:bg-amber-50">Επικοινωνία & βοήθεια επιλογής</Link>
+                <Link to="/low-vision" onClick={() => setOpenCategory(null)} className="min-h-11 px-4 py-3 hover:bg-amber-50">Βοηθήματα χαμηλής όρασης</Link>
+                <Link to="/look-at-home" onClick={() => setOpenCategory(null)} className="min-h-11 px-4 py-3 hover:bg-amber-50">Οπτικά στο σπίτι · Αττική</Link>
+                <Link to="/about-us" onClick={() => setOpenCategory(null)} className="min-h-11 px-4 py-3 hover:bg-amber-50">Σχετικά με εμάς</Link>
+              </div>
+            </div>
             {admin && (
               <div
                 className="relative"
@@ -907,8 +903,8 @@ function AppShell() {
             {/* (Cart text link removed because we now have icon on the right) */}
           </nav>
 
-          {/* Right side: account + cart + socials */}
-          <div className="hidden items-center gap-4 text-2xl text-slate-500 md:flex">
+          {/* Right side: search, account and cart */}
+          <div className="hidden items-center gap-2 text-2xl text-slate-500 lg:flex">
             {/* Site-wide search */}
             {navSearchOpen ? (
               <form onSubmit={handleNavSearchSubmit} className="flex items-center gap-1">
@@ -918,7 +914,7 @@ function AppShell() {
                   value={navSearchQuery}
                   onChange={(e) => setNavSearchQuery(e.target.value)}
                   placeholder="Αναζήτηση προϊόντων..."
-                  className="w-48 rounded-full border border-amber-200 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-amber-500"
+                  className="min-h-11 w-48 rounded-full border border-amber-200 px-4 py-2 text-sm text-slate-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 />
                 <button
                   type="button"
@@ -926,7 +922,7 @@ function AppShell() {
                     setNavSearchOpen(false);
                     setNavSearchQuery("");
                   }}
-                  className="text-slate-500 hover:text-amber-700"
+                  className="grid size-11 place-items-center rounded-full text-slate-500 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                   aria-label="Κλείσιμο αναζήτησης"
                 >
                   <CloseIcon fontSize="small" />
@@ -936,7 +932,7 @@ function AppShell() {
               <button
                 type="button"
                 onClick={() => setNavSearchOpen(true)}
-                className="text-slate-600 hover:text-amber-700"
+                className="grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 aria-label="Αναζήτηση"
               >
                 <SearchIcon fontSize="inherit" />
@@ -946,7 +942,7 @@ function AppShell() {
             {/* Account icon */}
             <Link
               to={isLoggedIn ? "/account" : "/account/login"}
-              className="relative text-slate-600 hover:text-amber-700"
+              className="relative grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
               aria-label="Ο λογαριασμός μου"
             >
               <PersonOutlineIcon fontSize="inherit" />
@@ -955,7 +951,7 @@ function AppShell() {
             {/* Cart icon with badge */}
             <Link
               to="/cart"
-              className="relative text-slate-600 hover:text-amber-700"
+              className="relative grid size-11 place-items-center rounded-full text-slate-600 hover:bg-amber-50 hover:text-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
               aria-label="Καλάθι"
             >
               <ShoppingCartOutlinedIcon fontSize="inherit" />
@@ -966,19 +962,6 @@ function AppShell() {
               )}
             </Link>
 
-            {/* Socials */}
-            <Link
-              to="https://www.facebook.com/lookoptikahalandri"
-              target="_blank"
-            >
-              <FacebookIcon className="text-blue-700" />
-            </Link>
-            <Link
-              to="https://www.instagram.com/lookopticahalandri"
-              target="_blank"
-            >
-              <InstagramIcon className="text-red-700" />
-            </Link>
           </div>
         </div>
       </header>
@@ -1140,27 +1123,22 @@ function AppShell() {
 
       <footer className="border-t bg-white/90">
         <div className="flex w-full flex-col gap-3 px-6 py-8 text-sm text-amber-700 md:flex-row md:items-center md:justify-between">
-          <span>
-            © {new Date().getFullYear()} Look Optica — A different point of
-            view
-          </span>
-          <span className="flex flex-wrap items-center gap-2">
-            <Link to="/faq" className="hover:text-red-800">
-              Faq
-            </Link>
-            <span>|</span>
-            <Link to="/contact" className="hover:text-red-800">
-              Επικοινωνία
-            </Link>
-            <span>|</span>
-            <Link to="/terms" className="hover:text-red-800">
-              Όροι χρήσης
-            </Link>
-            <span>|</span>
-            <Link to="/returns" className="hover:text-red-800">
-              Υπαναχώρηση / Επιστροφές
-            </Link>
-          </span>
+         <span>
+            © {new Date().getFullYear()} Look Optica — Μια διαφορετική οπτική
+         </span>
+         <span className="flex flex-wrap items-center gap-2">
+            <Link to="/contact" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+             Επικοινωνία
+           </Link>
+           <span>|</span>
+            <Link to="/terms" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+             Όροι χρήσης
+           </Link>
+           <span>|</span>
+            <Link to="/returns" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+             Υπαναχώρηση / Επιστροφές
+           </Link>
+         </span>
           <span className="md:text-right">
             Αγίας Παρασκευής 30, Χαλάνδρι
             <br />
@@ -1169,10 +1147,14 @@ function AppShell() {
               info@lookoptica.gr
             </a>{" "}
             |{" "}
-            <a href="https://www.lookoptica.gr" className="underline">
-              www.lookoptica.gr
-            </a>
-          </span>
+           <a href="https://www.lookoptica.gr" className="underline">
+             www.lookoptica.gr
+           </a>
+            <span className="ml-2 inline-flex items-center gap-1">
+              <a href="https://www.facebook.com/lookoptikahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Facebook" className="inline-grid size-9 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><FacebookIcon fontSize="small" /></a>
+              <a href="https://www.instagram.com/lookopticahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Instagram" className="inline-grid size-9 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><InstagramIcon fontSize="small" /></a>
+            </span>
+         </span>
         </div>
       </footer>
     </div>

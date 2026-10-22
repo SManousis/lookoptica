@@ -38,7 +38,7 @@ export default function WishlistButton({ slug, className = "" }) {
         fill={active ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth={1.8}
-        className={active ? "text-red-600" : "text-slate-500"}
+        className={active ? "text-status-error" : "text-ink-muted"}
         width="20"
         height="20"
       >

@@ -340,6 +340,71 @@ status-code checks on all the reported URLs (dead prefixes → 404, trailing
 slashes → 301); frontend deploy confirmed via matching bundle hash on the
 live site.
 
+### 2026-10-05 follow-up: Soft 404 validation failed — real cause, different from the one above
+
+Requested validation on the Soft 404 fix above; Google re-crawled and
+failed it again, with 10 example URLs. Checked each one against the live
+API: **every single one is a genuinely deleted product** (`/api/products/{slug}`
+returns a real `404` for all of them - `ana-hickmann-ah-3308`,
+`prime-pr-2789`, `anna-riska-ar-2292`, `max-co-mo-5001`, `moritz-mz-11530`,
+`moritz-mz-11473`, `prime-pr-2641`, `prime-pr-2639`, `guess-gu-5209-2`).
+Nothing to do with contact lenses or the wrong-prefix bug fixed earlier —
+a different, previously-unhandled case of the same underlying problem: the
+app has no server-side way to return a real HTTP 404 for a product that no
+longer exists, since `/product/:slug` is a pure client-side route. nginx
+can't help here either (it would need to know which slugs are valid, which
+means querying the backend per-request - not worth building for this).
+
+**Fix:** `PDP.jsx` and `ContactLensPDP.jsx` now pass `noindex: true` to
+`usePageSEO` whenever the product fetch fails/404s (`state === "error"`),
+instead of leaving `noindex` at its default `false`. Previously, a deleted
+product's page still set a self-referencing canonical URL and a generic
+indexable title while showing nothing but "Could not load product." —
+textbook soft-404 shape. Also replaced that bare error text with a proper
+message + links back to `/shop` and `/`, matching the site-wide
+`NotFoundPage` pattern from the previous fix, for any real visitor who
+follows a dead product link.
+
+**Known limitation, accepted as-is for now:** this is still an HTTP `200`
+with a client-side `noindex`, not a true `404` - the strongest signal
+available without server-side rendering (Phase 4). `noindex` is the
+standard, Google-accepted way to say "don't index this," so it should
+clear the Search Console issue even though the raw status code doesn't
+change. If a future product deletion/migration produces a *lot* of dead
+slugs at once, it might be worth deleting the affected URLs from the
+sitemap and Search Console's URL Removal tool as a faster signal than
+waiting for organic re-crawl - not needed for the ~9 cases found here.
+
+### 2026-10-05: Merchant listings — "Not a globally valid GTIN" (separate from the earlier "Invalid GTIN" fix)
+
+A new, more specific Merchant listings email, non-critical. Checked the 7
+example URLs Google gave against the live catalog: every one has an `ean`
+of the shape `2000000XXXXXX`. These pass the GTIN checksum (which is
+exactly why the earlier "Invalid GTIN" fix - length + check-digit
+validation - didn't catch them), but **GS1 reserves the EAN-13 prefixes
+"02", "04", and "20"-"29" as "Restricted Circulation Numbers"**: valid,
+correctly-formatted barcodes used for a single company/region's internal
+labeling (e.g. in-store variable-weight items), explicitly *not* globally
+unique. That's precisely what "not a globally valid GTIN" means - a
+different, more semantic check than plain checksum validity. Scanned the
+whole catalog: **84 products** have an ean in this range, all shaped
+`2000000...`, clearly an internal placeholder from the original import
+rather than a real manufacturer barcode (consistent with the general
+pattern already found in Section "Merchant listings structured data
+issues" above - real EANs in this catalog use the `52...` Greek GS1 prefix
+or similar legitimate ranges).
+
+**Fix:** extended `sanitizeGtin()` in `frontend/src/utils/structuredData.js`
+with a restricted-circulation-number check (EAN-13 prefixes 02/04/20-29,
+and the equivalent UPC-A leading digit "2" for 12-digit codes) - any GTIN
+in these ranges is now stripped from the `Product` JSON-LD (and the
+visible "EAN: ..." label) exactly like an invalid-checksum one already
+was, falling back to the base product's ean or omitting the field
+entirely. Verified against the real flagged values (`2000000401232` etc. →
+correctly stripped) and the previously-confirmed-good ones (`5200001371177`,
+`4894917129864` → still kept) before deploying, to make sure this
+tightening didn't start stripping legitimate GTINs.
+
 ## Phase 5 — Local SEO (store pickup is a real advantage here)
 
 - [x] Claimed and verified the Google Business Profile (a listing already

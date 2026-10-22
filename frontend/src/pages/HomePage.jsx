@@ -1,29 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import PauseIcon from "@mui/icons-material/Pause";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ProductCard from "../components/ProductCard";
 import { usePageSEO } from "../hooks/usePageSEO";
 
 
 const API = import.meta.env.VITE_API_BASE || "";
 
-const HERO_IMAGES = ["/hero1.jpg", "/hero2.jpg", "/hero3.jpg", "/hero4.jpg"]; // TODO: change to your actual files
-const BRAND_ITEMS = [
-  { src: "/Converse.png", alt: "Converse", brand: "Converse" },
-  { src: "/Dkny.png", alt: "DKNY", brand: "DKNY" },
-  { src: "/Guess.png", alt: "Guess", brand: "Guess" },
-  { src: "/Hickmann.png", alt: "Hickmann", brand: "Ana Hickmann" },
-  { src: "/PaulFrank.png", alt: "Paul Frank", brand: "Paul Frank" },
-  { src: "/PepeJeans.png", alt: "Pepe Jeans", brand: "Pepe Jeans" },
-  { src: "/TedBaker.png", alt: "Ted Baker", brand: "Ted Baker" },
+const HERO_IMAGES = [
+  { src: "/hero1.jpg", srcSet: "/hero1-768.webp 768w, /hero1-1440.webp 1440w", width: 1920, height: 1359 },
+  { src: "/hero2.jpg", width: 1920, height: 1281 },
+  { src: "/hero3.jpg", srcSet: "/hero3-768.webp 768w, /hero3-1000.webp 1000w", width: 1000, height: 666 },
+  { src: "/hero4.jpg", width: 600, height: 500 },
 ];
-const BRAND_SLIDE_WIDTH = 180;
-const BRAND_SLIDE_INTERVAL = 3000;
-const BRAND_TRANSITION_MS = 600;
+const BRAND_ITEMS = [
+  { src: "/Converse.png", webp: "/Converse-320.webp", alt: "Converse", brand: "Converse" },
+  { src: "/Dkny.png", webp: "/Dkny-320.webp", alt: "DKNY", brand: "DKNY" },
+  { src: "/Guess.png", webp: "/Guess-320.webp", alt: "Guess", brand: "Guess" },
+  { src: "/Hickmann.png", webp: "/Hickmann-320.webp", alt: "Hickmann", brand: "Ana Hickmann" },
+  { src: "/PaulFrank.png", webp: "/PaulFrank-320.webp", alt: "Paul Frank", brand: "Paul Frank" },
+  { src: "/PepeJeans.png", webp: "/PepeJeans-320.webp", alt: "Pepe Jeans", brand: "Pepe Jeans" },
+  { src: "/TedBaker.png", webp: "/TedBaker-320.webp", alt: "Ted Baker", brand: "Ted Baker" },
+];
+
+const CATEGORY_CARDS = [
+  { to: "/shop/sunglasses", image: "/cat-sunglasses.png", srcSet: "/cat-sunglasses-320.webp 320w, /cat-sunglasses-425.webp 425w", width: 425, height: 469, label: "Γυαλιά Ηλίου" },
+  { to: "/shop/frames", image: "/cat-frames.png", srcSet: "/cat-frames-320.webp 320w, /cat-frames-453.webp 453w", width: 453, height: 453, label: "Σκελετοί Οράσεως" },
+  { to: "/shop/contact-lenses", image: "/cat-contacts.jpg", srcSet: "/cat-contacts-480.webp 480w, /cat-contacts-800.webp 800w", width: 1024, height: 1024, label: "Φακοί Επαφής" },
+  { to: "/shop/other-products", image: "/cat-other.jpg", srcSet: "/cat-other-480.webp 480w, /cat-other-800.webp 800w", width: 1536, height: 1024, label: "Αξεσουάρ & Φροντίδα" },
+];
 
 const OFFERS_MAX_PRICE = 80;
-// Mirrors the alias lists in PLP.jsx's CATEGORY_CONFIG - the catalog has
-// several spelling/casing variants for the same category from the bulk
-// import (e.g. "Γυαλιά Ηλίου" vs "Γυαλία Ηλίου" vs "sunglasses").
+const FALLBACK_OFFER_LIMIT = 24;
 const SUNGLASSES_CATEGORY_ALIASES = ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου"];
 const FRAMES_CATEGORY_ALIASES = [
   "ophthalmic_frames",
@@ -33,28 +46,43 @@ const FRAMES_CATEGORY_ALIASES = [
   "γυαλια ορασεως",
 ];
 
+const parseJsonResponse = async (response) => {
+  if (!response.ok) throw new Error(`request failed: ${response.status}`);
+  return response.json();
+};
+
 export default function HomePage() {
   usePageSEO({
     title: "Look Οπτικά | Γυαλιά Ηλίου, Οράσεως & Φακοί Επαφής",
     description:
-      "Ανακαλύψτε γυαλιά ηλίου, σκελετούς οράσεως και φακούς επαφής από κορυφαίες μάρκες στο Look Οπτικά. Παραλαβή από κατάστημα ή παράδοση με courier.",
+      "Ανακαλύψτε γυαλιά ηλίου, σκελετούς οράσεως και φακούς επαφής με εξειδικευμένη οπτική καθοδήγηση και αποστολή σε όλη την Ελλάδα.",
     url: "https://www.lookoptica.gr/",
     image: "https://www.lookoptica.gr/logo.png",
   });
 
   const [featured, setFeatured] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [offersState, setOffersState] = useState("loading");
   const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [newsletterState, setNewsletterState] = useState("idle"); // idle | loading | ok | error
   const [state, setState] = useState("loading"); // loading | ok | error
   const [slideIndex, setSlideIndex] = useState(0);
-  const [brandsIndex, setBrandsIndex] = useState(0);
-  const [isBrandJumping, setIsBrandJumping] = useState(false);
+  const [heroAnnouncement, setHeroAnnouncement] = useState({ id: 0, message: "" });
+  const [heroPaused, setHeroPaused] = useState(false);
+  const [heroInteracting, setHeroInteracting] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [loadedHeroImages, setLoadedHeroImages] = useState(() =>
+    HERO_IMAGES.map(() => false)
+  );
   const swipeStart = useRef(null);
+  const brandTrackRef = useRef(null);
 
-  useEffect(() => {
-    fetch(`${API}/products`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+  const loadFeatured = useCallback(() => {
+    setState("loading");
+    fetch(`${API}/shop-products/featured?limit=8`)
+      .then(parseJsonResponse)
+      .catch(() => fetch(`${API}/products?limit=8`).then(parseJsonResponse))
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setFeatured(list.slice(0, 8));
@@ -63,93 +91,77 @@ export default function HomePage() {
       .catch(() => setState("error"));
   }, []);
 
-  // Offers bar: a mix of sunglasses + frames, real discount, price up to
-  // OFFERS_MAX_PRICE - not just whatever happens to be newest (that was the
-  // old behavior and skewed toward a single category).
   useEffect(() => {
-    const buildQuery = (aliases) => {
-      const params = new URLSearchParams();
-      aliases.forEach((alias) => params.append("category", alias));
-      // 200 is the backend's max allowed limit - verified live that a
-      // smaller pool (e.g. 60 newest) only turned up 2 eligible frames vs
-      // 8 sunglasses, an unbalanced "mix". 200 gave 34 sunglasses / 42
-      // frames, plenty to interleave from.
-      params.set("limit", "200");
-      return params.toString();
-    };
+    loadFeatured();
+  }, [loadFeatured]);
 
-    const isEligibleOffer = (p) =>
-      p?.price != null &&
-      p.price > 0 &&
-      p.price <= OFFERS_MAX_PRICE &&
-      p?.discountPrice != null &&
-      p.discountPrice > p.price;
-
-    Promise.all([
-      fetch(`${API}/shop-products?${buildQuery(SUNGLASSES_CATEGORY_ALIASES)}`).then((r) =>
-        r.ok ? r.json() : []
-      ),
-      fetch(`${API}/shop-products?${buildQuery(FRAMES_CATEGORY_ALIASES)}`).then((r) =>
-        r.ok ? r.json() : []
-      ),
-    ])
-      .then(([sunglasses, frames]) => {
-        const sunglassesOffers = (Array.isArray(sunglasses) ? sunglasses : []).filter(
-          isEligibleOffer
-        );
-        const framesOffers = (Array.isArray(frames) ? frames : []).filter(isEligibleOffer);
-
-        // Interleave the two categories so the bar is an actual mix, not
-        // whichever category happened to have more matches.
-        const mixed = [];
-        const max = Math.max(sunglassesOffers.length, framesOffers.length);
-        for (let i = 0; i < max && mixed.length < 8; i++) {
-          if (sunglassesOffers[i]) mixed.push(sunglassesOffers[i]);
-          if (mixed.length < 8 && framesOffers[i]) mixed.push(framesOffers[i]);
-        }
-        setOffers(mixed);
-      })
-      .catch(() => {
-        /* offers bar just stays empty/hidden on failure */
-      });
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+    syncPreference();
+    media.addEventListener?.("change", syncPreference);
+    return () => media.removeEventListener?.("change", syncPreference);
   }, []);
+
+  const loadOffers = useCallback(async () => {
+    setOffersState("loading");
+    try {
+      const params = new URLSearchParams({ limit: "8", max_price: String(OFFERS_MAX_PRICE) });
+      let data;
+      try {
+        data = await fetch(`${API}/shop-products/offers?${params}`).then(parseJsonResponse);
+      } catch {
+        const buildFallbackQuery = (aliases) => {
+          const fallbackParams = new URLSearchParams({ limit: String(FALLBACK_OFFER_LIMIT) });
+          aliases.forEach((alias) => fallbackParams.append("category", alias));
+          return fallbackParams;
+        };
+        const [sunglasses, frames] = await Promise.all([
+          fetch(`${API}/shop-products?${buildFallbackQuery(SUNGLASSES_CATEGORY_ALIASES)}`).then(parseJsonResponse),
+          fetch(`${API}/shop-products?${buildFallbackQuery(FRAMES_CATEGORY_ALIASES)}`).then(parseJsonResponse),
+        ]);
+        const isEligibleOffer = (product) =>
+          product?.price > 0 &&
+          product.price <= OFFERS_MAX_PRICE &&
+          product?.discountPrice > product.price;
+        const sunglassesOffers = (Array.isArray(sunglasses) ? sunglasses : []).filter(isEligibleOffer);
+        const framesOffers = (Array.isArray(frames) ? frames : []).filter(isEligibleOffer);
+        const mixed = [];
+        for (let index = 0; index < Math.max(sunglassesOffers.length, framesOffers.length); index += 1) {
+          if (sunglassesOffers[index]) mixed.push(sunglassesOffers[index]);
+          if (mixed.length < 8 && framesOffers[index]) mixed.push(framesOffers[index]);
+          if (mixed.length >= 8) break;
+        }
+        data = mixed;
+      }
+      setOffers(Array.isArray(data) ? data : []);
+      setOffersState("ok");
+    } catch {
+      setOffers([]);
+      setOffersState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOffers();
+  }, [loadOffers]);
 
   // Hero slider: change image every 5 seconds
   useEffect(() => {
-    if (HERO_IMAGES.length <= 1) return;
+    if (
+      HERO_IMAGES.length <= 1 ||
+      heroPaused ||
+      heroInteracting ||
+      prefersReducedMotion ||
+      !loadedHeroImages.every(Boolean)
+    ) return undefined;
     const id = setInterval(() => {
       setSlideIndex((i) => (i + 1) % HERO_IMAGES.length);
     }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [heroInteracting, heroPaused, loadedHeroImages, prefersReducedMotion]);
 
-  // Brands carousel infinite slider
-  useEffect(() => {
-    if (BRAND_ITEMS.length <= 1) return;
-    const id = setInterval(() => {
-      setBrandsIndex((i) => i + 1);
-    }, BRAND_SLIDE_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (BRAND_ITEMS.length <= 1 || brandsIndex !== BRAND_ITEMS.length) return;
-    const timeout = setTimeout(() => {
-      setIsBrandJumping(true);
-      setBrandsIndex(0);
-      requestAnimationFrame(() => setIsBrandJumping(false));
-    }, BRAND_TRANSITION_MS);
-    return () => clearTimeout(timeout);
-  }, [brandsIndex]);
-
-  // Hero image
-  const currentHero = HERO_IMAGES[slideIndex] || "/placeholder.png";
-  const brandSlides =
-    BRAND_ITEMS.length > 1 ? [...BRAND_ITEMS, ...BRAND_ITEMS] : BRAND_ITEMS;
-  const brandTrackStyle = {
-    transform: `translateX(-${brandsIndex * BRAND_SLIDE_WIDTH}px)`,
-    transition: isBrandJumping ? "none" : `transform ${BRAND_TRANSITION_MS}ms ease`,
-  };
+  const heroMotionStopped = heroPaused || prefersReducedMotion;
 
   const getBrandHref = (item) => {
     if (item.href) return item.href;
@@ -159,6 +171,38 @@ export default function HomePage() {
     if (item.view) params.set("view", item.view);
     const query = params.toString();
     return query ? `${basePath}?${query}` : basePath;
+  };
+
+  const announceHeroStatus = (message) => {
+    setHeroAnnouncement((current) => ({ id: current.id + 1, message }));
+  };
+
+  const changeHero = (direction, announce = false) => {
+    const nextIndex = (slideIndex + direction + HERO_IMAGES.length) % HERO_IMAGES.length;
+    if (!loadedHeroImages[nextIndex]) return;
+    setSlideIndex(nextIndex);
+    if (announce) announceHeroStatus(`Εικόνα ${nextIndex + 1} από ${HERO_IMAGES.length}`);
+  };
+
+  const selectHero = (index, announce = false) => {
+    if (!loadedHeroImages[index]) return;
+    setSlideIndex(index);
+    if (announce) announceHeroStatus(`Εικόνα ${index + 1} από ${HERO_IMAGES.length}`);
+  };
+
+  const toggleHeroPlayback = () => {
+    const nextPaused = !heroPaused;
+    setHeroPaused(nextPaused);
+    announceHeroStatus(nextPaused ? "Η αυτόματη προβολή τέθηκε σε παύση" : "Η αυτόματη προβολή συνεχίζεται");
+  };
+
+  const scrollBrands = (direction) => {
+    const track = brandTrackRef.current;
+    if (!track) return;
+    track.scrollBy({
+      left: direction * Math.min(track.clientWidth * 0.8, 540),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
   };
 
   const handleSwipeStart = (e) => {
@@ -179,338 +223,313 @@ export default function HomePage() {
 
     if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) < threshold) return;
 
-    if (dx < 0) {
-      setSlideIndex((i) => (i + 1) % HERO_IMAGES.length);
-    } else {
-      setSlideIndex((i) => (i - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
-    }
+    changeHero(dx < 0 ? 1 : -1, true);
   };
 
   return (
     <div className="space-y-10 px-4 py-6 sm:px-6">
-      {/* BIG HERO SLIDER */}
       <section
-        className="relative -mx-4 h-[70vh] overflow-hidden rounded-2xl sm:-mx-6 sm:h-[80vh] sm:rounded-3xl md:h-[90vh]"
+        className="relative -mx-4 min-h-[32rem] overflow-hidden rounded-2xl sm:-mx-6 sm:min-h-[36rem] sm:rounded-3xl lg:min-h-[42rem]"
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
+        onMouseEnter={() => setHeroInteracting(true)}
+        onMouseLeave={() => setHeroInteracting(false)}
+        onFocusCapture={() => setHeroInteracting(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setHeroInteracting(false);
+        }}
+        aria-roledescription="carousel"
+        aria-label="Προτάσεις Look Optica"
       >
-        {/* Hero image */}
-        <img
-          src={currentHero}
-          alt="Look Optica – συλλογή γυαλιών"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "/placeholder.png";
-          }}
-        />
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          <span key={heroAnnouncement.id}>{heroAnnouncement.message}</span>
+        </div>
+        {HERO_IMAGES.map((hero, index) => (
+          <img
+            key={hero.src}
+            src={hero.src}
+            srcSet={hero.srcSet}
+            sizes="100vw"
+            width={hero.width}
+            height={hero.height}
+            loading="eager"
+            decoding="async"
+            fetchPriority={index === 0 ? "high" : "auto"}
+            alt=""
+            aria-hidden={index !== slideIndex}
+            className={`absolute inset-0 h-full w-full object-cover ${index === slideIndex ? "opacity-100" : "opacity-0"}`}
+            onLoad={() => {
+              setLoadedHeroImages((loaded) => {
+                if (loaded[index]) return loaded;
+                const next = [...loaded];
+                next[index] = true;
+                return next;
+              });
+            }}
+            onError={(event) => {
+              const image = event.currentTarget;
+              image.removeAttribute("srcset");
+              image.onerror = () => {
+                image.onerror = null;
+                image.src = "/placeholder.png";
+              };
+              image.src = hero.src;
+            }}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-r from-overlay-dark/75 via-overlay-dark/45 to-overlay-dark/15" />
 
-        {/* dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/20" />
+        <div className="relative z-[1] flex min-h-[32rem] items-center px-6 py-16 sm:min-h-[36rem] sm:px-10 lg:min-h-[42rem] lg:px-16">
+          <div className="max-w-3xl text-left text-on-media">
+            <h1 className="font-zen text-4xl leading-[1.12] text-balance sm:text-5xl lg:text-6xl">
+              Γυαλιά που ταιριάζουν σε εσάς και στην τιμή που θέλετε
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-on-media-muted sm:text-lg">
+              Αγοράστε online από όλη την Ελλάδα, με προσεγμένες επιλογές και
+              εξειδικευμένη οπτική καθοδήγηση όταν τη χρειάζεστε.
+            </p>
 
-        {/* text overlay (centered-ish) */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <div className="text-xs md:text-sm font-semibold text-amber-800 uppercase tracking-[0.2em]">
-            Premium Eyewear
-          </div>
-          <h1 className="mt-3 text-3xl md:text-5xl font-semibold text-white leading-tight">
-            Νέες συλλογές γυαλιών
-            <br />
-            Ηλίου &amp; Οράσεως
-          </h1>
-          <p className="mt-4 max-w-xl text-sm md:text-base text-slate-100">
-            Ελάτε σήμερα στο κατάστημα μας και διάλεξτε άπο μια πλούσια συλλογή γυαλιών ηλίου και οράσεως.
-          </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link
+                to="/shop"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-on-media shadow-lg transition hover:bg-brand-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
+              >
+                Αγορά online
+              </Link>
+              <Link
+                to="/contact"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-on-media/80 bg-overlay-dark/15 px-6 py-3 text-sm font-semibold text-on-media transition hover:bg-surface-raised hover:text-brand-deep focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
+              >
+                Μιλήστε με ειδικό
+              </Link>
+            </div>
 
-          <div className="mt-6 flex flex-wrap gap-3 justify-center">
-            <Link
-              to="/shop/sunglasses"
-              className="px-5 py-2.5 rounded-full bg-amber-800 text-white text-sm font-medium hover:bg-amber-700 transition"
-            >
-              Γυαλιά Ηλίου
-            </Link>
-            <Link
-              to="/shop/frames"
-              className="px-5 py-2.5 rounded-full border border-white/70 text-white text-sm font-medium hover:bg-white/10 transition"
-            >
-              Σκελετοί Οράσεως
-            </Link>
+            <p className="mt-6 text-sm font-medium text-on-media-warm">
+              Αποστολές σε όλη την Ελλάδα · Φυσικό κατάστημα στο Χαλάνδρι
+            </p>
           </div>
         </div>
-        {/* slider dots */}
+
         {HERO_IMAGES.length > 1 && (
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
-            {HERO_IMAGES.map((_, idx) => (
+          <div className="absolute inset-x-4 bottom-4 z-[2] flex items-center justify-between gap-3 sm:inset-x-8">
+            <div className="flex items-center gap-1 rounded-full bg-overlay-dark/40 p-1">
               <button
-                key={idx}
                 type="button"
-                onClick={() => setSlideIndex(idx)}
-                className={`w-2.5 h-2.5 rounded-full border border-white/70 transition ${
-                  idx === slideIndex ? "bg-white" : "bg-white/20"
-                }`}
-                aria-label={`Slide ${idx + 1}`}
-              />
-            ))}
+                onClick={() => changeHero(-1, true)}
+                className="grid size-11 place-items-center rounded-full text-on-media transition hover:bg-on-media/15 focus-visible:outline-2 focus-visible:outline-on-media"
+                aria-label="Προηγούμενη εικόνα"
+              >
+                <ChevronLeftIcon />
+              </button>
+              <button
+                type="button"
+                onClick={toggleHeroPlayback}
+                disabled={prefersReducedMotion}
+                className="grid size-11 place-items-center rounded-full text-on-media transition hover:bg-on-media/15 focus-visible:outline-2 focus-visible:outline-on-media disabled:cursor-default disabled:opacity-70"
+                aria-label={prefersReducedMotion ? "Η αυτόματη προβολή είναι απενεργοποιημένη λόγω μειωμένης κίνησης" : heroPaused ? "Συνέχιση αυτόματης προβολής" : "Παύση αυτόματης προβολής"}
+                aria-pressed={heroMotionStopped}
+              >
+                {heroMotionStopped ? <PlayArrowIcon /> : <PauseIcon />}
+              </button>
+              <button
+                type="button"
+                onClick={() => changeHero(1, true)}
+                className="grid size-11 place-items-center rounded-full text-on-media transition hover:bg-on-media/15 focus-visible:outline-2 focus-visible:outline-on-media"
+                aria-label="Επόμενη εικόνα"
+              >
+                <ChevronRightIcon />
+              </button>
+            </div>
+            <span
+              className="inline-flex min-h-11 min-w-14 items-center justify-center rounded-full bg-overlay-dark/40 px-3 text-sm font-semibold tabular-nums text-on-media sm:hidden"
+              aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_IMAGES.length}`}
+            >
+              {slideIndex + 1} / {HERO_IMAGES.length}
+            </span>
+            <div className="hidden items-center gap-1 rounded-full bg-overlay-dark/40 p-1 sm:flex" aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_IMAGES.length}`}>
+              {HERO_IMAGES.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => selectHero(idx, true)}
+                  disabled={!loadedHeroImages[idx]}
+                  className="grid size-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-on-media"
+                  aria-label={`Προβολή εικόνας ${idx + 1}`}
+                  aria-current={idx === slideIndex ? "true" : undefined}
+                >
+                  <span className={`size-2.5 rounded-full border border-on-media/80 ${idx === slideIndex ? "bg-on-media" : "bg-on-media/25"}`} />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </section>
 
-      {/* BRANDS MARQUEE */}
+      <section aria-label="Γιατί να επιλέξετε το Look Optica" className="-mt-4 border-y border-border-brand bg-surface-raised/80 py-5">
+        <ul className="grid gap-4 text-sm text-ink-primary sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-border-brand">
+          <li className="px-4"><strong className="block text-brand-strong">Πανελλαδική εξυπηρέτηση</strong> Αποστολές σε όλη την Ελλάδα.</li>
+          <li className="px-4"><strong className="block text-brand-strong">Οπτική καθοδήγηση</strong> Βοήθεια για να επιλέξετε με σιγουριά.</li>
+          <li className="px-4"><strong className="block text-brand-strong">Εγγυημένη προέλευση</strong> Προϊόντα επίσημης αντιπροσωπείας.</li>
+          <li className="px-4"><strong className="block text-brand-strong">Ασφαλείς πληρωμές</strong> Viva Wallet, PayPal και τραπεζική κατάθεση.</li>
+        </ul>
+        <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm font-medium">
+          <Link to="/terms" className="text-brand-strong underline decoration-border-brand-highlight underline-offset-4 hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-focus-ring">Αποστολές & πληρωμές</Link>
+          <Link to="/contact" className="text-brand-strong underline decoration-border-brand-highlight underline-offset-4 hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-focus-ring">Χρειάζεστε βοήθεια επιλογής;</Link>
+        </div>
+      </section>
+
       {BRAND_ITEMS.length > 0 && (
-        <section className="relative -mx-4 rounded-2xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm sm:-mx-6 sm:rounded-3xl sm:p-6">
-          <div className="relative mt-2 overflow-hidden sm:mt-6">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white to-transparent" />
-            <div className="flex" style={brandTrackStyle}>
-              {brandSlides.map((item, idx) => (
-                <div
-                  key={`${item.brand || item.alt || item.src}-${idx}`}
-                  className="flex shrink-0 items-center justify-center px-4 py-2"
-                  style={{ width: `${BRAND_SLIDE_WIDTH}px` }}
-                >
+        <section className="-mx-4 rounded-2xl border border-border-warm-subtle bg-surface-warm/60 p-4 shadow-sm sm:-mx-6 sm:rounded-3xl sm:p-6" aria-labelledby="brands-heading">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id="brands-heading" className="font-zen text-2xl text-brand-deep">Επιλεγμένες μάρκες</h2>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => scrollBrands(-1)} className="grid size-11 place-items-center rounded-full border border-border-brand bg-surface-raised text-brand-strong hover:border-border-brand-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" aria-label="Προηγούμενες μάρκες"><ChevronLeftIcon /></button>
+              <button type="button" onClick={() => scrollBrands(1)} className="grid size-11 place-items-center rounded-full border border-border-brand bg-surface-raised text-brand-strong hover:border-border-brand-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" aria-label="Επόμενες μάρκες"><ChevronRightIcon /></button>
+            </div>
+          </div>
+          <div
+            ref={brandTrackRef}
+            className="-mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scroll-px-4 sm:-mx-6 sm:px-6 sm:scroll-px-6"
+          >
+              {BRAND_ITEMS.map((item) => (
                   <Link
+                    key={item.brand || item.alt || item.src}
                     to={getBrandHref(item)}
-                    className="block rounded-xl px-2 py-1 transition hover:bg-white/70"
-                    aria-label={`Browse ${item.alt || item.brand || "brand"} products`}
+                    className="flex h-24 w-40 shrink-0 snap-start items-center justify-center rounded-xl bg-surface-raised/60 px-4 py-2 transition hover:bg-surface-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                    aria-label={`Προϊόντα ${item.alt || item.brand || "μάρκας"}`}
                   >
                     <img
-                      src={item.src}
+                      src={item.webp}
                       alt={item.alt || "Brand logo"}
-                      className="h-20 w-100 object-contain opacity-80 transition hover:opacity-100"
+                      width="320"
+                      height="160"
+                      loading="lazy"
+                      decoding="async"
+                      className="h-20 w-full object-contain opacity-80 transition hover:opacity-100"
                       onError={(e) => {
-                        e.currentTarget.src = "/placeholder.png";
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = item.src;
                       }}
                     />
                   </Link>
-                </div>
               ))}
-            </div>
           </div>
         </section>
       )}
 
-      {/* CATEGORY IMAGES ROW */}
-      <section>
-        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-8">
-            {/* Γυαλιά Ηλίου */}
-            <Link
-            to="/shop/sunglasses"
-            className="relative group rounded-2xl overflow-hidden"
-            >
-            <img
-                src="/cat-sunglasses.png"
-                alt="Γυαλιά Ηλίου"
-                className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                e.currentTarget.src = "/placeholder.png";
+      <section aria-labelledby="categories-heading" className="space-y-5">
+        <h2 id="categories-heading" className="font-zen text-3xl text-brand-deep">Ανακαλύψτε τη συλλογή</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-8">
+          {CATEGORY_CARDS.map((category) => (
+            <Link key={category.to} to={category.to} className="group relative min-h-56 overflow-hidden rounded-2xl focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring sm:min-h-64 lg:min-h-[28rem]">
+              <img
+                src={category.image}
+                srcSet={category.srcSet}
+                sizes="(min-width: 640px) 50vw, 100vw"
+                width={category.width}
+                height={category.height}
+                loading="lazy"
+                decoding="async"
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 motion-reduce:transition-none group-hover:scale-105 motion-reduce:group-hover:scale-100"
+                onError={(event) => {
+                  const image = event.currentTarget;
+                  image.removeAttribute("srcset");
+                  image.onerror = () => {
+                    image.onerror = null;
+                    image.src = "/placeholder.png";
+                  };
+                  image.src = category.image;
                 }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                                    px-4 py-2
-                                    rounded-full
-                                    bg-white/70 backdrop-blur-sm
-                                    shadow-lg
-                                    font-zen
-                                    text-[24px] md:text-[28px]
-                                    font-bold
-                                    text-amber-700
-                                    whitespace-nowrap
-                                    hover:text-white
-                                    hover:bg-amber-700
-                                    transition">
-                Γυαλιά Ηλίου
-            </div>
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-overlay-dark/65 via-overlay-dark/10 to-transparent" />
+              <span className="absolute inset-x-4 bottom-4 rounded-xl bg-surface-raised/90 px-4 py-3 text-center font-zen text-xl leading-tight text-brand-deep shadow-lg transition group-hover:bg-brand-primary group-hover:text-on-media sm:text-2xl">
+                {category.label}
+              </span>
             </Link>
-
-            {/* Σκελετοί Οράσεως */}
-            <Link
-            to="/shop/frames"
-            className="relative group rounded-2xl overflow-hidden"
-            >
-            <img
-                src="/cat-frames.png"
-                alt="Σκελετοί Οράσεως"
-                className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                e.currentTarget.src = "/placeholder.png";
-                }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                            px-4 py-2
-                            rounded-full
-                            bg-white/70 backdrop-blur-sm
-                            shadow-lg
-                            font-zen
-                            text-[24px] md:text-[28px]
-                            font-bold
-                            text-amber-700
-                            whitespace-nowrap 
-                            hover:text-white
-                            hover:bg-amber-700
-                            transition">
-                Σκελετοί Οράσεως
-            </div>
-
-            </Link>
-           </div>
-           <div className="grid grid-cols-2 md:grid-cols-2 mt-8 gap-4 md:gap-8">     
-            {/* Φακοί Επαφής */}
-            <Link   
-            to="/shop/contact-lenses"
-            className="relative group rounded-2xl overflow-hidden"
-            >
-            <img
-                src="/cat-contacts.jpg"
-                alt="Φακοί Επαφής"
-                className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                e.currentTarget.src = "/placeholder.png";
-                }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                            px-4 py-2
-                            rounded-full
-                            bg-white/70 backdrop-blur-sm
-                            shadow-lg
-                            font-zen
-                            text-[24px] md:text-[28px]
-                            font-bold
-                            text-amber-700
-                            whitespace-nowrap 
-                            hover:text-white
-                            hover:bg-amber-700
-                            transition">
-                Φακοί Επαφής
-            </div>
-            </Link>
-
-            {/* Άλλα προϊόντα */}
-            <Link
-            to="/shop/other-products"
-            className="relative group rounded-2xl overflow-hidden"
-            >
-            <img
-                src="/cat-other.jpg"
-                alt="Άλλα προϊόντα"
-                className="w-full h-32 md:h-40 lg:h-140 object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                e.currentTarget.src = "/placeholder.png";
-                }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2
-                            px-4 py-2
-                            rounded-full
-                            bg-white/70 backdrop-blur-sm
-                            shadow-lg
-                            font-zen
-                            text-[24px] md:text-[28px]
-                            font-bold
-                            text-amber-700
-                            whitespace-nowrap 
-                            hover:text-white
-                            hover:bg-amber-700
-                            transition">
-                Άλλα προϊόντα
-            </div>
-            </Link>
+          ))}
         </div>
-     </section >
+      </section>
 
-      {/* OFFERS */}
-      {offers.length > 0 && (
+      {(offers.length > 0 || offersState === "error") && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg text-amber-700 font-semibold">Προσφορές</h2>
+            <h2 className="font-zen text-3xl text-brand-deep">Προσφορές</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {offers.map((p) => (
-              <ProductCard key={p.slug} p={p} />
-            ))}
-          </div>
+          {offersState === "error" ? (
+            <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-border-brand bg-surface-warm p-4 text-sm text-brand-deep sm:flex-row sm:items-center sm:justify-between">
+              <span>Δεν μπορέσαμε να φορτώσουμε τις προσφορές.</span>
+              <button type="button" onClick={loadOffers} className="min-h-11 rounded-lg border border-border-brand-highlight bg-surface-raised px-4 py-2 font-semibold hover:bg-surface-warm-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">Δοκιμάστε ξανά</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {offers.map((p) => <ProductCard key={p.slug} p={p} />)}
+            </div>
+          )}
         </section>
       )}
 
-      {/* SERVICES */}
       <section className="space-y-4">
-        <h2 className="text-lg text-amber-700 font-semibold">Οι Υπηρεσίες μας</h2>
+        <h2 className="font-zen text-3xl text-brand-deep">Εξειδικευμένη φροντίδα</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             to="/low-vision"
-            className="group rounded-2xl border border-amber-100 bg-white/80 p-6 shadow-sm transition hover:border-amber-300 hover:shadow-md"
+            className="group rounded-2xl border border-border-warm-subtle bg-surface-raised/80 p-6 shadow-sm transition hover:border-border-brand-highlight hover:shadow-md focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring"
           >
-            <div className="text-3xl mb-3">🔍</div>
-            <h3 className="font-zen text-xl text-amber-800 mb-2">
+            <VisibilityOutlinedIcon className="mb-3 text-brand-primary" fontSize="large" aria-hidden="true" />
+            <h3 className="font-zen text-xl text-brand-strong mb-2">
               Βοηθήματα Χαμηλής Όρασης
             </h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-sm text-ink-secondary leading-relaxed">
               Εξειδικευμένες υπηρεσίες και βοηθήματα χαμηλής όρασης, κατόπιν
               ραντεβού, με χρόνια εμπειρία στον τομέα.
             </p>
-            <span className="mt-3 inline-block text-sm font-medium text-amber-700 group-hover:underline">
+            <span className="mt-3 inline-block text-sm font-medium text-brand-primary group-hover:underline">
               Μάθε περισσότερα &rarr;
             </span>
           </Link>
 
           <Link
             to="/look-at-home"
-            className="group rounded-2xl border border-amber-100 bg-white/80 p-6 shadow-sm transition hover:border-amber-300 hover:shadow-md"
+            className="group rounded-2xl border border-border-warm-subtle bg-surface-raised/80 p-6 shadow-sm transition hover:border-border-brand-highlight hover:shadow-md focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring"
           >
-            <div className="text-3xl mb-3">🏠</div>
-            <h3 className="font-zen text-xl text-amber-800 mb-2">
+            <HomeOutlinedIcon className="mb-3 text-brand-primary" fontSize="large" aria-hidden="true" />
+            <h3 className="font-zen text-xl text-brand-strong mb-2">
               Οπτικά στο Σπίτι
             </h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Δεν προλαβαίνετε να περάσετε από το κατάστημα; Ερχόμαστε εμείς
-              σε εσάς για να διαλέξετε τα γυαλιά που σας ταιριάζουν.
+            <p className="text-sm text-ink-secondary leading-relaxed">
+              Επιλέξτε γυαλιά στον χώρο σας με προσωπική εξυπηρέτηση. Η
+              υπηρεσία διατίθεται αποκλειστικά εντός Αττικής.
             </p>
-            <span className="mt-3 inline-block text-sm font-medium text-amber-700 group-hover:underline">
+            <span className="mt-3 inline-block text-sm font-medium text-brand-primary group-hover:underline">
               Μάθε περισσότερα &rarr;
             </span>
           </Link>
         </div>
       </section>
 
-      {/* VARIOUS INFOS */}
-      <section className="py-12 space-y-4">
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
-            <img src=" /Shipping.png" alt="Shipping" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-            <p className="text-sm leading-relaxed text-amber-800">Δωρεάν αποστολή για αγορές άνω των 40€ με Box Now και 80€ με Ελτα courier</p>
-          </div>
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
-            <img src=" /Star.png" alt="Star" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
-            <p className="text-sm leading-relaxed text-amber-800">Ολα τα προϊόντα είναι από την επίσημη αντιπροσωπεία</p>
-          </div>
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-white/80 p-4 shadow-sm">
-            <img src=" /Safety.png" alt="Safety" className="w-12 h-12 md:w-14 md:h-14 object-contain" />
-            <p className="text-sm leading-relaxed text-amber-800">Ασφαλείς συναλλαγές μέσω VivaWallet, PayPal και τραπεζικής κατάθεσης</p>
-          </div>
-        </div>
-        
-       </section>
-
-      {/* FEATURED PRODUCTS */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg text-amber-700 font-semibold">Προτεινόμενα / Νέες αφίξεις</h2>
-          <Link to="/shop" className="text-xs text-amber-700 hover:underline">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-zen text-3xl text-brand-deep">Επιλογές από τη συλλογή μας</h2>
+          <Link
+            to="/shop"
+            className="inline-flex min-h-11 items-center rounded-full border border-border-brand bg-surface-raised px-4 py-2 text-sm font-semibold text-brand-strong transition hover:border-border-brand-strong hover:bg-surface-warm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
             Δες όλα τα προϊόντα &rarr;
           </Link>
         </div>
 
         {state === "loading" && (
-          <div className="text-sm text-slate-500">Φόρτωση προϊόντων…</div>
+          <div className="text-sm text-ink-muted">Φόρτωση προϊόντων…</div>
         )}
         {state === "error" && (
-          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-            Δεν ήταν δυνατή η φόρτωση των προϊόντων.
+          <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-border-brand bg-surface-warm p-4 text-sm text-brand-deep sm:flex-row sm:items-center sm:justify-between">
+            <span>Δεν μπορέσαμε να φορτώσουμε τα προϊόντα.</span>
+            <button type="button" onClick={loadFeatured} className="min-h-11 rounded-lg border border-border-brand-highlight bg-surface-raised px-4 py-2 font-semibold hover:bg-surface-warm-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">Δοκιμάστε ξανά</button>
           </div>
         )}
         {state === "ok" && featured.length === 0 && (
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-ink-secondary">
             Δεν υπάρχουν ακόμη προϊόντα για προβολή.
           </div>
         )}
@@ -522,18 +541,22 @@ export default function HomePage() {
           </div>
         )}
       </section>
-      {/* NEWSLETTER SECTION */}
-      <section className="relative -mx-4 mb-10 rounded-2xl border border-amber-100 bg-amber-50/60 py-10 shadow-sm sm:-mx-6 sm:rounded-3xl">
+      <section className="relative -mx-4 mb-10 rounded-2xl border border-border-warm-subtle bg-surface-warm/60 py-10 shadow-sm sm:-mx-6 sm:rounded-3xl">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-          <h2 className="font-zen text-3xl text-amber-800 mb-3 md:text-4xl">
-            Εγγραφή στο Newsletter
+          <h2 className="font-zen text-3xl text-brand-strong mb-3 md:text-4xl">
+            Νέα από το Look Optica
           </h2>
-          <p className="text-amber-700 mb-6 text-sm md:text-base">
-            Μάθε πρώτος για νέες συλλογές, προσφορές και αποκλειστικά events στο Look Optica.
+          <p className="text-brand-primary mb-6 text-sm md:text-base">
+            Λάβετε ενημερώσεις για νέες συλλογές και προσφορές, μόνο όταν
+            έχουμε κάτι χρήσιμο να μοιραστούμε.
+          </p>
+          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {newsletterState === "loading" && "Η εγγραφή σας αποστέλλεται."}
+            {newsletterState === "ok" && "Η εγγραφή σας ολοκληρώθηκε επιτυχώς."}
           </p>
 
           {newsletterState === "ok" ? (
-            <p className="text-amber-800 font-semibold">
+            <p className="text-brand-strong font-semibold">
               Ευχαριστούμε! Η εγγραφή σας ολοκληρώθηκε.
             </p>
           ) : (
@@ -552,36 +575,43 @@ export default function HomePage() {
                   if (!res.ok) throw new Error("subscribe failed");
                   setNewsletterState("ok");
                   setNewsletterEmail("");
+                  setNewsletterConsent(false);
                 } catch {
                   setNewsletterState("error");
                 }
               }}
-              className="flex flex-col items-center justify-center gap-3 md:flex-row"
+              aria-busy={newsletterState === "loading"}
+              className="mx-auto grid max-w-2xl gap-4"
             >
-              <input
-                type="email"
-                required
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Το email σας…"
-                className="w-full md:w-80 px-4 py-3 rounded-xl border border-amber-200
-                          focus:outline-none focus:border-amber-500
-                          shadow-sm text-amber-800 placeholder-amber-500"
-              />
-
-              <button
-                type="submit"
-                disabled={newsletterState === "loading"}
-                className="px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-600
-                          text-white font-semibold shadow-lg transition disabled:opacity-60"
-              >
-                {newsletterState === "loading" ? "Αποστολή..." : "Εγγραφή"}
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <label htmlFor="newsletter-email" className="sr-only">Email για το newsletter</label>
+                <input
+                  id="newsletter-email"
+                  type="email"
+                  required
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="Το email σας…"
+                  aria-describedby="newsletter-consent"
+                  className="min-h-12 w-full rounded-xl border border-border-brand bg-surface-raised px-4 py-3 text-brand-deep shadow-sm placeholder:text-brand-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:flex-1"
+                />
+                <button
+                  type="submit"
+                  disabled={newsletterState === "loading" || !newsletterConsent}
+                  className="min-h-12 rounded-xl bg-brand-primary px-6 py-3 font-semibold text-on-media shadow-lg transition hover:bg-brand-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {newsletterState === "loading" ? "Γίνεται εγγραφή…" : "Εγγραφή"}
+                </button>
+              </div>
+              <label id="newsletter-consent" className="flex items-start gap-3 text-left text-sm leading-relaxed text-brand-deep">
+                <input type="checkbox" required checked={newsletterConsent} onChange={(event) => setNewsletterConsent(event.target.checked)} className="mt-1 size-4 accent-brand-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" />
+                <span>Συμφωνώ να λαμβάνω ενημερωτικά email. Μπορώ να διαγραφώ οποτεδήποτε. Δείτε τους <Link to="/terms" className="font-semibold underline decoration-border-brand-strong underline-offset-4">όρους και την ενημέρωση προσωπικών δεδομένων</Link>.</span>
+              </label>
             </form>
           )}
           {newsletterState === "error" && (
-            <p className="mt-3 text-sm text-red-700">
-              Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.
+            <p role="alert" className="mt-3 text-sm text-status-error">
+              Η εγγραφή δεν ολοκληρώθηκε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.
             </p>
           )}
         </div>
