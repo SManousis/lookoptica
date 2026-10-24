@@ -600,6 +600,23 @@ export default function CategoryPLP() {
     setVisibleCount(PAGE_SIZE);
   };
 
+  const handleRetry = () => {
+    loadPage(0, true, debouncedSearch);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    setBrandFilter("");
+    // Clear both params in one navigation - two sequential setSearchParams
+    // calls here would each build off the same stale pre-update snapshot
+    // and the second would silently undo the first.
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("brand");
+    nextParams.delete("view");
+    setSearchParams(nextParams, { replace: true });
+  };
+
   // If the slug doesn't exist in CATEGORY_CONFIG
   if (!config) {
     return (
@@ -735,24 +752,40 @@ export default function CategoryPLP() {
       )}
 
       {state === "error" && (
-        <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">
-          Δεν ήταν δυνατή η φόρτωση των προϊόντων.
+        <div className="text-red-700 bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+          <p>Δεν ήταν δυνατή η φόρτωση των προϊόντων. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.</p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50"
+          >
+            Δοκιμάστε ξανά
+          </button>
         </div>
       )}
 
       {state === "ok" && displayItems.length === 0 && (
         <div className="space-y-4 text-center text-slate-600">
-          <div>Δεν βρέθηκαν ακόμα προϊόντα.</div>
-          {hasMore && (
+          <div>Δεν βρέθηκαν προϊόντα με αυτά τα κριτήρια.</div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              onClick={handleLoadMore}
-              disabled={isLoadingMore}
-              className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleClearFilters}
+              className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50"
             >
-              {isLoadingMore ? "Φόρτωση..." : "Περισσότερα αποτελέσματα"}
+              Καθαρισμός φίλτρων
             </button>
-          )}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoadingMore ? "Φόρτωση..." : "Περισσότερα αποτελέσματα"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
