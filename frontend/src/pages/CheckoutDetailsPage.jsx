@@ -416,7 +416,7 @@ export default function CheckoutDetailsPage() {
         <span className="text-slate-700">Στοιχεία αποστολής</span>
       </nav>
 
-      <h1 className="text-xl font-semibold text-amber-700 mb-2">
+      <h1 className="text-xl font-semibold text-ink-heading mb-2">
         Στοιχεία αποστολής & τιμολόγησης
       </h1>
       <p className="text-xs text-slate-600 mb-4">

@@ -72,7 +72,7 @@ export default function BankTransferIrisPage() {
       </nav>
 
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-amber-800">
+        <h1 className="text-xl font-semibold text-ink-heading">
           Πληρωμή με Τραπεζική Κατάθεση / IRIS
         </h1>
         <p className="text-sm text-slate-600">

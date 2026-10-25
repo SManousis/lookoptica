@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T18:18:56.7359214+03:00",
+  "generatedAt": "2026-10-25T17:06:16+00:00",
   "title": "Design System: Look Optica",
   "extensions": {
     "colorMeta": {
@@ -75,14 +75,27 @@
         "displayName": "Assurance Emerald",
         "canonical": "#047857",
         "tonalRamp": ["oklch(20% 0.06 165)", "oklch(30% 0.09 165)", "oklch(40% 0.12 165)", "oklch(50% 0.14 165)", "oklch(61% 0.13 165)", "oklch(72% 0.11 165)", "oklch(84% 0.07 165)", "oklch(95% 0.025 165)"]
+      },
+      "secondary-slate": {
+        "role": "neutral",
+        "displayName": "Secondary Slate",
+        "canonical": "#475569",
+        "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#f1f5f9"]
+      },
+      "deep-slate": {
+        "role": "neutral",
+        "displayName": "Deep Slate",
+        "canonical": "#1e293b",
+        "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#f1f5f9"]
       }
     },
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "Large desktop hero statements with a warm editorial voice." },
-      "headline": { "displayName": "Headline", "purpose": "Service, newsletter, and campaign headings." },
+      "headline": { "displayName": "Headline", "purpose": "Service and newsletter headings." },
       "title": { "displayName": "Title", "purpose": "Product prices, card headings, and form titles." },
       "body": { "displayName": "Body", "purpose": "Product, service, form, and transactional copy." },
-      "label": { "displayName": "Label", "purpose": "Metadata, category chips, and compact controls." }
+      "label": { "displayName": "Label", "purpose": "Metadata, category chips, and compact controls." },
+      "headline-commerce": { "displayName": "Headline Commerce", "purpose": "Shopping section headings and commerce page titles." }
     },
     "shadows": [
       { "name": "quiet-lift", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Inputs, service cards, and low-emphasis controls." },
@@ -138,7 +151,7 @@
       "refersTo": "chip-category",
       "description": "A compact taxonomy label used beside product brand metadata.",
       "html": "<span class=\"ds-chip\">ΓΥΑΛΙΑ ΗΛΙΟΥ</span>",
-      "css": ".ds-chip { display: inline-flex; align-items: center; border: 1px solid #f59e0b; border-radius: 9999px; padding: 2px 8px; color: #f59e0b; background: transparent; font: 600 10px/1.5 ui-sans-serif, system-ui, sans-serif; letter-spacing: .025em; text-transform: uppercase; }"
+      "css": ".ds-chip { display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid currentColor; border-radius: 9999px; padding: 2px 8px; color: #475569; background: transparent; font: 400 12px/1.5 ui-sans-serif, system-ui, sans-serif; letter-spacing: .025em; text-transform: uppercase; }"
     },
     {
       "name": "Service Card",
@@ -146,21 +159,21 @@
       "refersTo": "card-service",
       "description": "A softly layered card for expert services and reassurance content.",
       "html": "<article class=\"ds-service-card\"><div class=\"ds-service-icon\">⌂</div><h3>Οπτικά στο Σπίτι</h3><p>Προσωπική εξυπηρέτηση και επιλογή γυαλιών στον χώρο σας.</p><a href=\"#\">Μάθε περισσότερα →</a></article>",
-      "css": ".ds-service-card { max-width: 360px; background: rgba(255,255,255,.8); color: #334155; border: 1px solid #fef3c7; border-radius: 16px; padding: 24px; box-shadow: 0 1px 2px rgb(0 0 0 / .05); font-family: ui-sans-serif, system-ui, sans-serif; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-service-card:hover { border-color: #fcd34d; box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1); } .ds-service-icon { margin-bottom: 12px; color: #b45309; font-size: 28px; } .ds-service-card h3 { margin: 0 0 8px; color: #92400e; font: 400 20px/1.4 'Zen Antique', Georgia, serif; } .ds-service-card p { margin: 0; color: #475569; font-size: 14px; line-height: 1.625; } .ds-service-card a { display: inline-block; margin-top: 12px; color: #b45309; font-size: 14px; font-weight: 600; text-decoration: none; } .ds-service-card a:hover { text-decoration: underline; } .ds-service-card a:focus-visible { outline: 2px solid #f59e0b; outline-offset: 3px; }"
+      "css": ".ds-service-card { max-width: 360px; background: rgba(255,255,255,.8); color: #334155; border: 1px solid #fef3c7; border-radius: 16px; padding: 24px; box-shadow: 0 1px 2px rgb(0 0 0 / .05); font-family: ui-sans-serif, system-ui, sans-serif; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-service-card:hover { border-color: #fcd34d; box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1); } .ds-service-icon { margin-bottom: 12px; color: #475569; font-size: 28px; } .ds-service-card h3 { margin: 0 0 8px; color: #1e293b; font: 600 20px/1.4 ui-sans-serif, system-ui, sans-serif; } .ds-service-card p { margin: 0; color: #475569; font-size: 14px; line-height: 1.625; } .ds-service-card a { display: inline-block; margin-top: 12px; color: #b45309; font-size: 14px; font-weight: 600; text-decoration: none; } .ds-service-card a:hover { text-decoration: underline; } .ds-service-card a:focus-visible { outline: 2px solid #f59e0b; outline-offset: 3px; }"
     },
     {
       "name": "Product Card",
       "kind": "custom",
       "description": "The signature commerce component: image first, restrained metadata, and an amber price.",
       "html": "<article class=\"ds-product\"><div class=\"ds-product-image\"><span>PRODUCT IMAGE</span><button aria-label=\"Προσθήκη στα αγαπημένα\">♡</button></div><div class=\"ds-product-meta\">BRAND <span>ΓΥΑΛΙΑ</span></div><h3>Όνομα προϊόντος</h3><strong>€79</strong></article>",
-      "css": ".ds-product { width: 250px; color: #334155; font-family: ui-sans-serif, system-ui, sans-serif; } .ds-product-image { position: relative; display: grid; place-items: center; aspect-ratio: 4/3; overflow: hidden; border-radius: 12px; background: #f3f4f6; color: #94a3b8; font-size: 12px; transition: transform 500ms cubic-bezier(0.4,0,0.2,1); } .ds-product:hover .ds-product-image { transform: scale(1.02); } .ds-product-image button { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 9999px; background: rgba(255,255,255,.9); color: #64748b; box-shadow: 0 1px 3px rgb(0 0 0 / .12); font-size: 20px; } .ds-product-image button:focus-visible { outline: 3px solid rgba(245,158,11,.35); outline-offset: 2px; } .ds-product-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: #f59e0b; font-size: 12px; font-weight: 600; letter-spacing: .025em; } .ds-product-meta span { border: 1px solid currentColor; border-radius: 9999px; padding: 2px 8px; font-size: 10px; } .ds-product h3 { margin: 4px 0; font-size: 14px; font-weight: 500; } .ds-product strong { color: #b45309; font-size: 20px; }"
+      "css": ".ds-product { width: 250px; color: #334155; font-family: ui-sans-serif, system-ui, sans-serif; } .ds-product-image { position: relative; display: grid; place-items: center; aspect-ratio: 4/3; overflow: hidden; border-radius: 12px; background: #f3f4f6; color: #94a3b8; font-size: 12px; transition: transform 500ms cubic-bezier(0.4,0,0.2,1); } .ds-product:hover .ds-product-image { transform: scale(1.02); } .ds-product-image button { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 9999px; background: rgba(255,255,255,.9); color: #64748b; box-shadow: 0 1px 3px rgb(0 0 0 / .12); font-size: 20px; } .ds-product-image button:focus-visible { outline: 3px solid rgba(245,158,11,.35); outline-offset: 2px; } .ds-product-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 8px; color: #475569; font-size: 12px; font-weight: 500; letter-spacing: .025em; } .ds-product-meta span { border: 1px solid currentColor; border-radius: 9999px; padding: 2px 8px; font-size: 12px; font-weight: 400; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-product h3 { margin: 4px 0; font-size: 14px; font-weight: 500; } .ds-product strong { color: #b45309; font-size: 20px; }"
     }
   ],
   "narrative": {
     "northStar": "The Golden Lens",
-    "overview": "The Golden Lens presents optical retail through warmth, clarity, and measured polish. Amber communicates care and value, slate supplies professional restraint, and generous white or cream surfaces keep product photography and practical information easy to read. The result should feel refined, calm, and professional rather than clinical or luxurious for its own sake.\n\nThe interface is softly layered: fine borders establish most structure, while restrained shadows lift menus, interactive cards, and important actions. Rounded forms make commerce and service workflows reassuring without becoming playful. Zen Antique appears selectively as a warm editorial accent; the system sans serif carries navigation, product data, forms, checkout, and administrative work.",
+    "overview": "The Golden Lens presents optical retail through warmth, clarity, and measured polish. Amber marks what a customer can act on and what it costs, slate carries headings and reading text with professional restraint, and generous white or cream surfaces keep product photography and practical information easy to read. The result should feel refined, calm, and professional rather than clinical or luxurious for its own sake.\n\nThe interface is softly layered: fine borders establish most structure, while restrained shadows lift menus, interactive cards, and important actions. Rounded forms make commerce and service workflows reassuring without becoming playful. Zen Antique appears selectively as a warm editorial accent; the system sans serif carries navigation, product data, forms, checkout, and administrative work.",
     "keyCharacteristics": [
-      "Warm amber hierarchy against quiet slate neutrals",
+      "Amber reserved for action and price against slate headings and text",
       "Product-led imagery with calm, readable supporting UI",
       "Rounded, reassuring controls and containers",
       "Fine borders first, soft elevation second",
@@ -168,8 +181,22 @@
     ],
     "rules": [
       { "name": "The Amber Hierarchy Rule", "body": "Bright, core, and deep amber tones must communicate increasing emphasis; do not use them interchangeably as decoration.", "section": "colors" },
+      {
+        "name": "The Amber-Means-Action Rule",
+        "body": "Amber text belongs to links, buttons, navigation, selected states, and prices. Headings, labels, metadata, and reading copy are slate. Test: if it cannot be clicked and is not a price, it is not amber. The only exceptions are warning states (pre-order and low-stock notices) and review stars.",
+        "section": "colors"
+      },
       { "name": "The Quiet Canvas Rule", "body": "Product imagery and transactional content sit on white, cream, or mist-slate surfaces so the merchandise remains the visual lead.", "section": "colors" },
-      { "name": "The Selective Serif Rule", "body": "Zen Antique is an accent for meaningful customer-facing moments, not the default for dense forms, navigation, prices, or administration.", "section": "typography" },
+      {
+        "name": "The Selective Serif Rule",
+        "body": "Zen Antique is an accent for meaningful customer-facing moments, not the default for dense forms, navigation, prices, or administration. On the homepage it appears exactly three times: the hero headline, the specialist-care heading, and the newsletter heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Weight Rule",
+        "body": "Zen Antique ships in one weight (400). Never set it semibold or bold; the browser would synthesize a smeared fake bold. Emphasis comes from size, not weight.",
+        "section": "typography"
+      },
       { "name": "The Readable Commerce Rule", "body": "Functional text remains in the system sans serif, with semibold weight used to signal action or hierarchy rather than ornamental styling.", "section": "typography" },
       { "name": "The Product Breathing Room Rule", "body": "Dense data can remain compact, but product imagery, major services, and checkout decisions must keep clear separation and stable alignment.", "section": "layout" },
       { "name": "The Border-Before-Shadow Rule", "body": "Establish structure with a fine border or tonal shift first; add a shadow only when an element needs to sit above its surroundings.", "section": "elevation" },
@@ -177,6 +204,7 @@
     ],
     "dos": [
       "Do use Optician's Amber for the primary commercial action and price emphasis.",
+      "Do set headings in Deep Slate and metadata in Secondary Slate; amber text appears only where the customer can act or sees a price.",
       "Do keep most surfaces white, Amber Cream, or Mist Slate so products and service information remain clear.",
       "Do use thin borders and tonal shifts before adding elevation.",
       "Do reserve Zen Antique for selective customer-facing headlines and service moments.",
@@ -184,6 +212,8 @@
     ],
     "donts": [
       "Don't turn the amber family into undifferentiated decoration; every shade must carry a clear hierarchy role.",
+      "Don't color headings, labels, or reading copy amber.",
+      "Don't give static containers a resting shadow.",
       "Don't use heavy shadows on every card or control; elevation is a response to hierarchy and interaction.",
       "Don't apply the display serif to dense product data, forms, checkout, or administrative interfaces.",
       "Don't let decorative overlays overpower product photography or reduce text contrast.",

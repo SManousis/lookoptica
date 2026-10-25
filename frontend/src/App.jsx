@@ -431,8 +431,8 @@ function ShopPLP() {
     <div className="space-y-4">
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
-            {isStockView ? "Προϊόντα Stock" : "Όλα τα προϊόντα"}
+          <h1 className="text-2xl md:text-3xl font-semibold text-ink-heading">
+            {isStockView ? "Προσφορές" : "Όλα τα προϊόντα"}
           </h1>
           <p className="text-sm md:text-base text-slate-600 max-w-2xl">
             Περιηγηθείτε σε όλες τις συλλογές Look Optica και φιλτράρετε όπως στις σελίδες κατηγορίας.
@@ -493,7 +493,7 @@ function ShopPLP() {
                     : "bg-white text-slate-700 hover:border-amber-400"
                 }`}
               >
-                Stock
+                Προσφορές
               </button>
             </div>
           </div>
@@ -590,7 +590,7 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-border-slate bg-white/80 backdrop-blur">
         <div className="flex w-full flex-col gap-3 px-3 py-2 lg:h-24 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="flex items-center justify-between gap-3">
             <Link to="/" className="font-semibold">
@@ -692,7 +692,7 @@ function AppShell() {
                 );
               })}
               <details className="rounded-xl border border-amber-100 bg-amber-50/40 open:bg-amber-50">
-                <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-amber-600">Υπηρεσίες & υποστήριξη<span aria-hidden="true">+</span></summary>
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-amber-600">Υπηρεσίες & βοήθεια<span aria-hidden="true">+</span></summary>
                 <div className="grid gap-1 border-t border-amber-100 p-2">
                   <Link to="/contact" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Επικοινωνία & βοήθεια επιλογής</Link>
                   <Link to="/low-vision" onClick={closeMobileMenu} className="min-h-11 rounded-lg px-3 py-3 hover:bg-white">Βοηθήματα χαμηλής όρασης</Link>
@@ -746,7 +746,7 @@ function AppShell() {
                     <div
                       className={`absolute left-0 top-full min-w-[12rem] w-max ${
                         openCategory === (cat.slug || cat.label) ? "flex" : "hidden"
-                      } flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
+                      } flex-col bg-white shadow-lg border border-border-slate rounded-lg z-50 pt-2`}
                     >
                       {hasChildren &&
                         cat.children.map((item) => (
@@ -790,7 +790,7 @@ function AppShell() {
               );
             })}
             <Link to="/shop?view=stock" className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-amber-50 hover:text-amber-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
-              Stock
+              Προσφορές
             </Link>
             <div
               className="relative"
@@ -835,7 +835,7 @@ function AppShell() {
                 <div
                   className={`absolute right-0 top-full min-w-[12rem] w-max ${
                     openCategory === "admin-menu" ? "flex" : "hidden"
-                  } flex-col bg-white shadow-lg border rounded-lg z-50 pt-2`}
+                  } flex-col bg-white shadow-lg border border-border-slate rounded-lg z-50 pt-2`}
                 >
                   <Link
                     to="/admin/orders"
@@ -1121,33 +1121,33 @@ function AppShell() {
         </Routes>
       </main>
 
-      <footer className="border-t bg-white/90">
-        <div className="flex w-full flex-col gap-3 px-6 py-8 text-sm text-amber-700 md:flex-row md:items-center md:justify-between">
+      <footer className="border-t border-border-slate bg-white/90">
+        <div className="flex w-full flex-col gap-3 px-6 py-8 text-sm text-ink-secondary md:flex-row md:items-center md:justify-between">
          <span>
             © {new Date().getFullYear()} Look Optica — Μια διαφορετική οπτική
          </span>
          <span className="flex flex-wrap items-center gap-2">
-            <Link to="/contact" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+            <Link to="/contact" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
              Επικοινωνία
            </Link>
            <span>|</span>
-            <Link to="/terms" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+            <Link to="/terms" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
              Όροι χρήσης
            </Link>
            <span>|</span>
-            <Link to="/returns" className="hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+            <Link to="/returns" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
              Υπαναχώρηση / Επιστροφές
            </Link>
          </span>
           <span className="md:text-right">
             Αγίας Παρασκευής 30, Χαλάνδρι
             <br />
-            Τηλ: 210 6898658 |{" "}
-            <a href="mailto:info@lookoptica.gr" className="underline">
+            Τηλ: <a href="tel:+302106898658" className="text-amber-700 underline hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">210 6898658</a> |{" "}
+            <a href="mailto:info@lookoptica.gr" className="text-amber-700 underline hover:text-amber-900">
               info@lookoptica.gr
             </a>{" "}
             |{" "}
-           <a href="https://www.lookoptica.gr" className="underline">
+           <a href="https://www.lookoptica.gr" className="text-amber-700 underline hover:text-amber-900">
              www.lookoptica.gr
            </a>
             <span className="ml-2 inline-flex items-center gap-1">

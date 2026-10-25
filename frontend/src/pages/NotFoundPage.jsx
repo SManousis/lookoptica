@@ -9,7 +9,7 @@ export default function NotFoundPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center space-y-6">
-      <h1 className="text-3xl font-semibold text-amber-900">404 — Η σελίδα δεν βρέθηκε</h1>
+      <h1 className="text-3xl font-semibold text-ink-heading">404 — Η σελίδα δεν βρέθηκε</h1>
       <p className="text-sm text-slate-600">
         Η σελίδα που ψάχνετε δεν υπάρχει ή έχει μετακινηθεί. Ίσως ο σύνδεσμος
         είναι παλιός ή έχει γραφτεί λάθος.

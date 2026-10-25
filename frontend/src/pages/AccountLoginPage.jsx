@@ -59,7 +59,7 @@ export default function AccountLoginPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-semibold text-amber-800 mb-4">Σύνδεση</h1>
+      <h1 className="text-2xl font-semibold text-ink-heading mb-4">Σύνδεση</h1>
 
       {errorMsg && (
         <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">

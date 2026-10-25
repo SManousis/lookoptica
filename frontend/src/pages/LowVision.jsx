@@ -11,7 +11,7 @@ export default function LowVision() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold text-amber-900">Βοηθήματα Χαμηλής Όρασης</h1>
+        <h1 className="text-3xl font-semibold text-ink-heading">Βοηθήματα Χαμηλής Όρασης</h1>
       </header>
 
       <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-slate-700">
@@ -22,7 +22,7 @@ export default function LowVision() {
       </section>
 
       <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-slate-700">
-        <h2 className="text-xl font-semibold text-amber-700 text-center">Τι ειναι ομως τα βοηθηματα χαμηλης ορασης</h2>
+        <h2 className="text-xl font-semibold text-ink-heading text-center">Τι ειναι ομως τα βοηθηματα χαμηλης ορασης</h2>
         <p className="text-sm text-slate-600 text-justify">
           Τα βοηθήματα χαμηλής όρασης περιλαμβάνουν μια ποικιλία συσκευών, όπως μεγεθυντικοί φακοί σταθεροί και χειρός, ισχυρά μεγεθυντικά γυαλιά ανάγνωσης, λούπες και μικρά τηλεσκόπια. Επειδή αυτές οι συσκευές μπορούν να παρέχουν πολύ μεγαλύτερες δυνάμεις μεγέθυνσης και ισχυρότερες σε διοπτρικη δύναμη συνταγές, μαζί με οπτικά στοιχεία υψηλότερης ποιότητας , είναι διαφορετικά από τα κανονικά γυαλιά και τους μεγενθυντικούς φακούς που διατίθενται στο εμπόριο.
         </p>

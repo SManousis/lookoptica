@@ -17,7 +17,9 @@
   --color-border-brand: #fde68a;
   --color-border-brand-highlight: #fcd34d;
   --color-border-brand-strong: #fbbf24;
+  --color-border-slate: #e2e8f0;
 
+  --color-ink-heading: #1e293b;
   --color-ink-primary: #334155;
   --color-ink-secondary: #475569;
   --color-ink-muted: #64748b;
@@ -29,4 +31,7 @@
   --color-focus-ring: #d97706;
   --color-status-error: #b91c1c;
   --color-status-success: #047857;
+
+  /* Selective display accent (hero, service, newsletter headings); Zen Antique ships one weight. */
+  --font-zen: "Zen Antique", Georgia, serif;
 }

@@ -7,6 +7,7 @@ import { useProductReviews } from "../hooks/useProductReviews";
 import ProductReviews from "../components/ProductReviews";
 import WishlistButton from "../components/WishlistButton";
 import { sanitizeSku, sanitizeGtin } from "../utils/structuredData";
+import { formatPrice } from "../utils/formatPrice";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -155,7 +156,7 @@ export default function ContactLensPDP() {
       title,
       product?.brand ? `από ${product.brand}` : null,
       (price ?? discountPrice) != null
-        ? `${Number(price ?? discountPrice).toFixed(2)}€`
+        ? formatPrice(price ?? discountPrice)
         : null,
     ]
       .filter(Boolean)
@@ -591,11 +592,11 @@ export default function ContactLensPDP() {
             {/* Price */}
             {discountPrice && price != null && discountPrice > price ? (
               <div className="flex items-baseline gap-2">
-                <div className="text-xl font-bold text-amber-700">€{Number(price).toFixed(2)}</div>
-                <div className="text-sm text-slate-400 line-through">€{Number(discountPrice).toFixed(2)}</div>
+                <div className="text-xl font-bold text-amber-700">{formatPrice(price)}</div>
+                <div className="text-sm text-slate-400 line-through">{formatPrice(discountPrice)}</div>
               </div>
             ) : (
-              <div className="text-xl font-bold text-amber-700">€{Number(price ?? 0).toFixed(2)}</div>
+              <div className="text-xl font-bold text-amber-700">{formatPrice(price ?? 0)}</div>
             )}
 
             {/* Stock info */}

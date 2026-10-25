@@ -11,20 +11,28 @@ colors:
   mist-slate: "#f8fafc"
   slate-border: "#e2e8f0"
   slate-muted: "#64748b"
+  secondary-slate: "#475569"
   lens-slate: "#334155"
+  deep-slate: "#1e293b"
   error-red: "#b91c1c"
   success-emerald: "#047857"
 typography:
   display:
     fontFamily: "Zen Antique, Georgia, serif"
     fontSize: "3rem"
-    fontWeight: 600
+    fontWeight: 400
     lineHeight: 1.25
   headline:
     fontFamily: "Zen Antique, Georgia, serif"
     fontSize: "1.875rem"
     fontWeight: 400
     lineHeight: 1.25
+  headline-commerce:
+    fontFamily: "ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.875rem"
+    fontWeight: 600
+    lineHeight: 1.25
+    letterSpacing: "-0.025em"
   title:
     fontFamily: "ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.25rem"
@@ -85,7 +93,7 @@ components:
     padding: "24px"
   chip-category:
     backgroundColor: "{colors.clean-white}"
-    textColor: "{colors.honeyed-brass}"
+    textColor: "{colors.secondary-slate}"
     typography: "{typography.label}"
     rounded: "{rounded.full}"
     padding: "2px 8px"
@@ -97,13 +105,13 @@ components:
 
 **Creative North Star: "The Golden Lens"**
 
-The Golden Lens presents optical retail through warmth, clarity, and measured polish. Amber communicates care and value, slate supplies professional restraint, and generous white or cream surfaces keep product photography and practical information easy to read. The result should feel refined, calm, and professional rather than clinical or luxurious for its own sake.
+The Golden Lens presents optical retail through warmth, clarity, and measured polish. Amber marks what a customer can act on and what it costs, slate carries headings and reading text with professional restraint, and generous white or cream surfaces keep product photography and practical information easy to read. The result should feel refined, calm, and professional rather than clinical or luxurious for its own sake.
 
 The interface is softly layered: fine borders establish most structure, while restrained shadows lift menus, interactive cards, and important actions. Rounded forms make commerce and service workflows reassuring without becoming playful. Zen Antique appears selectively as a warm editorial accent; the system sans serif carries navigation, product data, forms, checkout, and administrative work.
 
 **Key Characteristics:**
 
-- Warm amber hierarchy against quiet slate neutrals
+- Amber reserved for action and price against slate headings and text
 - Product-led imagery with calm, readable supporting UI
 - Rounded, reassuring controls and containers
 - Fine borders first, soft elevation second
@@ -115,17 +123,19 @@ The palette moves from bright Honeyed Brass through Optician's Amber to deep War
 
 ### Primary
 
-- **Optician's Amber:** The default brand and action color for primary buttons, prices, navigation emphasis, and high-value links.
-- **Warm Cognac:** The deeper anchor for headings, strong hover states, and moments requiring greater visual authority.
-- **Honeyed Brass:** The brighter note for small metadata, highlights, progress, and selective accents rather than large text fields.
+- **Optician's Amber:** The default brand and action color for primary buttons, prices, navigation, links, and selected states.
+- **Warm Cognac:** The deeper step for hover states, secondary-button text, and links that need extra weight. It is not a heading color.
+- **Honeyed Brass:** The brighter note for highlights, progress fills, and selective accents rather than text.
 
 ### Neutral
 
 - **Clean White:** The principal card, menu, input, header, and footer surface.
 - **Mist Slate:** The page canvas and quiet alternate surface.
 - **Slate Border:** The neutral divider and low-emphasis control border.
-- **Slate Muted:** Secondary copy, icons, placeholders, and subdued labels.
-- **Lens Slate:** Primary body text when black would feel too severe.
+- **Slate Muted:** Placeholders, muted icons, the quietest supporting copy, and loading skeletons (at 15% opacity over the canvas).
+- **Secondary Slate:** Supporting copy, product brand and category metadata, decorative icons, and the footer's non-link text.
+- **Lens Slate:** Primary body text, form labels, and notices when black would feel too severe.
+- **Deep Slate:** Page, section, and card headings; one clear step darker than body text.
 
 ### Tertiary
 
@@ -135,6 +145,8 @@ The palette moves from bright Honeyed Brass through Optician's Amber to deep War
 ### Named Rules
 
 **The Amber Hierarchy Rule.** Bright, core, and deep amber tones must communicate increasing emphasis; do not use them interchangeably as decoration.
+
+**The Amber-Means-Action Rule.** Amber text belongs to links, buttons, navigation, selected states, and prices. Headings, labels, metadata, and reading copy are slate. Test: if it cannot be clicked and is not a price, it is not amber. The only exceptions are warning states (pre-order and low-stock notices) and review stars.
 
 **The Quiet Canvas Rule.** Product imagery and transactional content sit on white, cream, or mist-slate surfaces so the merchandise remains the visual lead.
 
@@ -148,15 +160,18 @@ The palette moves from bright Honeyed Brass through Optician's Amber to deep War
 
 ### Hierarchy
 
-- **Display** (semibold, 3rem, 1.25): Large desktop hero statements; reduce responsively to approximately 1.875rem on small screens.
-- **Headline** (regular, 1.875rem, 1.25): Editorial service headings, newsletter calls, and distinctive section introductions.
+- **Display** (regular, 3rem, 1.25): Large desktop hero statements; reduce responsively to approximately 1.875rem on small screens.
+- **Headline** (regular, 1.875rem, 1.25): Editorial service headings and newsletter calls.
+- **Headline Commerce** (semibold sans, 1.875rem, 1.25, -0.025em): Shopping section headings such as offers, collections, and brands, and page titles in commerce flows.
 - **Title** (semibold, 1.25rem, 1.4): Product prices, card headings, page subsections, and prominent form titles.
 - **Body** (regular, 0.875rem, 1.625): Product information, service explanations, form help, and general interface copy.
 - **Label** (semibold, 0.75rem, 0.025em): Metadata, category chips, compact controls, and uppercase brand labels.
 
 ### Named Rules
 
-**The Selective Serif Rule.** Zen Antique is an accent for meaningful customer-facing moments, not the default for dense forms, navigation, prices, or administration.
+**The Selective Serif Rule.** Zen Antique is an accent for meaningful customer-facing moments, not the default for dense forms, navigation, prices, or administration. On the homepage it appears exactly three times: the hero headline, the specialist-care heading, and the newsletter heading.
+
+**The Single Weight Rule.** Zen Antique ships in one weight (400). Never set it semibold or bold; the browser would synthesize a smeared fake bold. Emphasis comes from size, not weight.
 
 **The Readable Commerce Rule.** Functional text remains in the system sans serif, with semibold weight used to signal action or hierarchy rather than ornamental styling.
 
@@ -170,7 +185,7 @@ The responsive system follows the implemented Tailwind breakpoints: small at 640
 
 ## Elevation & Depth
 
-The system is softly layered. Borders and tonal surface shifts define the default hierarchy; shadows are used to lift interactive controls, cards, dropdown menus, overlays, and high-priority actions. Image overlays use restrained black gradients so white copy remains legible without obscuring merchandise.
+The system is softly layered. Borders and tonal surface shifts define the default hierarchy; shadows are used to lift interactive controls, actionable cards, dropdown menus, overlays, and high-priority actions. Static containers such as panels, empty states, and form and summary cards stay flat at rest. Image overlays use restrained black gradients so white copy remains legible without obscuring merchandise.
 
 ### Shadow Vocabulary
 
@@ -202,14 +217,14 @@ Borders remain thin and warm around branded customer components, with neutral sl
 
 ### Chips
 
-- **Style:** Small uppercase or compact labels with a full pill radius, fine border, and restrained padding.
+- **Style:** Small uppercase labels (12px) in Secondary Slate with a matching hairline border, a full pill radius, and restrained padding. They stay on one line and truncate rather than wrap on narrow cards.
 - **State:** Unselected chips remain white or transparent; selected filters use amber border, text, or a pale amber fill rather than heavy elevation.
 
 ### Cards / Containers
 
 - **Corner Style:** Product image containers use 12px; service and information cards use 16px.
 - **Background:** Clean White or translucent white over a Mist Slate canvas; Amber Cream is used for messages and promotional sections.
-- **Shadow Strategy:** Flat or Quiet Lift at rest, with Interactive Lift on hover when the whole card is actionable.
+- **Shadow Strategy:** Static containers are flat at rest (border only). Actionable cards may use Quiet Lift at rest and Interactive Lift on hover.
 - **Border:** Pale amber for branded customer cards and neutral slate for utility or administrative content.
 - **Internal Padding:** Typically 16px for compact information and 24px for service or form containers.
 
@@ -225,13 +240,14 @@ Navigation sits on a translucent white sticky surface with a fine lower border a
 
 ### Product Card
 
-The signature product card lets photography lead. The image sits on a quiet neutral surface with a gentle 12px crop, subtle zoom on hover, and a floating circular wishlist control. Brand and category metadata remain small; the product name is concise; Optician's Amber gives the price immediate clarity.
+The signature product card lets photography lead. The image sits on a quiet neutral surface with a gentle 12px crop, subtle zoom on hover, and a floating circular wishlist control. Brand and category metadata remain small and in Secondary Slate; the product name is concise; Optician's Amber gives the price immediate clarity. While loading, product rails show skeleton cards that mirror the image, metadata, title, and price rhythm, so the layout does not jump when products arrive.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** use Optician's Amber for the primary commercial action and price emphasis.
+- **Do** set headings in Deep Slate and metadata in Secondary Slate; amber text appears only where the customer can act or sees a price.
 - **Do** keep most surfaces white, Amber Cream, or Mist Slate so products and service information remain clear.
 - **Do** use thin borders and tonal shifts before adding elevation.
 - **Do** reserve Zen Antique for selective customer-facing headlines and service moments.
@@ -240,6 +256,8 @@ The signature product card lets photography lead. The image sits on a quiet neut
 ### Don't:
 
 - **Don't** turn the amber family into undifferentiated decoration; every shade must carry a clear hierarchy role.
+- **Don't** color headings, labels, or reading copy amber.
+- **Don't** give static containers a resting shadow.
 - **Don't** use heavy shadows on every card or control; elevation is a response to hierarchy and interaction.
 - **Don't** apply the display serif to dense product data, forms, checkout, or administrative interfaces.
 - **Don't** let decorative overlays overpower product photography or reduce text contrast.

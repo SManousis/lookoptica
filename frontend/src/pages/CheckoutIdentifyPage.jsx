@@ -55,7 +55,7 @@ export default function CheckoutIdentifyPage() {
   if (isLoggedIn && customer) {
     return (
       <div className="max-w-4xl mx-auto space-y-4">
-        <h1 className="text-xl font-semibold text-amber-700">
+        <h1 className="text-xl font-semibold text-ink-heading">
           Checkout – Στοιχεία πελάτη
         </h1>
         <p className="text-sm text-slate-700">
@@ -144,7 +144,7 @@ export default function CheckoutIdentifyPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold text-amber-700">
+      <h1 className="text-xl font-semibold text-ink-heading">
         Checkout – Ποιος είστε;
       </h1>
       <p className="text-sm text-slate-700">

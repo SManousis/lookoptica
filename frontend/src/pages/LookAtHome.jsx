@@ -11,7 +11,7 @@ export default function LookAtHome() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-10">
       <header className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold text-amber-900">Οπτικά στο σπίτι</h1>
+        <h1 className="text-3xl font-semibold text-ink-heading">Οπτικά στο σπίτι</h1>
       </header>
 
       <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-slate-700">
@@ -22,14 +22,14 @@ export default function LookAtHome() {
       </section>
 
       <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-slate-700">
-        <h2 className="text-xl font-semibold text-amber-700 text-center">Πως λειτουργεί η υπηρεσία:</h2>
+        <h2 className="text-xl font-semibold text-ink-heading text-center">Πως λειτουργεί η υπηρεσία:</h2>
         <p className="text-sm text-slate-600 text-justify">
             Είτε διαλέγετε από το site μας ένα αριθμό γυαλιά που σας αρέσουν (μέχρι 30 ζευγάρια) είτε μας δίνετε κάποιες πληροφορίες για το ενδιαφερόμενο άτομο και επιλέγουμε εμείς κάποια γυαλιά για να σας φέρουμε. Έτσι κάποιος μπορεί να έχει την επιλογή να δει και στο χώρο του τα γυαλιά που τον ενδιαφέρουν, ώστε να επιλέξει αυτό που του ταιριάζει καλύτερα.
         </p>
       </section>
 
       <section className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-slate-700">
-       <h2 className="text-xl font-semibold text-amber-700 text-center">Κόστος υπηρεσίας:</h2>
+       <h2 className="text-xl font-semibold text-ink-heading text-center">Κόστος υπηρεσίας:</h2>
         <p className="text-sm text-slate-600 text-justify">
           Οι τιμές στα προϊόντα παραμένουν οι ίδιες που ισχύουν στο φυσικό κατάστημα και στο site μας. Υπάρχει ένα κόστος 15€ για την επίσκεψη το οποίο όμως για αγορές άνω των 60€ αφαιρείται.
 

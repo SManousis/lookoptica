@@ -99,7 +99,7 @@ export default function WithdrawalRequestPage() {
         <span className="text-slate-700">Δήλωση Υπαναχώρησης</span>
       </nav>
 
-      <h1 className="text-2xl font-semibold text-amber-700 mb-2">
+      <h1 className="text-2xl font-semibold text-ink-heading mb-2">
         Δήλωση Υπαναχώρησης
       </h1>
       <p className="text-sm text-slate-600 mb-6">
@@ -170,7 +170,7 @@ export default function WithdrawalRequestPage() {
           </div>
 
           {!order.eligible && (
-            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <div className="text-sm text-ink-primary bg-amber-50 border border-amber-200 rounded-lg p-3">
               Η προθεσμία των 14 ημερών για αυτή την παραγγελία έχει παρέλθει.
               Επικοινωνήστε μαζί μας στο info@lookoptica.gr αν χρειάζεστε βοήθεια.
             </div>

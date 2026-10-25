@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { usePageSEO } from "../hooks/usePageSEO";
+import { formatPrice } from "../utils/formatPrice";
 
 // Mirrors the thresholds in backend/app/routers/final_checkout.py
 // (FREE_BOXNOW_THRESHOLD / FREE_SHIPPING_THRESHOLD) - informational nudge
@@ -24,7 +25,7 @@ function ShippingProgress({ subtotal }) {
       <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 space-y-2">
         <div>✅ Έχετε δωρεάν μεταφορικά με Box Now!</div>
         <div className="text-xs text-emerald-700">
-          Πρόσθεσε ακόμα <strong>€{remaining.toFixed(2)}</strong> για δωρεάν
+          Πρόσθεσε ακόμα <strong>{formatPrice(remaining)}</strong> για δωρεάν
           μεταφορικά με courier και δωρεάν αντικαταβολή.
         </div>
         <div className="h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden">
@@ -40,9 +41,9 @@ function ShippingProgress({ subtotal }) {
   const remaining = FREE_BOXNOW_THRESHOLD - subtotal;
   const pct = Math.min(100, (subtotal / FREE_BOXNOW_THRESHOLD) * 100);
   return (
-    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 space-y-2">
+    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-ink-primary space-y-2">
       <div>
-        Πρόσθεσε ακόμα <strong>€{remaining.toFixed(2)}</strong> για δωρεάν
+        Πρόσθεσε ακόμα <strong>{formatPrice(remaining)}</strong> για δωρεάν
         μεταφορικά με Box Now!
       </div>
       <div className="h-1.5 w-full rounded-full bg-amber-100 overflow-hidden">
@@ -89,7 +90,7 @@ export default function CartPage() {
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-amber-800">Καλάθι Αγορών</h1>
+          <h1 className="text-2xl font-semibold text-ink-heading">Καλάθι Αγορών</h1>
           <p className="text-sm text-slate-600">
             {itemCount} {itemCount === 1 ? "προϊόν" : "προϊόντα"} στο καλάθι σας
           </p>
@@ -107,7 +108,7 @@ export default function CartPage() {
       </div>
 
       {isEmpty ? (
-        <section className="rounded-xl border border-dashed border-amber-200 bg-white p-10 text-center shadow-sm">
+        <section className="rounded-xl border border-dashed border-amber-200 bg-white p-10 text-center">
           <p className="text-lg font-medium text-slate-700">
             Το καλάθι σας είναι άδειο.
           </p>
@@ -135,7 +136,7 @@ export default function CartPage() {
             {items.map((item) => (
               <article
                 key={item._key}
-                className="flex flex-col gap-4 rounded-xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center"
+                className="flex flex-col gap-4 rounded-xl border bg-white p-4 sm:flex-row sm:items-center"
               >
                 <div className="h-32 w-full overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
                   {item.image ? (
@@ -162,7 +163,7 @@ export default function CartPage() {
                     <p className="text-xs text-slate-400">SKU: {item.sku}</p>
                   )}
                   <div className="text-sm font-semibold text-amber-800">
-                    €{item.price.toFixed(2)}
+                    {formatPrice(item.price)}
                   </div>
                 </div>
 
@@ -204,18 +205,18 @@ export default function CartPage() {
                 </div>
 
                 <div className="text-right text-base font-semibold text-slate-800 sm:w-28">
-                  €{(item.price * item.quantity).toFixed(2)}
+                  {formatPrice(item.price * item.quantity)}
                 </div>
               </article>
             ))}
           </section>
 
-          <aside className="rounded-xl border bg-white p-5 shadow-sm">
+          <aside className="rounded-xl border bg-white p-5">
             <h2 className="text-lg font-semibold text-slate-800">Σύνοψη παραγγελίας</h2>
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>Υποσύνολο</span>
-                <span>€{subtotal.toFixed(2)}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Προϊόντα</span>

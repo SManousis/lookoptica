@@ -8,6 +8,8 @@ import ProductReviews from "../components/ProductReviews";
 import { useProductReviews } from "../hooks/useProductReviews";
 import WishlistButton from "../components/WishlistButton";
 import { sanitizeSku, sanitizeGtin } from "../utils/structuredData";
+import { formatPrice } from "../utils/formatPrice";
+import { categoryLabelEl } from "../utils/categoryHelpers";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -100,13 +102,6 @@ function ProductDescription({ product }) {
       )}
     </div>
   );
-}
-
-function formatCategory(category) {
-  if (!category) return "";
-  return category
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatAudience(audience) {
@@ -292,7 +287,7 @@ export default function PDP() {
       title,
       brand ? `από ${brand}` : null,
       (price ?? discountPrice) != null
-        ? `${Number(price ?? discountPrice).toFixed(2)}€`
+        ? formatPrice(price ?? discountPrice)
         : null,
     ]
       .filter(Boolean)
@@ -494,9 +489,9 @@ export default function PDP() {
                   {brand}
                 </span>
               )}
-              {category && (
+              {categoryLabelEl(category) && (
                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wide">
-                  {formatCategory(category)}
+                  {categoryLabelEl(category)}
                 </span>
               )}
               {audience && (
@@ -517,12 +512,12 @@ export default function PDP() {
             {/* Price */}
             {discountPrice != null && price != null && discountPrice > price ? (
               <div className="flex items-baseline gap-2">
-                <div className="text-xl font-bold text-amber-700">{`€${price}`}</div>
-                <div className="text-sm text-slate-400 line-through">{`€${discountPrice}`}</div>
+                <div className="text-xl font-bold text-amber-700">{formatPrice(price)}</div>
+                <div className="text-sm text-slate-400 line-through">{formatPrice(discountPrice)}</div>
               </div>
             ) : (
               <div className="text-xl font-bold text-amber-700">
-                {price != null ? `€${price}` : discountPrice != null ? `€${discountPrice}` : "€"}
+                {price != null ? formatPrice(price) : discountPrice != null ? formatPrice(discountPrice) : ""}
               </div>
             )}
 
@@ -693,7 +688,7 @@ export default function PDP() {
                       </div>
                       {rpPrice != null && (
                         <div className="text-xs text-amber-700 font-semibold">
-                          €{rpPrice}
+                          {formatPrice(rpPrice)}
                         </div>
                       )}
                     </Link>

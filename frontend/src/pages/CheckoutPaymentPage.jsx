@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/customerAuthShared";
 import { usePageSEO } from "../hooks/usePageSEO";
+import { formatPrice } from "../utils/formatPrice";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
@@ -259,23 +260,23 @@ export default function CheckoutPaymentPage() {
     alert("Ευχαριστούμε! Καταγράψαμε την παραγγελία σας.");
   };
 
-    const formattedSubtotal = subtotal.toFixed(2);
+    const formattedSubtotal = formatPrice(subtotal);
     const formattedShipping =
     quote && typeof quote.shipping_cost === "number"
-        ? quote.shipping_cost.toFixed(2)
+        ? formatPrice(quote.shipping_cost)
         : "—";
     const formattedCod =
     quote && typeof quote.cod_fee === "number"
-        ? quote.cod_fee.toFixed(2)
+        ? formatPrice(quote.cod_fee)
         : "—";
     const formattedTotal =
     quote && typeof quote.total === "number"
-        ? quote.total.toFixed(2)
+        ? formatPrice(quote.total)
         : "—";
     const formattedDiscount =
     quote && typeof quote.discount_amount === "number"
-        ? quote.discount_amount.toFixed(2)
-        : "0.00";
+        ? formatPrice(quote.discount_amount)
+        : formatPrice(0);
 
 
   return (
@@ -293,12 +294,12 @@ export default function CheckoutPaymentPage() {
         <span className="text-slate-700">Πληρωμή & αποστολή</span>
       </nav>
 
-      <h1 className="text-2xl font-semibold mb-4 text-amber-700">
+      <h1 className="text-2xl font-semibold mb-4 text-ink-heading">
         Τρόπος αποστολής & πληρωμής
       </h1>
 
       {/* Business rules info */}
-      <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+      <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-ink-primary space-y-1">
         <p>
           • <strong>Δωρεάν μεταφορικά & αντικαταβολή</strong> για αγορές{" "}
           <strong>άνω των 80€</strong> με όλους τους τρόπους αποστολής.
@@ -341,7 +342,7 @@ export default function CheckoutPaymentPage() {
             </div>
 
             {shippingMethod === "boxnow" && (
-              <div className="mt-3 rounded-lg border border-dashed border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+              <div className="mt-3 rounded-lg border border-dashed border-amber-200 bg-amber-50 p-3 text-xs text-ink-primary space-y-1">
                 <p className="font-semibold">
                   Box Now locker (placeholder – API αργότερα)
                 </p>
@@ -425,7 +426,7 @@ export default function CheckoutPaymentPage() {
 
           <div className="flex justify-between">
             <span>Υποσύνολο προϊόντων</span>
-            <span>€{formattedSubtotal}</span>
+            <span>{formattedSubtotal}</span>
           </div>
 
           <div className="space-y-1">
@@ -460,7 +461,7 @@ export default function CheckoutPaymentPage() {
           {quote?.promo_code_applied && (
             <div className="flex justify-between text-emerald-700">
               <span>Έκπτωση</span>
-              <span>-€{formattedDiscount}</span>
+              <span>-{formattedDiscount}</span>
             </div>
           )}
 
@@ -470,7 +471,7 @@ export default function CheckoutPaymentPage() {
                 {quoteState === "loading"
                 ? "Υπολογισμός..."
                 : quote
-                ? `€${formattedShipping}`
+                ? formattedShipping
                 : "—"}
             </span>
             </div>
@@ -483,7 +484,7 @@ export default function CheckoutPaymentPage() {
                 : quoteState === "loading"
                 ? "Υπολογισμός..."
                 : quote
-                ? `€${formattedCod}`
+                ? formattedCod
                 : "—"}
             </span>
           </div>
@@ -493,7 +494,7 @@ export default function CheckoutPaymentPage() {
           <div className="flex justify-between font-semibold text-slate-900">
             <span>Τελικό σύνολο</span>
             <span>
-              {quoteState === "loading" ? "…" : quote ? `€${formattedTotal}` : "—"}
+              {quoteState === "loading" ? "…" : quote ? formattedTotal : "—"}
             </span>
           </div>
 

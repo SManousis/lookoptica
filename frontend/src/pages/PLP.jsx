@@ -50,9 +50,9 @@ const CATEGORY_CONFIG = {
     includeStock: true,
   },
   stock: {
-    labelEl: "Stock",
+    labelEl: "Προσφορές",
     subtitle:
-      "Στην κατηγορία Stock θα βρεις επιλεγμένα γυαλιά ηλίου και οράσεως σε προνομιακές τιμές, σε περιορισμένη διαθεσιμότητα τεμαχίων. Πρόκειται για αυθεντικά προϊόντα από τις ίδιες αναγνωρισμένες μάρκες που διαθέτουμε στο κατάστημα, σε τελευταία τεμάχια ή προηγούμενες σεζόν. Ιδανική επιλογή αν ψάχνεις ποιοτικά γυαλιά σε καλύτερη τιμή, χωρίς συμβιβασμό στην αυθεντικότητα.",
+      "Στις Προσφορές θα βρεις επιλεγμένα γυαλιά ηλίου και οράσεως σε προνομιακές τιμές, σε περιορισμένη διαθεσιμότητα τεμαχίων. Πρόκειται για αυθεντικά προϊόντα από τις ίδιες αναγνωρισμένες μάρκες που διαθέτουμε στο κατάστημα, σε τελευταία τεμάχια ή προηγούμενες σεζόν. Ιδανική επιλογή αν ψάχνεις ποιοτικά γυαλιά σε καλύτερη τιμή, χωρίς συμβιβασμό στην αυθεντικότητα.",
     aliases: [
       "stock",
       "stok",
@@ -660,7 +660,7 @@ export default function CategoryPLP() {
       {/* Category hero + compact filters */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-semibold text-amber-800">
+          <h1 className="text-2xl md:text-3xl font-semibold text-ink-heading">
             {config.labelEl}
             {audienceConfig ? ` – ${audienceConfig.labelEl}` : ""}
           </h1>
@@ -724,7 +724,7 @@ export default function CategoryPLP() {
                     : "bg-white text-slate-700 hover:border-amber-400"
                 }`}
               >
-                Stock
+                Προσφορές
               </button>
             </div>
           </div>

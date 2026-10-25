@@ -61,7 +61,7 @@ export default function AccountRegisterPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-semibold text-amber-800 mb-4">
+      <h1 className="text-2xl font-semibold text-ink-heading mb-4">
         Δημιουργία λογαριασμού
       </h1>
 

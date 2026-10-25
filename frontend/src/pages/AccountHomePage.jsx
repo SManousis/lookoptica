@@ -109,7 +109,7 @@ export default function AccountHomePage() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold text-amber-800">Ο λογαριασμός μου</h1>
+      <h1 className="text-2xl font-semibold text-ink-heading">Ο λογαριασμός μου</h1>
       <div className="rounded-xl border bg-white p-4 space-y-2 text-sm text-slate-800">
         <div>
           <span className="font-semibold text-slate-700">Email:</span>{" "}
@@ -151,7 +151,7 @@ export default function AccountHomePage() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-amber-800">Οι παραγγελίες μου</h2>
+        <h2 className="text-lg font-semibold text-ink-heading">Οι παραγγελίες μου</h2>
         <OrderHistory />
       </div>
     </div>

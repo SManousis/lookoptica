@@ -63,14 +63,14 @@ export default function WishlistPage() {
         <span className="text-slate-700">Λίστα επιθυμιών</span>
       </nav>
 
-      <h1 className="mb-6 text-2xl font-semibold text-amber-800">Λίστα επιθυμιών</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-ink-heading">Λίστα επιθυμιών</h1>
 
       {state === "loading" && (
         <div className="text-sm text-slate-500">Φόρτωση...</div>
       )}
 
       {state === "ok" && products.length === 0 && (
-        <section className="rounded-xl border border-dashed border-amber-200 bg-white p-10 text-center shadow-sm">
+        <section className="rounded-xl border border-dashed border-amber-200 bg-white p-10 text-center">
           <p className="text-lg font-medium text-slate-700">
             Η λίστα επιθυμιών σας είναι άδεια.
           </p>

@@ -63,3 +63,20 @@ export function isStockProduct(product = {}) {
 
   return [...candidates, ...tags].some((val) => isStockCategory(val));
 }
+
+// Short Greek labels for product-card category chips; order matters ("stock-frames" is frames, not stock).
+const CATEGORY_LABELS_EL = [
+  { label: "Ηλίου", aliases: ["sunglasses", "sun-glasses", "γυαλια ηλιου"] },
+  { label: "Οράσεως", aliases: ["ophthalmic_frames", "frames", "σκελετοι ορασεως", "γυαλια ορασεως"] },
+  { label: "Φακοί επαφής", aliases: ["contact_lenses", "contact-lenses", "φακοι επαφης"] },
+  { label: "Αξεσουάρ", aliases: ["other_products", "other-products", "αλλα προιοντα", "accessor-eyes"] },
+  { label: "Προσφορά", aliases: ["stock", "stok", "στοκ"] },
+];
+
+export function categoryLabelEl(value) {
+  if (!value) return "";
+  const match = CATEGORY_LABELS_EL.find(({ aliases }) => matchesCategoryAlias(value, aliases));
+  if (match) return match.label;
+  // Unknown values: keep ones already written in Greek, hide raw English keys.
+  return /[Ͱ-Ͽ]/.test(value) ? value : "";
+}
