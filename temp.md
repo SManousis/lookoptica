@@ -21,3 +21,14 @@ One thing I'll need from you for step 2: the slide messages must stay factual. A
 You can ask me to run these one at a time, all at once, or in any order you prefer.
 
 Re-run /impeccable critique after fixes to see your score improve.
+
+On this computer, the private key is at C:\Users\fover\.ssh\id_ed25519 (and its public half, id_ed25519.pub, in the same folder).
+Copy both files to the new computer — treat the private key like a password: use a USB drive, or a secure transfer (not email/Slack/unencrypted cloud storage).
+On the new computer, put them in the equivalent folder:
+Windows: C:\Users\<username>\.ssh\id_ed25519 and id_ed25519.pub
+Mac/Linux: ~/.ssh/id_ed25519
+On Mac/Linux, fix permissions (SSH refuses to use a key that's too open):
+
+chmod 600 ~/.ssh/id_ed25519
+On Windows, OpenSSH checks that only your account can read the file — if you get a permissions error, right-click the file → Properties → Security, and remove any other users/groups from the access list, leaving just your own account.
+Use the exact same commands as on this machine (ssh -i path\to\id_ed25519 admin@159.69.146.172, etc.) — the server already trusts this key, so it works immediately.
