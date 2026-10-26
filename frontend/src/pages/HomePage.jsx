@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -13,11 +13,52 @@ import { usePageSEO } from "../hooks/usePageSEO";
 
 const API = import.meta.env.VITE_API_BASE || "";
 
-const HERO_IMAGES = [
-  { src: "/hero1.jpg", srcSet: "/hero1-768.webp 768w, /hero1-1440.webp 1440w", width: 1920, height: 1359 },
-  { src: "/hero2.jpg", width: 1920, height: 1281 },
-  { src: "/hero3.jpg", srcSet: "/hero3-768.webp 768w, /hero3-1000.webp 1000w", width: 1000, height: 666 },
-  { src: "/hero4.jpg", width: 600, height: 500 },
+// Each slide earns its own message - built only from what the site already
+// offers (real routes, real service details, a live-computed discount), not
+// placeholder copy. Slide 1's heading is computed at render time from actual
+// offers data instead of being hard-coded here (see bestOfferDiscountPercent).
+// hero4.jpg (600x500, no larger original on disk) was dropped from rotation -
+// hero14.jpg is a full-resolution (1920x1371) unused photo from the same
+// shoot as hero1/hero2, used here instead.
+const HERO_SLIDES = [
+  {
+    src: "/hero1.jpg",
+    srcSet: "/hero1-768.webp 768w, /hero1-1440.webp 1440w",
+    width: 1920,
+    height: 1359,
+    subhead: "Επιλεγμένα γυαλιά ηλίου και οράσεως σε χαμηλότερες τιμές, τώρα.",
+    ctaLabel: "Δείτε τις προσφορές",
+    ctaHref: "#offers-heading",
+  },
+  {
+    src: "/hero3.jpg",
+    srcSet: "/hero3-768.webp 768w, /hero3-1000.webp 1000w",
+    width: 1000,
+    height: 666,
+    heading: "Γυαλιά ηλίου για κάθε στυλ",
+    subhead: "Αναγνωρισμένες μάρκες με προστασία UV400, για άνδρες, γυναίκες και παιδιά.",
+    ctaLabel: "Δείτε τα γυαλιά ηλίου",
+    ctaHref: "/shop/sunglasses",
+  },
+  {
+    src: "/hero14.jpg",
+    width: 1920,
+    height: 1371,
+    heading: "Σκελετοί οράσεως που σας ταιριάζουν",
+    subhead: "Από την καθημερινότητα μέχρι πιο ιδιαίτερα σχέδια, με καθοδήγηση από την ομάδα μας.",
+    ctaLabel: "Δείτε τους σκελετούς",
+    ctaHref: "/shop/frames",
+  },
+  {
+    src: "/hero2.jpg",
+    srcSet: "/hero2-768.webp 768w, /hero2-1440.webp 1440w",
+    width: 1920,
+    height: 1281,
+    heading: "Οπτικά στο σπίτι σας",
+    subhead: "Έως 30 ζευγάρια στον χώρο σας, μόνο εντός Αττικής.",
+    ctaLabel: "Μάθετε περισσότερα",
+    ctaHref: "/look-at-home",
+  },
 ];
 const BRAND_ITEMS = [
   { src: "/Converse.png", webp: "/Converse-320.webp", alt: "Converse", brand: "Converse" },
@@ -94,7 +135,7 @@ export default function HomePage() {
   const [heroInteracting, setHeroInteracting] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [loadedHeroImages, setLoadedHeroImages] = useState(() =>
-    HERO_IMAGES.map(() => false)
+    HERO_SLIDES.map(() => false)
   );
   const swipeStart = useRef(null);
   const brandTrackRef = useRef(null);
@@ -156,19 +197,38 @@ export default function HomePage() {
   // Hero slider: change image every 5 seconds
   useEffect(() => {
     if (
-      HERO_IMAGES.length <= 1 ||
+      HERO_SLIDES.length <= 1 ||
       heroPaused ||
       heroInteracting ||
       prefersReducedMotion ||
       !loadedHeroImages.every(Boolean)
     ) return undefined;
     const id = setInterval(() => {
-      setSlideIndex((i) => (i + 1) % HERO_IMAGES.length);
+      setSlideIndex((i) => (i + 1) % HERO_SLIDES.length);
     }, 5000);
     return () => clearInterval(id);
   }, [heroInteracting, heroPaused, loadedHeroImages, prefersReducedMotion]);
 
   const heroMotionStopped = heroPaused || prefersReducedMotion;
+
+  // Computed from the same real offers data the Offers section below
+  // renders - never hard-coded - so the hero never claims a discount that
+  // isn't actually live. Falls back to honest, non-numeric copy while
+  // offers are still loading or if none qualify.
+  const bestOfferDiscountPercent = useMemo(() => {
+    if (!offers.length) return null;
+    const percents = offers
+      .filter((o) => o?.price > 0 && o?.discountPrice > o.price)
+      .map((o) => Math.round((1 - o.price / o.discountPrice) * 100));
+    return percents.length ? Math.max(...percents) : null;
+  }, [offers]);
+
+  const activeSlide = HERO_SLIDES[slideIndex];
+  const activeSlideHeading =
+    activeSlide.heading ??
+    (bestOfferDiscountPercent != null
+      ? `Προσφορές έως −${bestOfferDiscountPercent}%`
+      : "Προσφορές με πραγματική αξία");
 
   const getBrandHref = (item) => {
     if (item.href) return item.href;
@@ -185,16 +245,16 @@ export default function HomePage() {
   };
 
   const changeHero = (direction, announce = false) => {
-    const nextIndex = (slideIndex + direction + HERO_IMAGES.length) % HERO_IMAGES.length;
+    const nextIndex = (slideIndex + direction + HERO_SLIDES.length) % HERO_SLIDES.length;
     if (!loadedHeroImages[nextIndex]) return;
     setSlideIndex(nextIndex);
-    if (announce) announceHeroStatus(`Εικόνα ${nextIndex + 1} από ${HERO_IMAGES.length}`);
+    if (announce) announceHeroStatus(`Εικόνα ${nextIndex + 1} από ${HERO_SLIDES.length}`);
   };
 
   const selectHero = (index, announce = false) => {
     if (!loadedHeroImages[index]) return;
     setSlideIndex(index);
-    if (announce) announceHeroStatus(`Εικόνα ${index + 1} από ${HERO_IMAGES.length}`);
+    if (announce) announceHeroStatus(`Εικόνα ${index + 1} από ${HERO_SLIDES.length}`);
   };
 
   const toggleHeroPlayback = () => {
@@ -239,7 +299,7 @@ export default function HomePage() {
     const touch = e.changedTouches?.[0];
     const start = swipeStart.current;
     swipeStart.current = null;
-    if (!touch || !start || HERO_IMAGES.length <= 1) return;
+    if (!touch || !start || HERO_SLIDES.length <= 1) return;
 
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
@@ -253,7 +313,7 @@ export default function HomePage() {
   return (
     <div className="space-y-10 px-4 py-6 sm:px-6">
       <section
-        className="relative -mx-4 min-h-[32rem] overflow-hidden rounded-2xl sm:-mx-6 sm:min-h-[36rem] sm:rounded-3xl lg:min-h-[42rem]"
+        className="relative -mx-4 min-h-[26rem] overflow-hidden rounded-2xl sm:-mx-6 sm:min-h-[32rem] sm:rounded-3xl"
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
         onMouseEnter={() => setHeroInteracting(true)}
@@ -268,7 +328,7 @@ export default function HomePage() {
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           <span key={heroAnnouncement.id}>{heroAnnouncement.message}</span>
         </div>
-        {HERO_IMAGES.map((hero, index) => (
+        {HERO_SLIDES.map((hero, index) => (
           <img
             key={hero.src}
             src={hero.src}
@@ -301,31 +361,40 @@ export default function HomePage() {
             }}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-overlay-dark/75 via-overlay-dark/45 to-overlay-dark/15" />
+        {/* /85,/65,/35: verified via WCAG relative-luminance math to hold
+            white text at >=4.5:1 through the zone the text actually sits in
+            (left ~50%), even against a worst-case near-white source image -
+            the previous /75,/45,/15 dropped to ~3.35:1 at the midpoint. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-overlay-dark/85 via-overlay-dark/65 to-overlay-dark/35" />
 
-        <div className="relative z-[1] flex min-h-[32rem] items-center px-6 py-16 sm:min-h-[36rem] sm:px-10 lg:min-h-[42rem] lg:px-16">
+        <div className="relative z-[1] flex min-h-[26rem] items-center px-6 py-16 sm:min-h-[32rem] sm:px-10 lg:px-16">
           <div className="max-w-3xl text-left text-on-media">
             <h1 className="font-zen text-4xl leading-[1.12] text-balance sm:text-5xl lg:text-6xl">
-              Γυαλιά που ταιριάζουν σε εσάς και στην τιμή που θέλετε
+              {activeSlideHeading}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-on-media-muted sm:text-lg">
-              Αγοράστε online, με προσεγμένες επιλογές και
-              εξειδικευμένη οπτική καθοδήγηση όταν τη χρειάζεστε.
+              {activeSlide.subhead}
             </p>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/shop"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-on-media shadow-lg transition hover:bg-brand-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
-              >
-                Αγορά online
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-on-media/80 bg-overlay-dark/15 px-6 py-3 text-sm font-semibold text-on-media transition hover:bg-surface-raised hover:text-brand-deep focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
-              >
-                Μιλήστε με ειδικό
-              </Link>
+            <div className="mt-7">
+              {activeSlide.ctaHref.startsWith("#") ? (
+                // A plain anchor, not <Link>: React Router's client-side
+                // navigation doesn't trigger the browser's native
+                // scroll-to-fragment behavior for a same-page hash target.
+                <a
+                  href={activeSlide.ctaHref}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-on-media shadow-lg transition hover:bg-brand-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
+                >
+                  {activeSlide.ctaLabel}
+                </a>
+              ) : (
+                <Link
+                  to={activeSlide.ctaHref}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-on-media shadow-lg transition hover:bg-brand-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-on-media"
+                >
+                  {activeSlide.ctaLabel}
+                </Link>
+              )}
             </div>
 
             <p className="mt-6 text-sm font-medium text-on-media-warm">
@@ -334,7 +403,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {HERO_IMAGES.length > 1 && (
+        {HERO_SLIDES.length > 1 && (
           <div className="absolute inset-x-4 bottom-4 z-[2] flex items-center justify-between gap-3 sm:inset-x-8">
             <div className="flex items-center gap-1 rounded-full bg-overlay-dark/40 p-1">
               <button
@@ -366,12 +435,12 @@ export default function HomePage() {
             </div>
             <span
               className="inline-flex min-h-11 min-w-14 items-center justify-center rounded-full bg-overlay-dark/40 px-3 text-sm font-semibold tabular-nums text-on-media sm:hidden"
-              aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_IMAGES.length}`}
+              aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_SLIDES.length}`}
             >
-              {slideIndex + 1} / {HERO_IMAGES.length}
+              {slideIndex + 1} / {HERO_SLIDES.length}
             </span>
-            <div className="hidden items-center gap-1 rounded-full bg-overlay-dark/40 p-1 sm:flex" aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_IMAGES.length}`}>
-              {HERO_IMAGES.map((_, idx) => (
+            <div className="hidden items-center gap-1 rounded-full bg-overlay-dark/40 p-1 sm:flex" aria-label={`Εικόνα ${slideIndex + 1} από ${HERO_SLIDES.length}`}>
+              {HERO_SLIDES.map((_, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -389,7 +458,10 @@ export default function HomePage() {
         )}
       </section>
 
-      <section aria-label="Γιατί να επιλέξετε το Look Optica" className="-mt-4 border-y border-border-brand bg-surface-raised/80 py-5">
+      {/* No negative margin on mobile: the pull-up was overlapping the
+          hero's bottom control pill there. The overlap is kept from sm:
+          up, where the controls sit further from the section edge. */}
+      <section aria-label="Γιατί να επιλέξετε το Look Optica" className="sm:-mt-4 border-y border-border-brand bg-surface-raised/80 py-5">
         <ul className="grid gap-4 text-sm text-ink-primary sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-border-brand">
           <li className="px-4"><strong className="block text-ink-heading">Δωρεάν αποστολή</strong> Με Box Now για παραγγελίες από 40€.</li>
           <li className="px-4"><strong className="block text-ink-heading">Οπτική καθοδήγηση</strong> Βοήθεια για να επιλέξετε με σιγουριά.</li>

@@ -8,7 +8,7 @@ export const NAV_CATEGORIES = [
       { label: "Unisex", slug: "unisex" },
       { label: "Παιδιά", slug: "kids" },
     ],
-    extras: [{ label: "Προσφορές", view: "stock" }],
+    extras: [{ label: "Τελευταία τεμάχια", view: "stock" }],
   },
   {
     label: "Σκελετοί Οράσεως",
@@ -19,7 +19,7 @@ export const NAV_CATEGORIES = [
       { label: "Unisex", slug: "unisex" },
       { label: "Παιδιά", slug: "kids" },
     ],
-    extras: [{ label: "Προσφορές", view: "stock" }],
+    extras: [{ label: "Τελευταία τεμάχια", view: "stock" }],
   },
   {
     label: "Όλα τα Προϊόντα",
@@ -30,7 +30,7 @@ export const NAV_CATEGORIES = [
       { label: "Υγρά Φακών Επαφής", to: "/shop/other-products" },
       { label: "Αξεσουάρ / Αλυσίδες (Accessor-Eyes)", to: "/shop/other-products" },
       { label: "Διάφορα", to: "/shop/other-products" },
-      { label: "Προσφορές", to: "/shop?view=stock" },
+      { label: "Τελευταία τεμάχια", to: "/shop?view=stock" },
     ],
   },
 ];

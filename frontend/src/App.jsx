@@ -432,7 +432,7 @@ function ShopPLP() {
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-semibold text-ink-heading">
-            {isStockView ? "Προσφορές" : "Όλα τα προϊόντα"}
+            {isStockView ? "Τελευταία τεμάχια" : "Όλα τα προϊόντα"}
           </h1>
           <p className="text-sm md:text-base text-slate-600 max-w-2xl">
             Περιηγηθείτε σε όλες τις συλλογές Look Optica και φιλτράρετε όπως στις σελίδες κατηγορίας.
@@ -493,7 +493,7 @@ function ShopPLP() {
                     : "bg-white text-slate-700 hover:border-amber-400"
                 }`}
               >
-                Προσφορές
+                Τελευταία τεμάχια
               </button>
             </div>
           </div>
@@ -790,7 +790,7 @@ function AppShell() {
               );
             })}
             <Link to="/shop?view=stock" className="inline-flex min-h-11 items-center rounded-lg px-2 hover:bg-amber-50 hover:text-amber-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
-              Προσφορές
+              Τελευταία τεμάχια
             </Link>
             <div
               className="relative"
