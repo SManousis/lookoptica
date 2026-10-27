@@ -16,6 +16,7 @@ from app.routers import reviews
 from app.routers import newsletter
 from app.routers import promo_codes
 from app.routers import wishlist
+from app.routers import admin_erp_sync
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.middleware.csrf import CSRFMiddleware   # <-- NEW
 from app.routers.payments_viva import router as viva_router
@@ -116,6 +117,7 @@ app.include_router(reviews.router, prefix="/api")
 app.include_router(newsletter.router, prefix="/api")
 app.include_router(promo_codes.router, prefix="/api")
 app.include_router(wishlist.router, prefix="/api")
+app.include_router(admin_erp_sync.router, prefix="/api")
 app.include_router(viva_router, prefix="/api")
 
 @app.get("/healthz")
