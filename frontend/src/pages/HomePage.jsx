@@ -31,19 +31,21 @@ const HERO_SLIDES = [
     ctaHref: "#offers-heading",
   },
   {
-    src: "/hero3.jpg",
-    srcSet: "/hero3-768.webp 768w, /hero3-1000.webp 1000w",
-    width: 1000,
-    height: 666,
+    // No webp variants exist for hero14.jpg (full-res only) - see the note
+    // above the array.
+    src: "/hero14.jpg",
+    width: 1920,
+    height: 1371,
     heading: "Γυαλιά ηλίου για κάθε στυλ",
     subhead: "Αναγνωρισμένες μάρκες με προστασία UV400, για άνδρες, γυναίκες και παιδιά.",
     ctaLabel: "Δείτε τα γυαλιά ηλίου",
     ctaHref: "/shop/sunglasses",
   },
   {
-    src: "/hero14.jpg",
-    width: 1920,
-    height: 1371,
+    src: "/hero3.jpg",
+    srcSet: "/hero3-768.webp 768w, /hero3-1000.webp 1000w",
+    width: 1000,
+    height: 666,
     heading: "Σκελετοί οράσεως που σας ταιριάζουν",
     subhead: "Από την καθημερινότητα μέχρι πιο ιδιαίτερα σχέδια, με καθοδήγηση από την ομάδα μας.",
     ctaLabel: "Δείτε τους σκελετούς",
@@ -81,6 +83,7 @@ const STORE_HOURS = [
   { days: "Δευτέρα, Τετάρτη", hours: "10:00–15:30" },
   { days: "Τρίτη, Πέμπτη, Παρασκευή", hours: "10:00–21:00" },
   { days: "Σάββατο", hours: "10:00–16:00" },
+  { days: "Κυριακή", hours: "Κλειστά" },
 ];
 
 const SERVICE_LINKS = [
@@ -217,10 +220,16 @@ export default function HomePage() {
   // offers are still loading or if none qualify.
   const bestOfferDiscountPercent = useMemo(() => {
     if (!offers.length) return null;
-    const percents = offers
+    const exactPercents = offers
       .filter((o) => o?.price > 0 && o?.discountPrice > o.price)
-      .map((o) => Math.round((1 - o.price / o.discountPrice) * 100));
-    return percents.length ? Math.max(...percents) : null;
+      .map((o) => (1 - o.price / o.discountPrice) * 100);
+    if (!exactPercents.length) return null;
+    // Rounded to the nearest multiple of 5 for a clean "up to -X%" badge
+    // (-50/-60/-65/-70...) instead of an odd value like -43% or -69% - take
+    // the max of the exact percentages first, then round once at the end.
+    // Floored at 5 so a near-zero real discount can't display as "-0%".
+    const maxExact = Math.max(...exactPercents);
+    return Math.max(5, Math.round(maxExact / 5) * 5);
   }, [offers]);
 
   const activeSlide = HERO_SLIDES[slideIndex];
@@ -311,9 +320,15 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-10 px-4 py-6 sm:px-6">
+    // -mx-6 cancels the shell's own flat px-6 (App.jsx's <main>) exactly
+    // once here, so this is the single source of the page's horizontal
+    // margin - every section below shares it with no bleed tricks of its
+    // own. Previously each section's -mx-4/-mx-6 only cancelled THIS div's
+    // own px-4/px-6, never the shell's, so nothing was ever actually flush
+    // with the real viewport edge - just inconsistently margined.
+    <div className="space-y-10 -mx-6 px-4 py-6 sm:px-6">
       <section
-        className="relative -mx-4 min-h-[26rem] overflow-hidden rounded-2xl sm:-mx-6 sm:min-h-[32rem] sm:rounded-3xl"
+        className="relative min-h-[26rem] overflow-hidden rounded-2xl sm:min-h-[32rem] sm:rounded-3xl"
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
         onMouseEnter={() => setHeroInteracting(true)}
@@ -462,11 +477,27 @@ export default function HomePage() {
           hero's bottom control pill there. The overlap is kept from sm:
           up, where the controls sit further from the section edge. */}
       <section aria-label="Γιατί να επιλέξετε το Look Optica" className="sm:-mt-4 border-y border-border-brand bg-surface-raised/80 py-5">
-        <ul className="grid gap-4 text-sm text-ink-primary sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-border-brand">
-          <li className="px-4"><strong className="block text-ink-heading">Δωρεάν αποστολή</strong> Με Box Now για παραγγελίες από 40€.</li>
-          <li className="px-4"><strong className="block text-ink-heading">Οπτική καθοδήγηση</strong> Βοήθεια για να επιλέξετε με σιγουριά.</li>
-          <li className="px-4"><strong className="block text-ink-heading">Εγγυημένη προέλευση</strong> Προϊόντα επίσημης αντιπροσωπείας.</li>
-          <li className="px-4"><strong className="block text-ink-heading">Ασφαλείς πληρωμές</strong> Viva Wallet, PayPal και τραπεζική κατάθεση.</li>
+        {/* 2x2 of labels + descriptions below lg, 4-across with dividers
+            from lg. Descriptions show at every width now too: the "why
+            trust us" detail is exactly what a first-time mobile visitor
+            needs before the links below, not a desktop-only extra. */}
+        <ul className="grid grid-cols-2 gap-4 text-sm text-ink-primary lg:grid-cols-4 lg:divide-x lg:divide-border-brand">
+          <li className="px-4">
+            <strong className="block text-ink-heading">Δωρεάν αποστολή</strong>
+            <span className="block">Με Box Now για παραγγελίες από 40€.</span>
+          </li>
+          <li className="px-4">
+            <strong className="block text-ink-heading">Οπτική καθοδήγηση</strong>
+            <span className="block">Βοήθεια για να επιλέξετε με σιγουριά.</span>
+          </li>
+          <li className="px-4">
+            <strong className="block text-ink-heading">Εγγυημένη προέλευση</strong>
+            <span className="block">Προϊόντα επίσημης αντιπροσωπείας.</span>
+          </li>
+          <li className="px-4">
+            <strong className="block text-ink-heading">Ασφαλείς πληρωμές</strong>
+            <span className="block">Viva Wallet, PayPal και τραπεζική κατάθεση.</span>
+          </li>
         </ul>
         <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm font-medium">
           <Link to="/terms" className="text-brand-strong underline decoration-border-brand-highlight underline-offset-4 hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-focus-ring">Αποστολές & πληρωμές</Link>
@@ -498,7 +529,7 @@ export default function HomePage() {
           )}
           {(offersState === "loading" || offers.length > 0) && (
             // Swipe rail below md so offers don't push categories four rows down; grid from md up.
-            <ul className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scroll-px-4 sm:-mx-6 sm:px-6 sm:scroll-px-6 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0 md:pb-0">
+            <ul className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
               {offersState === "loading"
                 ? Array.from({ length: 4 }, (_, index) => (
                     <li key={index} aria-hidden="true" className="w-[42%] shrink-0 snap-start sm:w-[30%] md:w-auto">
@@ -507,7 +538,13 @@ export default function HomePage() {
                   ))
                 : offers.map((p, index) => (
                     <li key={p.slug} className={`w-[42%] shrink-0 snap-start sm:w-[30%] md:w-auto ${index >= 4 ? "md:hidden" : ""}`}>
-                      <ProductCard p={p} />
+                      {/* Wider cards from the margin fix give brand names more
+                          room, but long Greek category labels ("Σκελετοί
+                          Οράσεως") combined with longer brand names can still
+                          overflow a 42%/30%-wide rail card - hide the chip
+                          below md, where cards are narrowest, and restore it
+                          once the section becomes a normal grid. */}
+                      <ProductCard p={p} hideCategoryChipOnNarrow />
                     </li>
                   ))}
             </ul>
@@ -590,7 +627,7 @@ export default function HomePage() {
       </section>
 
       {BRAND_ITEMS.length > 0 && (
-        <section className="-mx-4 rounded-2xl border border-border-warm-subtle bg-surface-warm/60 p-4 sm:-mx-6 sm:rounded-3xl sm:p-6" aria-labelledby="brands-heading">
+        <section className="rounded-2xl border border-border-warm-subtle bg-surface-warm/60 p-4 sm:rounded-3xl sm:p-6" aria-labelledby="brands-heading">
           <div className="flex items-center justify-between gap-4">
             <h2 id="brands-heading" className="text-2xl font-semibold tracking-tight text-ink-heading">Επιλεγμένες μάρκες</h2>
             {(brandScroll.prev || brandScroll.next) && (
@@ -630,10 +667,16 @@ export default function HomePage() {
         </section>
       )}
 
-      <section className="relative -mx-4 mb-10 rounded-2xl border border-border-warm-subtle bg-surface-warm/60 py-10 sm:-mx-6 sm:rounded-3xl">
+      <section className="relative mb-10 rounded-2xl border border-border-warm-subtle bg-surface-warm/60 py-10 sm:rounded-3xl">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+          {/* Zen Antique does list Greek in its official subsets, but its
+              Greek letterforms read as a visibly different design quality
+              than its native Latin ones - mixing the two scripts in one
+              line reads as two typefaces, not one. Keeping the brand name
+              in the system sans makes the font choice per-script
+              deliberate instead of an accidental clash within one font. */}
           <h2 className="font-zen text-3xl text-ink-heading mb-3 md:text-4xl">
-            Νέα από το Look Optica
+            Νέα από το <span className="font-sans">Look Optica</span>
           </h2>
           <p className="text-ink-secondary mb-6 text-sm md:text-base">
             Λάβετε ενημερώσεις για νέες συλλογές και προσφορές, μόνο όταν

@@ -4,7 +4,7 @@ import WishlistButton from "./WishlistButton";
 import { categoryLabelEl } from "../utils/categoryHelpers";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function ProductCard({ p }) {
+export default function ProductCard({ p, hideCategoryChipOnNarrow = false }) {
   if (!p) return null;
 
   const title = p?.title?.el || p?.title?.en || "Product";
@@ -63,7 +63,11 @@ export default function ProductCard({ p }) {
             </span>
           )}
           {categoryLabel && (
-            <span className="shrink-0 rounded-full border border-current px-2 py-0.5 text-xs uppercase tracking-wide">
+            <span
+              className={`shrink-0 rounded-full border border-current px-2 py-0.5 text-xs uppercase tracking-wide ${
+                hideCategoryChipOnNarrow ? "hidden md:inline-block" : ""
+              }`}
+            >
               {categoryLabel}
             </span>
           )}

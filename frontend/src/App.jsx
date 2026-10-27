@@ -1126,16 +1126,18 @@ function AppShell() {
          <span>
             © {new Date().getFullYear()} Look Optica — Μια διαφορετική οπτική
          </span>
-         <span className="flex flex-wrap items-center gap-2">
-            <Link to="/contact" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+         {/* Stacked, no separators below sm - these three items (the third
+             is long) wrap on phone widths, which left a "|" dangling alone
+             at a line break. A divide-x row only starts from sm, where the
+             row reliably fits on one line. */}
+         <span className="flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-0 sm:divide-x sm:divide-border-slate">
+            <Link to="/contact" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600 sm:px-2 sm:first:pl-0">
              Επικοινωνία
            </Link>
-           <span>|</span>
-            <Link to="/terms" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+            <Link to="/terms" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600 sm:px-2">
              Όροι χρήσης
            </Link>
-           <span>|</span>
-            <Link to="/returns" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600">
+            <Link to="/returns" className="text-amber-700 hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-amber-600 sm:px-2">
              Υπαναχώρηση / Επιστροφές
            </Link>
          </span>
@@ -1151,8 +1153,8 @@ function AppShell() {
              www.lookoptica.gr
            </a>
             <span className="ml-2 inline-flex items-center gap-1">
-              <a href="https://www.facebook.com/lookoptikahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Facebook" className="inline-grid size-9 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><FacebookIcon fontSize="small" /></a>
-              <a href="https://www.instagram.com/lookopticahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Instagram" className="inline-grid size-9 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><InstagramIcon fontSize="small" /></a>
+              <a href="https://www.facebook.com/lookoptikahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Facebook" className="inline-grid size-11 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><FacebookIcon fontSize="small" /></a>
+              <a href="https://www.instagram.com/lookopticahalandri" target="_blank" rel="noopener noreferrer" aria-label="Look Optica στο Instagram" className="inline-grid size-11 place-items-center rounded-full hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600"><InstagramIcon fontSize="small" /></a>
             </span>
          </span>
         </div>
