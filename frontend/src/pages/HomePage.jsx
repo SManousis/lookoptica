@@ -91,8 +91,32 @@ const SERVICE_LINKS = [
   { to: "/low-vision", icon: VisibilityOutlinedIcon, title: "Βοηθήματα χαμηλής όρασης", detail: "Εξειδικευμένη υποστήριξη, κατόπιν ραντεβού" },
 ];
 
-const OFFERS_MAX_PRICE = 80;
+const OFFERS_MAX_PRICE = 120;
+const OFFERS_PER_PAGE = 4;
+const OFFERS_ROTATION_INTERVAL = 6000;
 const FALLBACK_OFFER_LIMIT = 24;
+const POPULAR_OFFER_BRANDS = [
+  "Paul Frank",
+  "Ana Hickmann",
+  "Rebecca Blu",
+  "Pepe Jeans",
+  "Converse",
+  "Nautica",
+  "DKNY",
+  "Gant",
+  "Guess",
+];
+const POPULAR_OFFER_BRAND_ALIASES = {
+  "Paul Frank": ["paul frank"],
+  "Ana Hickmann": ["ana hickmann", "ana hickman"],
+  "Rebecca Blu": ["rebecca blu", "rebecca blue"],
+  "Pepe Jeans": ["pepe jeans"],
+  Converse: ["converse"],
+  Nautica: ["nautica"],
+  DKNY: ["dkny", "donna karan new york"],
+  Gant: ["gant"],
+  Guess: ["guess"],
+};
 const SUNGLASSES_CATEGORY_ALIASES = ["sunglasses", "sun-glasses", "γυαλια ηλιου", "γυαλιά ηλίου"];
 const FRAMES_CATEGORY_ALIASES = [
   "ophthalmic_frames",
@@ -116,6 +140,106 @@ const parseJsonResponse = async (response) => {
   return response.json();
 };
 
+const normalizeCatalogValue = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, "");
+
+const canonicalOfferBrand = (value) => {
+  const normalized = normalizeCatalogValue(value);
+  if (!normalized) return null;
+  return Object.entries(POPULAR_OFFER_BRAND_ALIASES).find(([, aliases]) =>
+    aliases.some((alias) => {
+      const normalizedAlias = normalizeCatalogValue(alias);
+      return normalized === normalizedAlias || normalized.startsWith(normalizedAlias);
+    })
+  )?.[0] || null;
+};
+
+const matchesCategoryAlias = (value, aliases) => {
+  const normalized = normalizeCatalogValue(value);
+  return aliases.some((alias) => {
+    const normalizedAlias = normalizeCatalogValue(alias);
+    return normalized === normalizedAlias || normalized.includes(normalizedAlias);
+  });
+};
+
+const weeklyOfferRotationNumber = () => {
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  const daysSinceMonday = (monday.getDay() + 6) % 7;
+  monday.setDate(monday.getDate() - daysSinceMonday);
+  return Math.floor(monday.getTime() / (7 * 24 * 60 * 60 * 1000));
+};
+
+const selectWeeklyFallbackOffers = (products, limit) => {
+  const createBuckets = () => new Map(POPULAR_OFFER_BRANDS.map((brand) => [brand, []]));
+  const bucketsByCategory = {
+    sunglasses: createBuckets(),
+    frames: createBuckets(),
+  };
+  const seen = new Set();
+  products.forEach((product) => {
+    const brand = canonicalOfferBrand(product?.brand);
+    const key = product?.slug;
+    if (!brand || !key || seen.has(key)) return;
+    const category = matchesCategoryAlias(product?.category, SUNGLASSES_CATEGORY_ALIASES)
+      ? "sunglasses"
+      : matchesCategoryAlias(product?.category, FRAMES_CATEGORY_ALIASES)
+        ? "frames"
+        : null;
+    if (!category) return;
+    seen.add(key);
+    bucketsByCategory[category].get(brand).push(product);
+  });
+
+  const rotation = weeklyOfferRotationNumber();
+  const selectFromBuckets = (buckets, categoryLimit, categoryRotation) => {
+    const availableBrands = [...buckets.keys()]
+      .filter((brand) => buckets.get(brand).length > 0)
+      .sort();
+    if (!availableBrands.length) return [];
+    const brandOffset = categoryRotation % availableBrands.length;
+    const brandOrder = [
+      ...availableBrands.slice(brandOffset),
+      ...availableBrands.slice(0, brandOffset),
+    ];
+    brandOrder.forEach((brand) => {
+      buckets.get(brand).sort((a, b) => String(a.slug).localeCompare(String(b.slug)));
+    });
+
+    const selected = [];
+    const maxBucketSize = Math.max(...brandOrder.map((brand) => buckets.get(brand).length));
+    for (let round = 0; round < maxBucketSize && selected.length < categoryLimit; round += 1) {
+      for (const brand of brandOrder) {
+        const bucket = buckets.get(brand);
+        if (round >= bucket.length) continue;
+        const candidate = bucket[(categoryRotation + round) % bucket.length];
+        if (!selected.some((product) => product.slug === candidate.slug)) selected.push(candidate);
+        if (selected.length >= categoryLimit) break;
+      }
+    }
+    return selected;
+  };
+
+  const sunglasses = selectFromBuckets(
+    bucketsByCategory.sunglasses,
+    Math.ceil(limit / 2),
+    rotation
+  );
+  const frames = selectFromBuckets(
+    bucketsByCategory.frames,
+    Math.floor(limit / 2),
+    rotation + 1
+  );
+  return Array.from(
+    { length: Math.max(sunglasses.length, frames.length) },
+    (_, index) => [sunglasses[index], frames[index]]
+  ).flat().filter(Boolean).slice(0, limit);
+};
+
 export default function HomePage() {
   usePageSEO({
     title: "Look Οπτικά | Γυαλιά Ηλίου, Οράσεως & Φακοί Επαφής",
@@ -127,6 +251,10 @@ export default function HomePage() {
 
   const [offers, setOffers] = useState([]);
   const [offersState, setOffersState] = useState("loading");
+  const [offerPage, setOfferPage] = useState(0);
+  const [offersPaused, setOffersPaused] = useState(false);
+  const [offersInteracting, setOffersInteracting] = useState(false);
+  const [offerAnnouncement, setOfferAnnouncement] = useState({ id: 0, message: "" });
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [newsletterConsentError, setNewsletterConsentError] = useState(false);
@@ -145,6 +273,7 @@ export default function HomePage() {
   const [brandScroll, setBrandScroll] = useState({ prev: false, next: false });
   const newsletterConsentRef = useRef(null);
   const newsletterEmailRef = useRef(null);
+  const offerPageCount = Math.max(1, Math.ceil(offers.length / OFFERS_PER_PAGE));
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -158,6 +287,7 @@ export default function HomePage() {
     setOffersState("loading");
     try {
       const params = new URLSearchParams({ limit: "8", max_price: String(OFFERS_MAX_PRICE) });
+      POPULAR_OFFER_BRANDS.forEach((brand) => params.append("brand", brand));
       let data;
       try {
         data = await fetch(`${API}/shop-products/offers?${params}`).then(parseJsonResponse);
@@ -175,15 +305,11 @@ export default function HomePage() {
           product?.price > 0 &&
           product.price <= OFFERS_MAX_PRICE &&
           product?.discountPrice > product.price;
-        const sunglassesOffers = (Array.isArray(sunglasses) ? sunglasses : []).filter(isEligibleOffer);
-        const framesOffers = (Array.isArray(frames) ? frames : []).filter(isEligibleOffer);
-        const mixed = [];
-        for (let index = 0; index < Math.max(sunglassesOffers.length, framesOffers.length); index += 1) {
-          if (sunglassesOffers[index]) mixed.push(sunglassesOffers[index]);
-          if (mixed.length < 8 && framesOffers[index]) mixed.push(framesOffers[index]);
-          if (mixed.length >= 8) break;
-        }
-        data = mixed;
+        const candidates = [
+          ...(Array.isArray(sunglasses) ? sunglasses : []),
+          ...(Array.isArray(frames) ? frames : []),
+        ].filter(isEligibleOffer);
+        data = selectWeeklyFallbackOffers(candidates, 8);
       }
       setOffers(Array.isArray(data) ? data : []);
       setOffersState("ok");
@@ -196,6 +322,23 @@ export default function HomePage() {
   useEffect(() => {
     loadOffers();
   }, [loadOffers]);
+
+  useEffect(() => {
+    setOfferPage(0);
+  }, [offers]);
+
+  useEffect(() => {
+    if (
+      offerPageCount <= 1 ||
+      offersPaused ||
+      offersInteracting ||
+      prefersReducedMotion
+    ) return undefined;
+    const timer = window.setInterval(() => {
+      setOfferPage((current) => (current + 1) % offerPageCount);
+    }, OFFERS_ROTATION_INTERVAL);
+    return () => window.clearInterval(timer);
+  }, [offerPageCount, offersInteracting, offersPaused, prefersReducedMotion]);
 
   // Hero slider: change image every 5 seconds
   useEffect(() => {
@@ -270,6 +413,34 @@ export default function HomePage() {
     const nextPaused = !heroPaused;
     setHeroPaused(nextPaused);
     announceHeroStatus(nextPaused ? "Η αυτόματη προβολή τέθηκε σε παύση" : "Η αυτόματη προβολή συνεχίζεται");
+  };
+
+  const offersMotionStopped = offersPaused || prefersReducedMotion;
+
+  const offerPageLabel = (page) => {
+    const first = page * OFFERS_PER_PAGE + 1;
+    const last = Math.min(first + OFFERS_PER_PAGE - 1, offers.length);
+    return `Προϊόντα ${first} έως ${last} από ${offers.length}`;
+  };
+
+  const announceOfferStatus = (message) => {
+    setOfferAnnouncement((current) => ({ id: current.id + 1, message }));
+  };
+
+  const changeOfferPage = (direction) => {
+    const nextPage = (offerPage + direction + offerPageCount) % offerPageCount;
+    setOfferPage(nextPage);
+    announceOfferStatus(offerPageLabel(nextPage));
+  };
+
+  const toggleOffersPlayback = () => {
+    const nextPaused = !offersPaused;
+    setOffersPaused(nextPaused);
+    announceOfferStatus(
+      nextPaused
+        ? "Η αυτόματη εναλλαγή προσφορών τέθηκε σε παύση"
+        : "Η αυτόματη εναλλαγή προσφορών συνεχίζεται"
+    );
   };
 
   useEffect(() => {
@@ -505,7 +676,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="offers-heading" aria-busy={offersState === "loading"} className="space-y-4">
+      <section
+        aria-labelledby="offers-heading"
+        aria-busy={offersState === "loading"}
+        aria-roledescription="carousel"
+        className="space-y-4"
+        onMouseEnter={() => setOffersInteracting(true)}
+        onMouseLeave={() => setOffersInteracting(false)}
+        onFocusCapture={() => setOffersInteracting(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setOffersInteracting(false);
+        }}
+      >
+          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            <span key={offerAnnouncement.id}>{offerAnnouncement.message}</span>
+          </p>
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 id="offers-heading" className="text-3xl font-semibold tracking-tight text-ink-heading">Προσφορές</h2>
             <Link
@@ -515,6 +700,46 @@ export default function HomePage() {
               Δείτε όλες τις προσφορές &rarr;
             </Link>
           </div>
+          {offersState === "ok" && offers.length > 0 && (
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm text-ink-secondary">
+                Επιλεγμένες προσφορές έως {OFFERS_MAX_PRICE}€ · Ανανέωση κάθε Δευτέρα
+              </p>
+              {offerPageCount > 1 && (
+                <div className="hidden items-center gap-1 rounded-full border border-border-brand bg-surface-raised p-1 md:flex">
+                  <button
+                    type="button"
+                    onClick={() => changeOfferPage(-1)}
+                    className="grid size-11 place-items-center rounded-full text-brand-strong transition hover:bg-surface-warm focus-visible:outline-2 focus-visible:outline-focus-ring"
+                    aria-label="Προηγούμενες προσφορές"
+                  >
+                    <ChevronLeftIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleOffersPlayback}
+                    disabled={prefersReducedMotion}
+                    className="grid size-11 place-items-center rounded-full text-brand-strong transition hover:bg-surface-warm focus-visible:outline-2 focus-visible:outline-focus-ring disabled:cursor-default disabled:opacity-60"
+                    aria-label={prefersReducedMotion ? "Η αυτόματη εναλλαγή είναι απενεργοποιημένη λόγω μειωμένης κίνησης" : offersPaused ? "Συνέχιση αυτόματης εναλλαγής προσφορών" : "Παύση αυτόματης εναλλαγής προσφορών"}
+                    aria-pressed={offersMotionStopped}
+                  >
+                    {offersMotionStopped ? <PlayArrowIcon /> : <PauseIcon />}
+                  </button>
+                  <span className="min-w-16 px-2 text-center text-sm font-semibold tabular-nums text-ink-secondary" aria-hidden="true">
+                    {offerPage + 1} / {offerPageCount}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => changeOfferPage(1)}
+                    className="grid size-11 place-items-center rounded-full text-brand-strong transition hover:bg-surface-warm focus-visible:outline-2 focus-visible:outline-focus-ring"
+                    aria-label="Επόμενες προσφορές"
+                  >
+                    <ChevronRightIcon />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {offersState === "loading" && <p className="sr-only">Φόρτωση προσφορών…</p>}
           {offersState === "error" && (
             <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-border-brand bg-surface-warm p-4 text-sm text-ink-primary sm:flex-row sm:items-center sm:justify-between">
@@ -537,7 +762,10 @@ export default function HomePage() {
                     </li>
                   ))
                 : offers.map((p, index) => (
-                    <li key={p.slug} className={`w-[42%] shrink-0 snap-start sm:w-[30%] md:w-auto ${index >= 4 ? "md:hidden" : ""}`}>
+                    <li
+                      key={p.slug}
+                      className={`w-[42%] shrink-0 snap-start sm:w-[30%] md:w-auto ${Math.floor(index / OFFERS_PER_PAGE) === offerPage ? "md:block" : "md:hidden"}`}
+                    >
                       {/* Wider cards from the margin fix give brand names more
                           room, but long Greek category labels ("Σκελετοί
                           Οράσεως") combined with longer brand names can still

@@ -1,4 +1,6 @@
 import unicodedata
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, load_only
@@ -87,6 +89,18 @@ FRAMES_CATEGORY_ALIASES = [
     "γυαλια ορασεως",
 ]
 
+POPULAR_OFFER_BRAND_ALIASES: Dict[str, tuple[str, ...]] = {
+    "Paul Frank": ("paul frank",),
+    "Ana Hickmann": ("ana hickmann", "ana hickman"),
+    "Rebecca Blu": ("rebecca blu", "rebecca blue"),
+    "Pepe Jeans": ("pepe jeans",),
+    "Converse": ("converse",),
+    "Nautica": ("nautica",),
+    "DKNY": ("dkny", "donna karan new york"),
+    "Gant": ("gant",),
+    "Guess": ("guess",),
+}
+
 
 def _normalize_category_string(value: Any) -> str:
     """
@@ -117,6 +131,87 @@ def _matches_category_alias(value: Any, aliases: List[str]) -> bool:
         ):
             return True
     return False
+
+
+def _canonical_offer_brand(
+    value: Any,
+    allowed_brands: Optional[List[str]] = None,
+) -> Optional[str]:
+    normalized = _normalize_category_string(value)
+    if not normalized:
+        return None
+
+    requested = {
+        _normalize_category_string(brand)
+        for brand in (allowed_brands or [])
+        if brand
+    }
+    for canonical, aliases in POPULAR_OFFER_BRAND_ALIASES.items():
+        canonical_normalized = _normalize_category_string(canonical)
+        alias_values = {
+            canonical_normalized,
+            *(_normalize_category_string(alias) for alias in aliases),
+        }
+        if requested and not any(
+            requested_value in alias_values
+            for requested_value in requested
+        ):
+            continue
+        if any(
+            normalized == alias
+            or normalized.startswith(alias)
+            or alias.startswith(normalized)
+            for alias in alias_values
+        ):
+            return canonical
+    return None
+
+
+def _weekly_offer_rotation_number(today: Optional[date] = None) -> int:
+    current_date = today or datetime.now(ZoneInfo("Europe/Athens")).date()
+    iso_year, iso_week, _ = current_date.isocalendar()
+    return iso_year * 53 + iso_week
+
+
+def _select_weekly_offer_products(
+    products_by_brand: Dict[str, List[Product]],
+    limit: int,
+    rotation_number: int,
+) -> List[Product]:
+    available_brands = sorted(
+        brand for brand, products in products_by_brand.items() if products
+    )
+    if not available_brands:
+        return []
+
+    brand_offset = rotation_number % len(available_brands)
+    brand_order = available_brands[brand_offset:] + available_brands[:brand_offset]
+    sorted_buckets = {
+        brand: sorted(
+            products_by_brand[brand],
+            key=lambda product: (product.slug or "", product.id),
+        )
+        for brand in brand_order
+    }
+    max_bucket_size = max(len(products) for products in sorted_buckets.values())
+    selected: List[Product] = []
+
+    # The first pass favors brand variety. Later passes fill any remaining
+    # slots while rotating each brand's product offset every ISO week.
+    for round_index in range(max_bucket_size):
+        for brand in brand_order:
+            bucket = sorted_buckets[brand]
+            if round_index >= len(bucket):
+                continue
+            product_index = (rotation_number + round_index) % len(bucket)
+            candidate = bucket[product_index]
+            if candidate in selected:
+                continue
+            selected.append(candidate)
+            if len(selected) >= limit:
+                return selected
+
+    return selected
 
 
 def _gather_category_candidates(
@@ -419,10 +514,11 @@ def featured_products(
 @router.get("/offers", response_model=List[CompactProductListItem])
 def homepage_offers(
     limit: int = Query(default=8, ge=1, le=12),
-    max_price: float = Query(default=80, gt=0, le=10000),
+    max_price: float = Query(default=120, gt=0, le=10000),
+    brand: Optional[List[str]] = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    """Return a small, balanced set of discounted sunglasses and frames."""
+    """Return a weekly rotating set of discounted products from selected brands."""
     base_stmt = (
         select(Product)
         .options(
@@ -444,55 +540,76 @@ def homepage_offers(
             Product.compare_at_price.is_not(None),
             Product.compare_at_price > Product.price,
         )
-        .order_by(Product.created_at.desc(), Product.id.desc())
+        .order_by(Product.id.asc())
     )
 
-    target_per_category = (limit + 1) // 2
-    sunglasses: List[Product] = []
-    frames: List[Product] = []
+    products_by_category: Dict[str, Dict[str, List[Product]]] = {
+        category: {
+            canonical: [] for canonical in POPULAR_OFFER_BRAND_ALIASES
+        }
+        for category in ("sunglasses", "frames")
+    }
     batch_size = 50
     cursor = 0
 
-    while len(sunglasses) < target_per_category or len(frames) < target_per_category:
+    while True:
         rows = db.execute(base_stmt.limit(batch_size).offset(cursor)).scalars().all()
         if not rows:
             break
 
         for product in rows:
+            attrs = product.attributes if isinstance(product.attributes, dict) else {}
+            canonical_brand = _canonical_offer_brand(
+                attrs.get("brand_label") or attrs.get("brand"),
+                brand,
+            )
+            if not canonical_brand:
+                continue
             candidates = _category_candidates_for_product(product)
-            if (
-                len(sunglasses) < limit
-                and any(
-                    _matches_category_alias(candidate, SUNGLASSES_CATEGORY_ALIASES)
-                    for candidate in candidates
-                )
-            ):
-                sunglasses.append(product)
-            elif (
-                len(frames) < limit
-                and any(
-                    _matches_category_alias(candidate, FRAMES_CATEGORY_ALIASES)
-                    for candidate in candidates
-                )
-            ):
-                frames.append(product)
+            is_sunglasses = any(
+                _matches_category_alias(candidate, SUNGLASSES_CATEGORY_ALIASES)
+                for candidate in candidates
+            )
+            is_frames = any(
+                _matches_category_alias(candidate, FRAMES_CATEGORY_ALIASES)
+                for candidate in candidates
+            )
+            if is_sunglasses:
+                products_by_category["sunglasses"][canonical_brand].append(product)
+            elif is_frames:
+                products_by_category["frames"][canonical_brand].append(product)
 
         cursor += len(rows)
         if len(rows) < batch_size:
             break
 
-    balanced: List[Product] = []
+    rotation_number = _weekly_offer_rotation_number()
+    sunglasses_target = (limit + 1) // 2
+    frames_target = limit // 2
+    sunglasses = _select_weekly_offer_products(
+        products_by_category["sunglasses"],
+        sunglasses_target,
+        rotation_number,
+    )
+    frames = _select_weekly_offer_products(
+        products_by_category["frames"],
+        frames_target,
+        rotation_number + 1,
+    )
+
+    # Interleave the categories so each four-card desktop page contains two
+    # sunglasses and two optical frames when the requested inventory exists.
+    weekly_products: List[Product] = []
     for index in range(max(len(sunglasses), len(frames))):
         if index < len(sunglasses):
-            balanced.append(sunglasses[index])
-        if len(balanced) >= limit:
-            break
+            weekly_products.append(sunglasses[index])
         if index < len(frames):
-            balanced.append(frames[index])
-        if len(balanced) >= limit:
-            break
+            weekly_products.append(frames[index])
 
-    return [_compact_product_item(product) for product in balanced]
+    return [
+        _compact_product_item(product)
+        for product in weekly_products[:limit]
+    ]
 
 
 @router.get("/{slug}", response_model=ProductDetail)
